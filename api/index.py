@@ -19,15 +19,18 @@ Local dev:
 
 import asyncio
 import base64
+import functools
 import ipaddress
 import os
 import socket
+import time
+from collections import defaultdict
 from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
 from fastapi.responses import HTMLResponse
 
 import sys
@@ -36,6 +39,23 @@ from _generator import (  # noqa: E402
     build_course, extract_main_text, normalize_url,
     GenerationError, resolve_provider, ENV_KEYS,
 )
+
+# ---------- rate limiting (sliding window, per IP, in-process) ---------------
+# Resets on cold start — fine for serverless; protects within a warm instance.
+_RATE_LIMIT = 10          # max requests
+_RATE_WINDOW = 60         # per this many seconds
+_rate_window: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_rate_limit(ip: str) -> bool:
+    now = time.monotonic()
+    bucket = _rate_window[ip]
+    bucket[:] = [t for t in bucket if now - t < _RATE_WINDOW]
+    if len(bucket) >= _RATE_LIMIT:
+        return False
+    bucket.append(now)
+    return True
+
 
 # ---------- SSRF guard -------------------------------------------------------
 _MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
@@ -95,6 +115,7 @@ async def fetch_urls(urls: list[str]) -> list[tuple[str, str]]:
 # ----------------------------------------------------------------------------
 APP_DIR = Path(__file__).parent
 TEMPLATE_PATH = APP_DIR / "_course_template.html"
+UPLOAD_PAGE = (APP_DIR / "_ui.html").read_text(encoding="utf-8")
 
 # Default provider when the form doesn't specify one. Free tier first.
 DEFAULT_BACKEND = os.environ.get("PREP_BACKEND", "gemini")
@@ -152,6 +173,7 @@ def config():
 
 @app.post("/api/generate")
 async def generate(
+    request: Request,
     instruction: str = Form(""),
     learner: str = Form("adult"),
     grade: str = Form(""),
@@ -162,6 +184,12 @@ async def generate(
     api_key: str = Form(""),
     file: UploadFile | None = File(None),
 ):
+    # Rate limit: 10 requests/minute per IP (x-forwarded-for on Vercel)
+    forwarded = request.headers.get("x-forwarded-for", "")
+    client_ip = forwarded.split(",")[0].strip() or (request.client.host if request.client else "unknown")
+    if not _check_rate_limit(client_ip):
+        raise HTTPException(429, "Too many requests — please wait a moment and try again.")
+
     material_parts = []
 
     # 1) uploaded document
@@ -201,14 +229,17 @@ async def generate(
         instruction_full += f" (school grade level: {grade.strip()})"
 
     try:
-        course, html = build_course(
-            instruction=instruction_full,
-            material=material,
-            learner=learner,
-            context=context.strip(),
-            template_path=TEMPLATE_PATH,
-            provider=provider or DEFAULT_BACKEND,
-            api_key=api_key,
+        course, html = await asyncio.to_thread(
+            functools.partial(
+                build_course,
+                instruction=instruction_full,
+                material=material,
+                learner=learner,
+                context=context.strip(),
+                template_path=TEMPLATE_PATH,
+                provider=provider or DEFAULT_BACKEND,
+                api_key=api_key,
+            )
         )
     except GenerationError as e:
         raise HTTPException(422, f"Generation failed: {e}")
@@ -221,156 +252,3 @@ async def generate(
         "html_b64": html_b64,
     }
 
-
-# ---------- the upload page --------------------------------------------------
-UPLOAD_PAGE = r"""<!DOCTYPE html>
-<html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prep Suite Generator</title>
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4/dist/index.global.js"></script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
-body{font-family:'Inter',sans-serif;background:#030712;}
-.mono{font-family:'JetBrains Mono',monospace;}
-.seg.active{background:#7e22ce;color:#fff;border-color:#a855f7;}
-</style></head>
-<body class="text-gray-100 min-h-screen bg-gray-950">
-<header class="border-b border-gray-800 bg-gray-900/40 px-4 py-3">
-  <div class="max-w-3xl mx-auto flex items-center gap-3">
-    <div class="h-3 w-3 rounded-full bg-purple-500 animate-pulse"></div>
-    <h1 class="text-base font-bold tracking-wider mono uppercase">Prep Suite Generator</h1>
-  </div>
-</header>
-
-<main class="max-w-3xl mx-auto px-4 py-10 space-y-6">
-  <div class="bg-gradient-to-r from-purple-950/30 to-gray-900/60 border border-purple-900/40 p-6 rounded-xl">
-    <h2 class="text-xl font-black text-white mb-2">Turn any document into an interactive study course.</h2>
-    <p class="text-sm text-gray-300 leading-relaxed">Upload notes, a chapter, or a study guide (or paste text), describe what you want, and get a finished course with flashcards, a quiz, a build game, a speed round, a cheat-sheet, and more.</p>
-  </div>
-
-  <form id="f" class="space-y-5 bg-gray-900 border border-gray-800 rounded-xl p-6">
-    <div>
-      <label class="text-xs mono uppercase tracking-widest text-purple-400 block mb-2">1 · Who is this for?</label>
-      <div class="flex gap-2 mono text-xs">
-        <button type="button" data-v="adult" class="seg active flex-1 border border-gray-800 bg-gray-950 rounded-lg py-2.5 font-bold">🎓 Adult (technical)</button>
-        <button type="button" data-v="kid"   class="seg flex-1 border border-gray-800 bg-gray-950 rounded-lg py-2.5 font-bold">🎒 School-age kid</button>
-      </div>
-      <input type="hidden" name="learner" id="learner" value="adult"/>
-      <div id="gradeWrap" class="hidden mt-3">
-        <input type="text" name="grade" id="grade"
-          placeholder="Grade level (e.g. 4th grade, Year 7, high school freshman)"
-          class="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none"/>
-        <p class="text-[11px] text-gray-600 mt-1">Helps tune vocabulary and difficulty for the right age.</p>
-      </div>
-    </div>
-
-    <div>
-      <label class="text-xs mono uppercase tracking-widest text-purple-400 block mb-2">2 · What do you want?</label>
-      <input type="text" name="instruction" id="instruction" required
-        placeholder="e.g. Science test on ecosystems, friendly tone"
-        class="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none"/>
-    </div>
-
-    <div>
-      <label class="text-xs mono uppercase tracking-widest text-purple-400 block mb-2">3 · Context <span class="text-gray-600 normal-case tracking-normal">(optional)</span></label>
-      <textarea name="context" id="context" rows="3"
-        placeholder="Goals, constraints, what to emphasize or avoid, the exam/standard, prior knowledge, etc."
-        class="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none"></textarea>
-    </div>
-
-    <div>
-      <label class="text-xs mono uppercase tracking-widest text-purple-400 block mb-2">4 · Source material</label>
-      <input type="file" name="file" id="file" accept=".txt,.md,.markdown,.pdf,.docx,.csv"
-        class="block w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:bg-purple-700 file:text-white file:font-bold file:cursor-pointer hover:file:bg-purple-600"/>
-      <p class="text-[11px] text-gray-600 mt-1">Upload txt, md, pdf, docx, csv.</p>
-      <textarea name="urls" id="urls" rows="2" placeholder="…or paste one or more URLs (one per line)"
-        class="mt-3 w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none mono"></textarea>
-      <textarea name="pasted" id="pasted" rows="5" placeholder="…or paste study material here"
-        class="mt-3 w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none"></textarea>
-      <p class="text-[11px] text-gray-600 mt-1">Mix and match — upload a file, add URLs, and paste text together.</p>
-    </div>
-
-    <div>
-      <label class="text-xs mono uppercase tracking-widest text-purple-400 block mb-2">5 · Model</label>
-      <select name="provider" id="provider"
-        class="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 focus:border-purple-600 focus:outline-none mono">
-        <option value="gemini">Gemini (free tier)</option>
-        <option value="groq">Groq (free tier)</option>
-        <option value="openai">OpenAI (paid)</option>
-        <option value="anthropic">Anthropic (paid)</option>
-      </select>
-      <input type="password" name="api_key" id="api_key" placeholder="Optional: paste your own API key (BYOK)"
-        class="mt-2 w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none mono"/>
-      <p id="keyHint" class="text-[11px] text-gray-600 mt-1"></p>
-    </div>
-
-    <button type="submit" id="go" class="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 px-4 py-3 rounded-lg mono font-bold text-white transition">Generate course →</button>
-  </form>
-
-  <div id="status" class="hidden bg-gray-900 border border-gray-800 rounded-xl p-6 text-center">
-    <div class="inline-block h-6 w-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-    <p id="statusText" class="text-sm text-gray-400 mono">Reading your document and building the course…</p>
-  </div>
-
-  <div id="result" class="hidden bg-gray-900 border border-emerald-900/40 rounded-xl p-6 space-y-3">
-    <div class="text-emerald-400 mono text-xs uppercase tracking-widest">✓ Course ready</div>
-    <h3 id="rTitle" class="text-lg font-bold text-white"></h3>
-    <p id="rMeta" class="text-xs text-gray-500 mono"></p>
-    <div class="flex gap-3 pt-2">
-      <a id="rView" target="_blank" class="bg-purple-600 hover:bg-purple-500 px-5 py-2.5 rounded-lg mono font-bold text-sm text-white">Open course ↗</a>
-      <a id="rDownload" class="bg-gray-800 hover:bg-gray-700 px-5 py-2.5 rounded-lg mono font-bold text-sm text-gray-200">Download .html</a>
-    </div>
-  </div>
-
-  <div id="error" class="hidden bg-gray-900 border border-red-900/40 rounded-xl p-5">
-    <div class="text-red-400 mono text-xs uppercase tracking-widest mb-1">✗ Something went wrong</div>
-    <p id="errText" class="text-sm text-gray-300"></p>
-  </div>
-</main>
-
-<script>
-const segs=document.querySelectorAll('.seg'), learner=document.getElementById('learner'), gradeWrap=document.getElementById('gradeWrap');
-segs.forEach(b=>b.onclick=()=>{segs.forEach(x=>x.classList.remove('active'));b.classList.add('active');learner.value=b.dataset.v;gradeWrap.classList.toggle('hidden', b.dataset.v!=='kid');});
-const f=document.getElementById('f'),go=document.getElementById('go');
-const elStatus=document.getElementById('status'),elResult=document.getElementById('result'),elErr=document.getElementById('error');
-const provider=document.getElementById('provider'),apiKey=document.getElementById('api_key'),keyHint=document.getElementById('keyHint');
-let CONFIG={configured:{},default:'gemini'};
-
-function refreshHint(){
-  const p=provider.value, hasServer=CONFIG.configured[p];
-  keyHint.textContent = hasServer
-    ? 'A server key is configured for '+p+'. Leave blank to use it, or paste your own to override.'
-    : 'No server key for '+p+' — paste your own API key above to use it.';
-}
-fetch('/api/config').then(r=>r.json()).then(c=>{CONFIG=c; if(c.default){provider.value=c.default;} refreshHint();}).catch(()=>refreshHint());
-provider.onchange=refreshHint;
-
-let lastUrl=null;
-f.onsubmit=async(e)=>{
-  e.preventDefault();
-  elResult.classList.add('hidden'); elErr.classList.add('hidden'); elStatus.classList.remove('hidden');
-  go.disabled=true; go.textContent='Generating…';
-  try{
-    const data=new FormData(f);
-    const r=await fetch('/api/generate',{method:'POST',body:data});
-    const j=await r.json();
-    if(!r.ok){throw new Error(j.detail||'Generation failed');}
-    const html=atob(j.html_b64);
-    const blob=new Blob([Uint8Array.from(html, c=>c.charCodeAt(0))],{type:'text/html'});
-    if(lastUrl) URL.revokeObjectURL(lastUrl);
-    lastUrl=URL.createObjectURL(blob);
-    const safe=(j.title||'course').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'course';
-    document.getElementById('rTitle').textContent=j.title;
-    document.getElementById('rMeta').textContent=j.modules+' modules';
-    document.getElementById('rView').href=lastUrl;
-    const dl=document.getElementById('rDownload'); dl.href=lastUrl; dl.download=safe+'.html';
-    elResult.classList.remove('hidden');
-  }catch(err){
-    document.getElementById('errText').textContent=err.message;
-    elErr.classList.remove('hidden');
-  }finally{
-    elStatus.classList.add('hidden'); go.disabled=false; go.textContent='Generate course →';
-  }
-};
-</script>
-</body></html>"""
