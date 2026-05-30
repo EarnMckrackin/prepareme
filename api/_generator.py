@@ -12,6 +12,7 @@ one entry to PROVIDERS.
 Providers:
   - gemini     (Google AI Studio — generous free tier)   default
   - groq       (Groq — fast free tier, OpenAI-compatible)
+  - grok       (xAI Grok — OpenAI-compatible)
   - openai     (paid fallback)
   - anthropic  (paid fallback)
 """
@@ -144,6 +145,7 @@ def _user_message(instruction: str, learner: str, material: str,
 DEFAULT_MODELS = {
     "gemini": "gemini-2.0-flash",
     "groq": "llama-3.3-70b-versatile",
+    "grok": "grok-3-mini",
     "openai": "gpt-4o-mini",
     "anthropic": "claude-sonnet-4-20250514",
 }
@@ -152,6 +154,7 @@ DEFAULT_MODELS = {
 ENV_KEYS = {
     "gemini": "GEMINI_API_KEY",
     "groq": "GROQ_API_KEY",
+    "grok": "XAI_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
 }
@@ -202,6 +205,11 @@ def _call_groq(system: str, user: str, api_key: str, model: str) -> str:
                                    "https://api.groq.com/openai/v1", "Groq")
 
 
+def _call_grok(system: str, user: str, api_key: str, model: str) -> str:
+    return _call_openai_compatible(system, user, api_key, model,
+                                   "https://api.x.ai/v1", "Grok")
+
+
 def _call_openai(system: str, user: str, api_key: str, model: str) -> str:
     return _call_openai_compatible(system, user, api_key, model,
                                    "https://api.openai.com/v1", "OpenAI")
@@ -229,6 +237,7 @@ def _call_anthropic(system: str, user: str, api_key: str, model: str) -> str:
 PROVIDERS = {
     "gemini": _call_gemini,
     "groq": _call_groq,
+    "grok": _call_grok,
     "openai": _call_openai,
     "anthropic": _call_anthropic,
 }

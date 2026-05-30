@@ -13,7 +13,7 @@ Serverless notes:
 
 Local dev:
     pip install -r requirements.txt
-    export GEMINI_API_KEY=...        # or GROQ_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY
+    export GEMINI_API_KEY=...        # or GROQ_API_KEY / XAI_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY
     uvicorn api.index:app --reload --port 8000
 """
 
