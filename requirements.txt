@@ -1,0 +1,10 @@
+fastapi
+httpx
+python-multipart
+# document parsers
+pypdf
+python-docx
+# high-quality web page main-content extraction (falls back to a built-in regex cleaner)
+trafilatura
+# local dev server (not used by Vercel at runtime)
+uvicorn

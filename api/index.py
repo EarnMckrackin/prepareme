@@ -1,0 +1,376 @@
+"""
+Prep Suite Generator — Vercel serverless front end.
+
+Upload a document (or paste text) + an instruction + pick kid/adult + pick a model
+provider  ->  generate  ->  the finished interactive course HTML is returned inline and
+the browser opens / downloads it as a standalone file.
+
+Serverless notes:
+  - No disk persistence (the function filesystem is ephemeral/read-only). The generated
+    course is sent back in the JSON response and the browser turns it into a Blob URL.
+  - Model calls go to hosted providers over HTTP. Default is Gemini (free tier). Users can
+    paste their own key (BYOK) to use any provider without server-side keys.
+
+Local dev:
+    pip install -r requirements.txt
+    export GEMINI_API_KEY=...        # or GROQ_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY
+    uvicorn api.index:app --reload --port 8000
+"""
+
+import asyncio
+import base64
+import ipaddress
+import os
+import socket
+from pathlib import Path
+from urllib.parse import urlparse
+
+import httpx
+
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.responses import HTMLResponse
+
+import sys
+sys.path.insert(0, str(Path(__file__).parent))
+from _generator import (  # noqa: E402
+    build_course, extract_main_text, normalize_url,
+    GenerationError, resolve_provider, ENV_KEYS,
+)
+
+# ---------- SSRF guard -------------------------------------------------------
+_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+def _assert_public_url(url: str) -> None:
+    """Block URLs that resolve to private/reserved addresses (SSRF mitigation)."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise GenerationError("Only http/https URLs are supported.")
+    host = parsed.hostname
+    if not host:
+        raise GenerationError(f"Invalid URL: {url}")
+    try:
+        addr = ipaddress.ip_address(socket.gethostbyname(host))
+    except (socket.gaierror, ValueError):
+        raise GenerationError(f"Could not resolve host: {host}")
+    if (addr.is_private or addr.is_loopback or addr.is_link_local
+            or addr.is_reserved or addr.is_multicast or addr.is_unspecified):
+        raise GenerationError(f"Fetching that URL is not permitted.")
+
+
+# ---------- concurrent URL fetching -----------------------------------------
+_URL_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
+_MAX_CONCURRENT_URLS = 5
+
+
+async def fetch_urls(urls: list[str]) -> list[tuple[str, str]]:
+    """Fetch many URLs concurrently and return [(url, extracted_text)] in input order.
+
+    Raises GenerationError on the first URL that can't be fetched.
+    """
+    sem = asyncio.Semaphore(_MAX_CONCURRENT_URLS)
+    headers = {"User-Agent": "Mozilla/5.0 (PrepSuiteBot)"}
+
+    async with httpx.AsyncClient(timeout=_URL_TIMEOUT, follow_redirects=True,
+                                 headers=headers) as client:
+        async def one(raw: str) -> tuple[str, str]:
+            url = normalize_url(raw)
+            # SSRF guard — runs DNS resolution in a thread to keep the event loop free
+            await asyncio.to_thread(_assert_public_url, url)
+            async with sem:
+                try:
+                    r = await client.get(url)
+                except httpx.HTTPError as e:
+                    raise GenerationError(f"Could not fetch {url} ({type(e).__name__}).")
+            if r.status_code != 200:
+                raise GenerationError(f"Could not fetch {url} (HTTP {r.status_code}).")
+            # extraction is CPU-bound; run it off the event loop
+            text = await asyncio.to_thread(extract_main_text, r.text, url)
+            if not text:
+                raise GenerationError(f"Fetched {url} but found no readable text.")
+            return url, text
+
+        return await asyncio.gather(*(one(u) for u in urls))
+
+# ----------------------------------------------------------------------------
+APP_DIR = Path(__file__).parent
+TEMPLATE_PATH = APP_DIR / "_course_template.html"
+
+# Default provider when the form doesn't specify one. Free tier first.
+DEFAULT_BACKEND = os.environ.get("PREP_BACKEND", "gemini")
+
+app = FastAPI(title="Prep Suite Generator")
+
+
+# ---------- document extraction ---------------------------------------------
+def extract_text(filename: str, raw: bytes) -> str:
+    """Pull plain text out of an uploaded file. Supports txt/md/pdf/docx."""
+    ext = Path(filename).suffix.lower()
+    if ext in (".txt", ".md", ".markdown", ".csv"):
+        return raw.decode("utf-8", errors="replace")
+    if ext == ".pdf":
+        try:
+            from pypdf import PdfReader
+            import io
+        except ImportError:
+            raise GenerationError("PDF support needs pypdf (it's in requirements.txt).")
+        try:
+            reader = PdfReader(io.BytesIO(raw))
+            return "\n\n".join((p.extract_text() or "") for p in reader.pages)
+        except Exception as e:
+            raise GenerationError(f"Could not read that PDF ({type(e).__name__}). "
+                                  "Try pasting the text instead.")
+    if ext == ".docx":
+        try:
+            import io, docx
+        except ImportError:
+            raise GenerationError("DOCX support needs python-docx (it's in requirements.txt).")
+        try:
+            d = docx.Document(io.BytesIO(raw))
+            return "\n\n".join(p.text for p in d.paragraphs if p.text.strip())
+        except Exception as e:
+            raise GenerationError(f"Could not read that DOCX ({type(e).__name__}). "
+                                  "Try pasting the text instead.")
+    return raw.decode("utf-8", errors="replace")
+
+
+# ---------- routes ----------------------------------------------------------
+@app.get("/", response_class=HTMLResponse)
+def home():
+    return UPLOAD_PAGE
+
+
+@app.get("/api/config")
+def config():
+    """Tell the UI which providers already have a server-side key configured."""
+    return {
+        "default": resolve_provider(DEFAULT_BACKEND),
+        "configured": {p: bool(os.environ.get(env, "").strip())
+                       for p, env in ENV_KEYS.items()},
+    }
+
+
+@app.post("/api/generate")
+async def generate(
+    instruction: str = Form(""),
+    learner: str = Form("adult"),
+    grade: str = Form(""),
+    context: str = Form(""),
+    pasted: str = Form(""),
+    urls: str = Form(""),
+    provider: str = Form(""),
+    api_key: str = Form(""),
+    file: UploadFile | None = File(None),
+):
+    material_parts = []
+
+    # 1) uploaded document
+    if file is not None and file.filename:
+        raw = await file.read()
+        if len(raw) > _MAX_UPLOAD_BYTES:
+            raise HTTPException(400, f"File is too large (max {_MAX_UPLOAD_BYTES // 1_048_576} MB).")
+        try:
+            material_parts.append(extract_text(file.filename, raw))
+        except GenerationError as e:
+            raise HTTPException(400, str(e))
+
+    # 2) URLs (one per line) — fetched concurrently
+    url_list = [ln.strip() for ln in urls.splitlines() if ln.strip()]
+    if url_list:
+        try:
+            for src, text in await fetch_urls(url_list):
+                material_parts.append(f"[Source: {src}]\n{text}")
+        except GenerationError as e:
+            raise HTTPException(400, str(e))
+
+    # 3) pasted text
+    if pasted.strip():
+        material_parts.append(pasted.strip())
+
+    material = "\n\n".join(p for p in material_parts if p.strip()).strip()
+
+    if not material:
+        raise HTTPException(400, "Provide a document, a URL, or paste some study material.")
+    if not instruction.strip():
+        raise HTTPException(400, "Add a one-line instruction (topic / focus / tone).")
+
+    # Fold grade level into the audience signal for kid courses.
+    learner = "kid" if learner == "kid" else "adult"
+    instruction_full = instruction.strip()
+    if learner == "kid" and grade.strip():
+        instruction_full += f" (school grade level: {grade.strip()})"
+
+    try:
+        course, html = build_course(
+            instruction=instruction_full,
+            material=material,
+            learner=learner,
+            context=context.strip(),
+            template_path=TEMPLATE_PATH,
+            provider=provider or DEFAULT_BACKEND,
+            api_key=api_key,
+        )
+    except GenerationError as e:
+        raise HTTPException(422, f"Generation failed: {e}")
+
+    title = course.get("meta", {}).get("title", "Untitled course")
+    html_b64 = base64.b64encode(html.encode("utf-8")).decode("ascii")
+    return {
+        "title": title,
+        "modules": len(course.get("modules", [])),
+        "html_b64": html_b64,
+    }
+
+
+# ---------- the upload page --------------------------------------------------
+UPLOAD_PAGE = r"""<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prep Suite Generator</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4/dist/index.global.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+body{font-family:'Inter',sans-serif;background:#030712;}
+.mono{font-family:'JetBrains Mono',monospace;}
+.seg.active{background:#7e22ce;color:#fff;border-color:#a855f7;}
+</style></head>
+<body class="text-gray-100 min-h-screen bg-gray-950">
+<header class="border-b border-gray-800 bg-gray-900/40 px-4 py-3">
+  <div class="max-w-3xl mx-auto flex items-center gap-3">
+    <div class="h-3 w-3 rounded-full bg-purple-500 animate-pulse"></div>
+    <h1 class="text-base font-bold tracking-wider mono uppercase">Prep Suite Generator</h1>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 py-10 space-y-6">
+  <div class="bg-gradient-to-r from-purple-950/30 to-gray-900/60 border border-purple-900/40 p-6 rounded-xl">
+    <h2 class="text-xl font-black text-white mb-2">Turn any document into an interactive study course.</h2>
+    <p class="text-sm text-gray-300 leading-relaxed">Upload notes, a chapter, or a study guide (or paste text), describe what you want, and get a finished course with flashcards, a quiz, a build game, a speed round, a cheat-sheet, and more.</p>
+  </div>
+
+  <form id="f" class="space-y-5 bg-gray-900 border border-gray-800 rounded-xl p-6">
+    <div>
+      <label class="text-xs mono uppercase tracking-widest text-purple-400 block mb-2">1 · Who is this for?</label>
+      <div class="flex gap-2 mono text-xs">
+        <button type="button" data-v="adult" class="seg active flex-1 border border-gray-800 bg-gray-950 rounded-lg py-2.5 font-bold">🎓 Adult (technical)</button>
+        <button type="button" data-v="kid"   class="seg flex-1 border border-gray-800 bg-gray-950 rounded-lg py-2.5 font-bold">🎒 School-age kid</button>
+      </div>
+      <input type="hidden" name="learner" id="learner" value="adult"/>
+      <div id="gradeWrap" class="hidden mt-3">
+        <input type="text" name="grade" id="grade"
+          placeholder="Grade level (e.g. 4th grade, Year 7, high school freshman)"
+          class="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none"/>
+        <p class="text-[11px] text-gray-600 mt-1">Helps tune vocabulary and difficulty for the right age.</p>
+      </div>
+    </div>
+
+    <div>
+      <label class="text-xs mono uppercase tracking-widest text-purple-400 block mb-2">2 · What do you want?</label>
+      <input type="text" name="instruction" id="instruction" required
+        placeholder="e.g. Science test on ecosystems, friendly tone"
+        class="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none"/>
+    </div>
+
+    <div>
+      <label class="text-xs mono uppercase tracking-widest text-purple-400 block mb-2">3 · Context <span class="text-gray-600 normal-case tracking-normal">(optional)</span></label>
+      <textarea name="context" id="context" rows="3"
+        placeholder="Goals, constraints, what to emphasize or avoid, the exam/standard, prior knowledge, etc."
+        class="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none"></textarea>
+    </div>
+
+    <div>
+      <label class="text-xs mono uppercase tracking-widest text-purple-400 block mb-2">4 · Source material</label>
+      <input type="file" name="file" id="file" accept=".txt,.md,.markdown,.pdf,.docx,.csv"
+        class="block w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:bg-purple-700 file:text-white file:font-bold file:cursor-pointer hover:file:bg-purple-600"/>
+      <p class="text-[11px] text-gray-600 mt-1">Upload txt, md, pdf, docx, csv.</p>
+      <textarea name="urls" id="urls" rows="2" placeholder="…or paste one or more URLs (one per line)"
+        class="mt-3 w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none mono"></textarea>
+      <textarea name="pasted" id="pasted" rows="5" placeholder="…or paste study material here"
+        class="mt-3 w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none"></textarea>
+      <p class="text-[11px] text-gray-600 mt-1">Mix and match — upload a file, add URLs, and paste text together.</p>
+    </div>
+
+    <div>
+      <label class="text-xs mono uppercase tracking-widest text-purple-400 block mb-2">5 · Model</label>
+      <select name="provider" id="provider"
+        class="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 focus:border-purple-600 focus:outline-none mono">
+        <option value="gemini">Gemini (free tier)</option>
+        <option value="groq">Groq (free tier)</option>
+        <option value="openai">OpenAI (paid)</option>
+        <option value="anthropic">Anthropic (paid)</option>
+      </select>
+      <input type="password" name="api_key" id="api_key" placeholder="Optional: paste your own API key (BYOK)"
+        class="mt-2 w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none mono"/>
+      <p id="keyHint" class="text-[11px] text-gray-600 mt-1"></p>
+    </div>
+
+    <button type="submit" id="go" class="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 px-4 py-3 rounded-lg mono font-bold text-white transition">Generate course →</button>
+  </form>
+
+  <div id="status" class="hidden bg-gray-900 border border-gray-800 rounded-xl p-6 text-center">
+    <div class="inline-block h-6 w-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+    <p id="statusText" class="text-sm text-gray-400 mono">Reading your document and building the course…</p>
+  </div>
+
+  <div id="result" class="hidden bg-gray-900 border border-emerald-900/40 rounded-xl p-6 space-y-3">
+    <div class="text-emerald-400 mono text-xs uppercase tracking-widest">✓ Course ready</div>
+    <h3 id="rTitle" class="text-lg font-bold text-white"></h3>
+    <p id="rMeta" class="text-xs text-gray-500 mono"></p>
+    <div class="flex gap-3 pt-2">
+      <a id="rView" target="_blank" class="bg-purple-600 hover:bg-purple-500 px-5 py-2.5 rounded-lg mono font-bold text-sm text-white">Open course ↗</a>
+      <a id="rDownload" class="bg-gray-800 hover:bg-gray-700 px-5 py-2.5 rounded-lg mono font-bold text-sm text-gray-200">Download .html</a>
+    </div>
+  </div>
+
+  <div id="error" class="hidden bg-gray-900 border border-red-900/40 rounded-xl p-5">
+    <div class="text-red-400 mono text-xs uppercase tracking-widest mb-1">✗ Something went wrong</div>
+    <p id="errText" class="text-sm text-gray-300"></p>
+  </div>
+</main>
+
+<script>
+const segs=document.querySelectorAll('.seg'), learner=document.getElementById('learner'), gradeWrap=document.getElementById('gradeWrap');
+segs.forEach(b=>b.onclick=()=>{segs.forEach(x=>x.classList.remove('active'));b.classList.add('active');learner.value=b.dataset.v;gradeWrap.classList.toggle('hidden', b.dataset.v!=='kid');});
+const f=document.getElementById('f'),go=document.getElementById('go');
+const elStatus=document.getElementById('status'),elResult=document.getElementById('result'),elErr=document.getElementById('error');
+const provider=document.getElementById('provider'),apiKey=document.getElementById('api_key'),keyHint=document.getElementById('keyHint');
+let CONFIG={configured:{},default:'gemini'};
+
+function refreshHint(){
+  const p=provider.value, hasServer=CONFIG.configured[p];
+  keyHint.textContent = hasServer
+    ? 'A server key is configured for '+p+'. Leave blank to use it, or paste your own to override.'
+    : 'No server key for '+p+' — paste your own API key above to use it.';
+}
+fetch('/api/config').then(r=>r.json()).then(c=>{CONFIG=c; if(c.default){provider.value=c.default;} refreshHint();}).catch(()=>refreshHint());
+provider.onchange=refreshHint;
+
+let lastUrl=null;
+f.onsubmit=async(e)=>{
+  e.preventDefault();
+  elResult.classList.add('hidden'); elErr.classList.add('hidden'); elStatus.classList.remove('hidden');
+  go.disabled=true; go.textContent='Generating…';
+  try{
+    const data=new FormData(f);
+    const r=await fetch('/api/generate',{method:'POST',body:data});
+    const j=await r.json();
+    if(!r.ok){throw new Error(j.detail||'Generation failed');}
+    const html=atob(j.html_b64);
+    const blob=new Blob([Uint8Array.from(html, c=>c.charCodeAt(0))],{type:'text/html'});
+    if(lastUrl) URL.revokeObjectURL(lastUrl);
+    lastUrl=URL.createObjectURL(blob);
+    const safe=(j.title||'course').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'course';
+    document.getElementById('rTitle').textContent=j.title;
+    document.getElementById('rMeta').textContent=j.modules+' modules';
+    document.getElementById('rView').href=lastUrl;
+    const dl=document.getElementById('rDownload'); dl.href=lastUrl; dl.download=safe+'.html';
+    elResult.classList.remove('hidden');
+  }catch(err){
+    document.getElementById('errText').textContent=err.message;
+    elErr.classList.remove('hidden');
+  }finally{
+    elStatus.classList.add('hidden'); go.disabled=false; go.textContent='Generate course →';
+  }
+};
+</script>
+</body></html>"""

@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Template Engine</title>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4/dist/index.global.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #030712; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .tab-active { border-color: #a855f7; color: #c084fc; background: rgba(168, 85, 247, 0.08); }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        [x-cloak] { display: none !important; }
+        .animate-fade { animation: fadeIn 0.25s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        details > summary { list-style: none; cursor: pointer; }
+        details > summary::-webkit-details-marker { display: none; }
+        @media print {
+            body { background: #fff !important; color: #000 !important; }
+            header, .no-print { display: none !important; }
+            .cheat-card { break-inside: avoid; border: 1px solid #ccc !important; background: #fff !important; }
+            .cheat-card * { color: #000 !important; }
+            .cheat-accent { color: #6b21a8 !important; }
+        }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen selection:bg-purple-500 selection:text-white bg-gray-950" x-data="engine">
+
+    <!-- HEADER -->
+    <header class="border-b border-gray-800 bg-gray-900/40 backdrop-blur sticky top-0 z-50 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="h-3 w-3 rounded-full bg-purple-500 animate-pulse"></div>
+                <h1 class="text-base font-bold tracking-wider text-gray-100 font-mono uppercase" x-text="course.meta.title"></h1>
+            </div>
+            <div class="font-mono text-xs text-gray-500" x-text="course.meta.subtitle"></div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- TAB NAV (generated from modules) -->
+        <div class="flex border-b border-gray-800 overflow-x-auto scrollbar-hide mb-8 gap-1 font-mono text-xs">
+            <template x-for="m in course.modules" :key="m.id">
+                <button @click="tab=m.id" :class="tab===m.id?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap" x-text="m.label"></button>
+            </template>
+        </div>
+
+        <template x-for="m in course.modules" :key="m.id">
+        <div x-show="tab===m.id" class="animate-fade" x-cloak>
+
+            <!-- ===== OVERVIEW ===== -->
+            <template x-if="m.type==='overview'">
+                <div class="space-y-6">
+                    <div class="bg-gradient-to-r from-purple-950/30 to-gray-900/60 border border-purple-900/40 p-6 rounded-xl">
+                        <h3 x-show="m.data.kicker" class="text-xs font-bold tracking-widest text-purple-400 uppercase font-mono mb-2" x-text="'// '+m.data.kicker"></h3>
+                        <h2 class="text-xl font-black text-white mb-3 tracking-tight" x-text="m.data.headline"></h2>
+                        <p class="text-gray-300 leading-relaxed text-sm max-w-4xl" x-text="m.data.body"></p>
+                    </div>
+                    <div x-show="m.data.cards && m.data.cards.length" class="grid md:grid-cols-3 gap-6 text-sm">
+                        <template x-for="(c,ci) in (m.data.cards||[])" :key="ci">
+                            <div class="bg-gray-900/60 border border-gray-800 p-5 rounded-xl space-y-2">
+                                <div class="text-purple-400 font-mono font-bold text-[11px]" x-text="c.tag"></div>
+                                <h4 class="font-bold text-white" x-text="c.title"></h4>
+                                <p class="text-gray-400 leading-relaxed" x-text="c.text"></p>
+                            </div>
+                        </template>
+                    </div>
+                    <div x-show="m.data.steps && m.data.steps.length" class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-3">
+                        <h3 x-show="m.data.stepsTitle" class="text-sm font-bold text-white font-mono uppercase tracking-wide" x-text="m.data.stepsTitle"></h3>
+                        <div class="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+                            <template x-for="(s,si) in (m.data.steps||[])" :key="si">
+                                <span class="flex items-center gap-2">
+                                    <span class="px-2.5 py-1 rounded bg-purple-950 text-purple-300 border border-purple-900/50" x-text="s"></span>
+                                    <span x-show="si < m.data.steps.length-1" class="text-gray-600">→</span>
+                                </span>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ===== CONCEPT CARDS (expandable) ===== -->
+            <template x-if="m.type==='concept_cards'">
+                <div class="space-y-4">
+                    <div x-show="m.data.intro" class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                        <p class="text-xs text-gray-400 leading-relaxed" x-text="m.data.intro"></p>
+                    </div>
+                    <template x-for="(c,ci) in m.data.cards" :key="ci">
+                        <details class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden group">
+                            <summary class="p-4 flex items-center justify-between hover:bg-gray-900/60 transition">
+                                <div class="flex items-center gap-3">
+                                    <span x-show="c.badge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-950 text-purple-300" x-text="c.badge"></span>
+                                    <span class="font-bold text-white text-sm" x-text="c.name"></span>
+                                </div>
+                                <span class="text-gray-600 font-mono text-xs group-open:rotate-90 transition-transform">▶</span>
+                            </summary>
+                            <div class="px-4 pb-5 pt-1 space-y-3 text-xs border-t border-gray-800/60">
+                                <template x-for="(f,fi) in c.fields" :key="fi">
+                                    <div><span class="uppercase tracking-wider text-[10px] font-mono block mb-0.5" :class="toneClass(f.tone)" x-text="f.label"></span><p class="text-gray-300 leading-relaxed" x-text="f.text"></p></div>
+                                </template>
+                                <div x-show="c.highlight" class="bg-amber-950/20 border border-amber-900/40 rounded-lg p-3">
+                                    <span class="text-amber-400 uppercase tracking-wider text-[10px] font-mono block mb-1" x-text="(c.highlight&&c.highlight.label)||'Watch out'"></span>
+                                    <p x-show="c.highlight&&c.highlight.q" class="text-amber-200/90 leading-relaxed italic mb-1" x-text="c.highlight&&c.highlight.q"></p>
+                                    <p class="text-gray-300 leading-relaxed" x-text="c.highlight&&c.highlight.a"></p>
+                                </div>
+                            </div>
+                        </details>
+                    </template>
+                </div>
+            </template>
+
+            <!-- ===== FLASHCARDS ===== -->
+            <template x-if="m.type==='flashcards'">
+                <div class="space-y-6" x-init="recordReview()">
+                    <div class="max-w-2xl mx-auto bg-gray-900/50 border border-gray-800 rounded-xl p-4 flex items-center justify-between gap-6 font-mono text-xs">
+                        <span class="text-gray-400">Progress:</span>
+                        <div class="flex-1 h-2 bg-gray-950 rounded-full overflow-hidden border border-gray-800">
+                            <div class="h-full bg-gradient-to-r from-purple-600 to-fuchsia-500 transition-all" :style="'width:'+(S[m.id].mastered.length/m.data.cards.length*100)+'%'"></div>
+                        </div>
+                        <span class="text-purple-300 font-bold" x-text="S[m.id].mastered.length+'/'+m.data.cards.length"></span>
+                    </div>
+                    <div class="max-w-2xl mx-auto flex items-center justify-center gap-6 font-mono text-[11px] text-gray-500">
+                        <span>🔥 Streak: <span class="text-amber-400 font-bold" x-text="streak"></span></span>
+                        <span>Last: <span class="text-gray-300" x-text="lastReviewedLabel"></span></span>
+                    </div>
+                    <div class="max-w-2xl mx-auto bg-gray-900 border border-gray-800 rounded-xl p-6 text-center space-y-6">
+                        <div class="flex justify-between items-center text-xs font-mono uppercase tracking-widest text-purple-400">
+                            <span>Flashcards</span>
+                            <span x-text="'Card '+(S[m.id].ci+1)+' of '+m.data.cards.length"></span>
+                        </div>
+                        <div class="min-h-[150px] flex items-center justify-center px-4">
+                            <p class="leading-relaxed text-white transition-all" :class="S[m.id].ans?'text-gray-300 text-sm text-left bg-gray-950 p-4 rounded-lg border border-gray-800':'text-base font-medium'" x-text="S[m.id].ans?m.data.cards[S[m.id].ci].a:m.data.cards[S[m.id].ci].q"></p>
+                        </div>
+                        <div class="pt-4 border-t border-gray-800 flex justify-between items-center font-mono text-xs">
+                            <button @click="S[m.id].ans=!S[m.id].ans" class="bg-gray-800 hover:bg-gray-700 font-bold px-4 py-2 rounded" x-text="S[m.id].ans?'Show question':'Reveal answer'"></button>
+                            <div class="flex gap-2">
+                                <button @click="fcMaster(m)" :class="S[m.id].mastered.includes(S[m.id].ci)?'bg-emerald-950 border border-emerald-500/40 text-emerald-300':'bg-gray-900 border border-gray-800 text-gray-400'" class="px-3 py-2 rounded font-bold" x-text="S[m.id].mastered.includes(S[m.id].ci)?(course.meta.learner==='kid'?'✓ Got it!':'✓ Mastered'):(course.meta.learner==='kid'?'Got it!':'Mark mastered')"></button>
+                                <button @click="S[m.id].ans=false; S[m.id].ci=(S[m.id].ci+1)%m.data.cards.length" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded font-bold text-white">Next ➔</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ===== GLOSSARY ===== -->
+            <template x-if="m.type==='glossary'">
+                <div class="space-y-6">
+                    <div x-show="m.data.intro" class="bg-gray-900 border border-gray-800 p-6 rounded-xl">
+                        <p class="text-xs text-gray-400 leading-relaxed" x-text="m.data.intro"></p>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-4 text-xs">
+                        <template x-for="(g,gi) in m.data.terms" :key="gi">
+                            <div class="space-y-1.5 p-4 bg-gray-950 rounded-lg border border-gray-800/80">
+                                <h4 class="font-bold text-purple-400 font-mono text-xs uppercase tracking-wider" x-text="g.t"></h4>
+                                <p class="text-gray-400 leading-normal" x-text="g.d"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ===== CHEATSHEET (printable) ===== -->
+            <template x-if="m.type==='cheatsheet'">
+                <div class="space-y-5">
+                    <div class="no-print flex items-center justify-between bg-gray-900 border border-gray-800 rounded-xl p-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide" x-text="m.data.title||'One-page study sheet'"></h3>
+                            <p class="text-xs text-gray-400 mt-1" x-text="m.data.intro||'Print this and keep it next to you.'"></p>
+                        </div>
+                        <button onclick="window.print()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded font-mono font-bold text-xs text-white transition whitespace-nowrap">⎙ Print</button>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <template x-for="(b,bi) in m.data.blocks" :key="bi">
+                            <div class="cheat-card bg-gray-900 border rounded-xl p-5 space-y-1.5 text-xs" :class="b.wide?'md:col-span-2 border-purple-900/40':'border-gray-800'">
+                                <span class="cheat-accent text-purple-400 text-[10px] font-mono uppercase tracking-widest block" x-text="b.title"></span>
+                                <p x-show="b.text" class="text-gray-300 leading-relaxed" x-text="b.text"></p>
+                                <ul x-show="b.items && b.items.length" class="text-gray-300 leading-relaxed list-disc list-inside space-y-0.5">
+                                    <template x-for="(it,ii) in (b.items||[])" :key="ii"><li x-text="it"></li></template>
+                                </ul>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ===== SEQUENCE ===== -->
+            <template x-if="m.type==='sequence'">
+                <div class="space-y-5 max-w-2xl mx-auto">
+                    <div x-show="!S[m.id].modeKey" class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-5">
+                        <h3 class="text-lg font-black text-white" x-text="m.data.title||'Put it in order'"></h3>
+                        <p class="text-sm text-gray-400 max-w-lg mx-auto" x-text="m.data.intro||'Arrange the steps in the right order.'"></p>
+                        <div class="flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
+                            <template x-for="(mode,mi) in m.data.modes" :key="mi">
+                                <button @click="seqStart(m, mode.key)" class="bg-purple-600 hover:bg-purple-500 px-5 py-2.5 rounded font-mono font-bold text-xs text-white" x-text="mode.label"></button>
+                            </template>
+                        </div>
+                    </div>
+                    <template x-if="S[m.id].modeKey">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-purple-400 uppercase tracking-widest" x-text="seqModeLabel(m)"></span>
+                                <button @click="S[m.id].modeKey=null" class="font-mono text-xs text-gray-500 hover:text-gray-300">← modes</button>
+                            </div>
+                            <p class="text-xs text-gray-400 font-mono">Tap items in order. Tap a chosen item to remove it.</p>
+                            <div class="grid sm:grid-cols-2 gap-3">
+                                <div class="space-y-2">
+                                    <div class="text-[10px] font-mono uppercase tracking-widest text-gray-500">Available</div>
+                                    <template x-for="item in S[m.id].items" :key="item.id">
+                                        <button x-show="!S[m.id].selected.find(s=>s.id===item.id)" @click="S[m.id].selected.push(item)" class="w-full text-left p-3 rounded-lg border border-gray-800 bg-gray-950 hover:bg-gray-900 text-xs text-gray-300" x-text="item.label"></button>
+                                    </template>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="text-[10px] font-mono uppercase tracking-widest text-gray-500">Your order</div>
+                                    <template x-for="(item,idx) in S[m.id].selected" :key="item.id">
+                                        <button @click="S[m.id].selected=S[m.id].selected.filter(s=>s.id!==item.id)" :class="S[m.id].done ? (item.id===S[m.id].correctOrder[idx]?.id?'border-emerald-600 bg-emerald-950/20':'border-red-600 bg-red-950/20'):'border-purple-800 bg-purple-950/10'" class="w-full text-left p-3 rounded-lg border text-xs text-gray-200 flex gap-2">
+                                            <span class="font-mono font-bold text-purple-400" x-text="(idx+1)+'.'"></span><span x-text="item.label"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                            <button x-show="!S[m.id].done && S[m.id].selected.length===S[m.id].items.length" @click="seqCheck(m)" class="w-full bg-purple-600 hover:bg-purple-500 px-4 py-2.5 rounded font-mono font-bold text-xs text-white">Check order</button>
+                            <div x-show="S[m.id].done" x-cloak class="p-4 rounded-lg border text-xs" :class="S[m.id].perfect?'bg-gray-950 border-emerald-900/50':'bg-gray-950 border-amber-900/50'">
+                                <span class="font-bold uppercase tracking-wider block mb-2 text-[10px]" :class="S[m.id].perfect?'text-emerald-400':'text-amber-400'" x-text="S[m.id].perfect?'✓ Perfect order!':'⚠ Not quite — correct order:'"></span>
+                                <ol class="space-y-1.5">
+                                    <template x-for="(item,idx) in S[m.id].correctOrder" :key="item.id">
+                                        <li class="text-gray-300 leading-relaxed"><span class="font-mono text-purple-400 font-bold" x-text="(idx+1)+'. '"></span><span class="font-semibold text-white" x-text="item.label"></span><span x-show="item.why" x-text="' — '+item.why" class="text-gray-400"></span></li>
+                                    </template>
+                                </ol>
+                                <button @click="seqStart(m, S[m.id].modeKey)" class="mt-3 bg-gray-800 hover:bg-gray-700 px-4 py-1.5 rounded font-mono font-bold text-xs text-gray-200">Shuffle &amp; retry</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- ===== CHALLENGE (quiz / rounds / timed / classify) ===== -->
+            <template x-if="m.type==='challenge'">
+                <div class="space-y-5 max-w-3xl mx-auto">
+                    <!-- intro -->
+                    <div x-show="S[m.id].stage===0" class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-4">
+                        <h3 class="text-lg font-black text-white" x-text="m.data.title||'Challenge'"></h3>
+                        <p class="text-sm text-gray-400 max-w-lg mx-auto" x-text="m.data.intro||''"></p>
+                        <p x-show="bestScore(m)!==null" class="text-xs font-mono text-gray-500">Best: <span class="text-emerald-400 font-bold" x-text="bestScore(m)+'/'+m.data.rounds.length"></span></p>
+                        <button @click="chStart(m)" class="bg-purple-600 hover:bg-purple-500 px-6 py-2.5 rounded font-mono font-bold text-sm text-white" x-text="m.data.startLabel||'Start'"></button>
+                    </div>
+                    <!-- a round -->
+                    <template x-if="S[m.id].stage>=1 && S[m.id].stage<=m.data.rounds.length">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between font-mono text-xs">
+                                <span class="text-purple-400 uppercase tracking-widest" x-text="(m.data.rounds[S[m.id].stage-1].title)||('Q '+S[m.id].stage+'/'+m.data.rounds.length)"></span>
+                                <span class="flex items-center gap-3">
+                                    <span x-show="m.data.kind==='timed'" :class="S[m.id].timeLeft<=10?'text-red-400':'text-gray-400'" class="font-bold" x-text="S[m.id].timeLeft+'s'"></span>
+                                    <span class="text-gray-500">Score: <span class="text-emerald-400 font-bold" x-text="S[m.id].score"></span></span>
+                                </span>
+                            </div>
+                            <div x-show="m.data.kind==='timed'" class="h-1.5 bg-gray-950 rounded-full overflow-hidden border border-gray-800"><div class="h-full bg-amber-500 transition-all" :style="'width:'+(S[m.id].timeLeft/(m.data.rounds[S[m.id].stage-1].timer||m.data.timer||30)*100)+'%'"></div></div>
+                            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+                                <p x-show="m.data.rounds[S[m.id].stage-1].scenario" class="text-sm text-gray-200 leading-relaxed" x-text="m.data.rounds[S[m.id].stage-1].scenario"></p>
+                                <div x-show="m.data.rounds[S[m.id].stage-1].constraints" class="flex flex-wrap gap-2">
+                                    <template x-for="(con,coni) in (m.data.rounds[S[m.id].stage-1].constraints||[])" :key="coni"><span class="text-[10px] font-mono px-2 py-1 rounded bg-gray-950 border border-gray-800 text-gray-400" x-text="con"></span></template>
+                                </div>
+                                <h4 class="text-sm font-bold text-white leading-relaxed" x-text="m.data.rounds[S[m.id].stage-1].question"></h4>
+                                <div class="space-y-2.5 text-xs">
+                                    <template x-for="(o,oi) in m.data.rounds[S[m.id].stage-1].opts" :key="oi">
+                                        <button @click="chPick(m,oi)"
+                                            :class="chOptClass(m,oi)"
+                                            class="w-full text-left p-3.5 rounded-lg border">
+                                            <div class="font-bold text-gray-100" x-text="optLabel(o)"></div>
+                                            <div x-show="optDetail(o)" class="text-gray-500 mt-0.5 leading-normal" x-text="optDetail(o)"></div>
+                                        </button>
+                                    </template>
+                                </div>
+                                <div x-show="S[m.id].confirmed" x-cloak class="p-4 rounded-lg text-xs leading-relaxed" :class="chCorrect(m)?'bg-gray-950 border border-emerald-900/50 text-emerald-300/90':'bg-gray-950 border border-red-900/50 text-red-300/90'">
+                                    <span class="font-bold uppercase tracking-wider block mb-1 text-[10px]" x-text="chCorrect(m)?'✓ Correct':'✗ Not quite'"></span>
+                                    <span x-text="chFeedback(m)"></span>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button x-show="!S[m.id].confirmed && m.data.kind!=='timed'" @click="chConfirm(m)" :disabled="S[m.id].pick===null" class="bg-purple-600 hover:bg-purple-500 disabled:opacity-40 px-5 py-2 rounded font-mono font-bold text-xs text-white">Check</button>
+                                    <button x-show="S[m.id].confirmed" @click="chAdvance(m)" class="bg-purple-600 hover:bg-purple-500 px-5 py-2 rounded font-mono font-bold text-xs text-white" x-text="S[m.id].stage<m.data.rounds.length?'Next ➔':'See result'"></button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <!-- results -->
+                    <div x-show="S[m.id].stage===m.data.rounds.length+1" x-cloak class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-4">
+                        <div class="text-5xl font-black text-white" x-text="S[m.id].score+'/'+m.data.rounds.length"></div>
+                        <p class="text-sm text-gray-400" x-text="resultMsg(m)"></p>
+                        <div class="flex flex-wrap justify-center gap-1.5">
+                            <template x-for="(h,hi) in S[m.id].history" :key="hi"><span class="h-2.5 w-2.5 rounded-full" :class="h?'bg-emerald-500':'bg-red-500'"></span></template>
+                        </div>
+                        <button @click="chStart(m)" class="bg-purple-600 hover:bg-purple-500 px-5 py-2 rounded font-mono font-bold text-xs text-white">Try again</button>
+                    </div>
+                </div>
+            </template>
+
+        </div>
+        </template>
+    </main>
+
+    <script>
+    // ============================================================
+    //  COURSE CONTENT  — this is the ONLY thing your generator writes.
+    //  Swap this object to produce a brand-new course. Everything
+    //  below it is the fixed rendering engine.
+    // ============================================================
+    const COURSE =
+{
+  meta: {
+    title: "Ecosystems & Food Webs — Test Prep",
+    subtitle: "6th Grade Science  //  swap the COURSE object to make any course",
+    learner: "kid"
+  },
+  modules: [
+    {
+      type: "overview", id: "bigidea", label: "1. The Big Idea",
+      data: {
+        kicker: "Start here",
+        headline: "Everything in an ecosystem is connected by energy.",
+        body: "An ecosystem is all the living things (plants, animals, tiny decomposers) and non-living things (sun, water, air, soil) in one place, working together. Energy starts at the sun, gets captured by plants, and passes from creature to creature as they eat. Follow the energy and you understand the whole ecosystem.",
+        cards: [
+          { tag: "ROLE 1 // PRODUCERS", title: "Plants make their own food", text: "Using sunlight, plants make their own food (photosynthesis). They are the START of every food chain because all the energy enters here." },
+          { tag: "ROLE 2 // CONSUMERS", title: "Animals eat other living things", text: "Consumers can't make their own food, so they eat plants or other animals to get energy. Herbivores, carnivores, and omnivores are all consumers." },
+          { tag: "ROLE 3 // DECOMPOSERS", title: "They recycle the leftovers", text: "Fungi and bacteria break down dead plants and animals, returning nutrients to the soil so producers can grow again. They close the loop." }
+        ],
+        stepsTitle: "How energy flows (memorize this arrow!)",
+        steps: ["☀️ Sun", "🌱 Producers", "🐛 Herbivores", "🦊 Carnivores", "🍄 Decomposers"]
+      }
+    },
+    {
+      type: "concept_cards", id: "concepts", label: "2. Key Concepts",
+      data: {
+        intro: "Tap each card to open it. The amber box is a common test trap — read it carefully.",
+        cards: [
+          { badge: "PRODUCER", name: "Producers (Autotrophs)",
+            fields: [
+              { label: "What it is", tone: "neutral", text: "A living thing that makes its own food from sunlight through photosynthesis." },
+              { label: "Examples", tone: "good", text: "Grass, trees, algae, phytoplankton in the ocean." }
+            ],
+            highlight: { label: "⚠ Test trap", q: "Are mushrooms producers?", a: "No! Mushrooms are fungi — they are DECOMPOSERS, not producers. Producers must make their own food from sunlight." } },
+          { badge: "CONSUMER", name: "Consumers (Herbivore / Carnivore / Omnivore)",
+            fields: [
+              { label: "What it is", tone: "neutral", text: "A living thing that eats other living things for energy because it can't make its own food." },
+              { label: "The three types", tone: "good", text: "Herbivore = eats only plants (rabbit). Carnivore = eats only animals (hawk). Omnivore = eats both (bear, human)." }
+            ],
+            highlight: { label: "⚠ Test trap", q: "Is a Venus flytrap a consumer?", a: "It's both! It's a producer (it photosynthesizes) AND it consumes insects. On a test, explain BOTH roles to get full credit." } },
+          { badge: "DECOMPOSER", name: "Decomposers",
+            fields: [
+              { label: "What it is", tone: "neutral", text: "Breaks down dead organisms and waste, returning nutrients to the soil." },
+              { label: "Examples", tone: "good", text: "Fungi (mushrooms, mold) and bacteria; also detritivores like earthworms." }
+            ],
+            highlight: { label: "⚠ Why they matter", q: "What happens without decomposers?", a: "Dead material would pile up and nutrients would never return to the soil, so producers couldn't grow. They keep the whole cycle going." } },
+          { badge: "FOOD CHAIN", name: "Food Chain vs Food Web",
+            fields: [
+              { label: "Food chain", tone: "neutral", text: "A single line showing who eats whom: grass → grasshopper → frog → snake → hawk." },
+              { label: "Food web", tone: "info", text: "Many food chains connected together — more realistic, because most animals eat more than one thing." },
+              { label: "Direction of arrows", tone: "bad", text: "Arrows point in the direction the ENERGY flows — toward the eater. Grass → rabbit means the rabbit eats the grass." }
+            ],
+            highlight: { label: "⚠ Test trap", q: "Which way do the arrows point?", a: "Toward whoever GETS the energy (the eater). A super common mistake is pointing the arrow at the food instead of the eater." } },
+          { badge: "ENERGY", name: "Energy Pyramid (the 10% rule)",
+            fields: [
+              { label: "What it shows", tone: "neutral", text: "How energy decreases as you move UP each level of a food chain." },
+              { label: "The 10% rule", tone: "good", text: "Only about 10% of the energy passes to the next level — the other 90% is used for living or lost as heat." }
+            ],
+            highlight: { label: "⚠ Why pyramids are wide at the bottom", q: "Why are there fewer hawks than grasshoppers?", a: "Because energy shrinks at each level, the top can support far fewer animals. That's why predators are rare and producers are everywhere." } }
+        ]
+      }
+    },
+    {
+      type: "flashcards", id: "recall", label: "3. Flashcards",
+      data: { cards: [
+        { q: "What is a producer?", a: "A living thing that makes its own food from sunlight (photosynthesis). Example: grass, trees, algae. It starts every food chain." },
+        { q: "What is a consumer?", a: "A living thing that eats other living things for energy. Three types: herbivore (plants), carnivore (animals), omnivore (both)." },
+        { q: "What is a decomposer? Give an example.", a: "Something that breaks down dead organisms and returns nutrients to the soil. Examples: fungi (mushrooms) and bacteria." },
+        { q: "Which way do food-chain arrows point?", a: "Toward the eater — the direction energy flows. Grass → rabbit means the rabbit eats (gets energy from) the grass." },
+        { q: "What is the difference between a food chain and a food web?", a: "A food chain is a single line of who-eats-whom. A food web is many food chains connected — more realistic." },
+        { q: "What is the 10% rule?", a: "Only about 10% of energy passes to the next level of a food chain; the rest is used up or lost as heat." },
+        { q: "Why are there fewer top predators than producers?", a: "Energy shrinks at each level (10% rule), so the top of the pyramid can support far fewer animals." },
+        { q: "Where does the energy in an ecosystem originally come from?", a: "The sun. Producers capture it through photosynthesis, then it passes along the food chain." },
+        { q: "What is a herbivore, carnivore, and omnivore?", a: "Herbivore eats only plants (rabbit). Carnivore eats only animals (hawk). Omnivore eats both (bear, human)." },
+        { q: "What would happen to an ecosystem with no decomposers?", a: "Dead material would pile up and nutrients would never return to the soil, so producers couldn't grow — the whole cycle would break." }
+      ] }
+    },
+    {
+      type: "challenge", id: "quiz", label: "4. Practice Quiz ✦",
+      data: {
+        kind: "quiz", title: "Practice Quiz", startLabel: "Start quiz",
+        intro: "8 questions. Pick an answer, check it, and read the explanation.",
+        rounds: [
+          { question: "Which of these is a producer?", opts: ["A rabbit", "An oak tree", "A mushroom", "A hawk"], correct: 1, exp: "An oak tree is a producer — it makes its own food from sunlight. Mushrooms are decomposers; rabbits and hawks are consumers." },
+          { question: "In the food chain grass → grasshopper → frog → snake, what is the frog?", opts: ["A producer", "A decomposer", "A consumer", "The sun"], correct: 2, exp: "The frog eats the grasshopper for energy, so it's a consumer (specifically a carnivore here)." },
+          { question: "Which way does the arrow point in 'grass → rabbit'?", opts: ["Toward the food", "Toward the eater (energy flow)", "It doesn't matter", "Both ways"], correct: 1, exp: "Arrows always point toward the eater, showing the direction energy flows. The rabbit gets energy from the grass." },
+          { question: "About how much energy passes to the next level of a food chain?", opts: ["100%", "50%", "10%", "0%"], correct: 2, exp: "The 10% rule: only about 10% moves up; the rest is used for living or lost as heat." },
+          { question: "A bear eats berries AND fish. What is it?", opts: ["Herbivore", "Carnivore", "Omnivore", "Producer"], correct: 2, exp: "Eating both plants and animals makes the bear an omnivore." },
+          { question: "What do decomposers return to the soil?", opts: ["Sunlight", "Nutrients", "Oxygen only", "Water only"], correct: 1, exp: "Decomposers break down dead things and return nutrients to the soil so producers can grow." },
+          { question: "Why are there usually fewer hawks than grasshoppers?", opts: ["Hawks are bigger", "Less energy is available at higher levels", "Grasshoppers reproduce faster", "Hawks migrate"], correct: 1, exp: "Because of the 10% rule, less energy is available higher up, so fewer top predators can be supported." },
+          { question: "What is the original source of almost all energy in an ecosystem?", opts: ["The soil", "Decomposers", "The sun", "Water"], correct: 2, exp: "The sun. Producers capture sunlight and energy flows from there through the whole web." }
+        ]
+      }
+    },
+    {
+      type: "challenge", id: "build", label: "5. Build-a-Web ⬡",
+      data: {
+        kind: "rounds", title: "Build a Food Web", startLabel: "Start building ⬡",
+        intro: "5 rounds. Make the right call to assemble a healthy ecosystem.",
+        rounds: [
+          { title: "Round 1 of 5 — The Foundation", scenario: "You're starting a new meadow ecosystem. Energy has to enter somewhere.", constraints: ["☀️ Sunny field", "🌍 Good soil"], question: "What do you add FIRST?",
+            opts: [ {label:"Grass and wildflowers (producers)", detail:"Plants that capture sunlight."}, {label:"A pack of wolves", detail:"Top predators."}, {label:"Mushrooms", detail:"Decomposers."}, {label:"A herd of deer", detail:"Large herbivores."} ],
+            correct: 0, rightFeedback: "Producers come first — they capture the sun's energy and feed everything else. No producers, no ecosystem.", wrongFeedback: [null, "Wolves need prey, which need plants. You skipped the energy source.", "Decomposers need dead material to break down — nothing has lived or died yet.", "Deer need plants to eat. Add the producers first."] },
+          { title: "Round 2 of 5 — First Consumers", scenario: "Your meadow is full of grass. Now energy needs to move up.", constraints: ["🌱 Lots of grass"], question: "Which consumer fits best next?",
+            opts: [ {label:"Rabbits (herbivores)", detail:"Eat the grass."}, {label:"Eagles (carnivores)", detail:"Eat other animals."}, {label:"More grass", detail:"Add producers again."}, {label:"Sharks", detail:"Ocean predators."} ],
+            correct: 0, rightFeedback: "Herbivores eat the producers, moving energy up one level. Rabbits are a perfect first consumer for a grassy meadow.", wrongFeedback: [null, "Eagles eat animals — but there are no animals for them to eat yet. Add herbivores first.", "You already have producers. Energy needs to move UP now.", "Sharks live in the ocean, not a meadow!"] },
+          { title: "Round 3 of 5 — Predators", scenario: "Rabbits are multiplying fast and eating all the grass.", constraints: ["🐇 Too many rabbits"], question: "What keeps the rabbit population balanced?",
+            opts: [ {label:"Foxes (carnivores)", detail:"Predators that eat rabbits."}, {label:"More rabbits", detail:"Add more herbivores."}, {label:"Remove the grass", detail:"Take away their food."}, {label:"Mushrooms", detail:"Decomposers."} ],
+            correct: 0, rightFeedback: "A predator like a fox keeps herbivores in balance so they don't eat all the producers. This is how food webs stay stable.", wrongFeedback: [null, "More rabbits makes the problem worse.", "Removing the grass would starve the whole ecosystem.", "Decomposers don't eat live rabbits — they break down dead material."] },
+          { title: "Round 4 of 5 — Closing the Loop", scenario: "Plants and animals are living and dying. Dead material is starting to pile up.", constraints: ["🍂 Dead leaves & animals"], question: "What recycles the nutrients?",
+            opts: [ {label:"Fungi and bacteria (decomposers)", detail:"Break down dead matter."}, {label:"Add more foxes", detail:"More predators."}, {label:"The sun", detail:"More sunlight."}, {label:"Rocks", detail:"Non-living material."} ],
+            correct: 0, rightFeedback: "Decomposers break down the dead material and return nutrients to the soil, so producers can keep growing. The loop is now complete!", wrongFeedback: [null, "Foxes are predators, not recyclers.", "Sunlight powers producers but doesn't recycle dead matter.", "Rocks don't break down dead organisms."] },
+          { title: "Round 5 of 5 — A Disturbance", scenario: "A disease wipes out all the foxes. What happens to the meadow over time?", constraints: ["❌ No more foxes"], question: "What's the most likely result?",
+            opts: [ {label:"Rabbits boom, then overeat the grass, then crash", detail:"The web becomes unbalanced."}, {label:"Nothing changes", detail:"The ecosystem ignores it."}, {label:"The grass grows taller forever", detail:"More plants, no problems."}, {label:"The sun gets brighter", detail:"More energy enters."} ],
+            correct: 0, rightFeedback: "Without a predator, rabbits multiply unchecked, overeat the grass, and then their food runs out — so they crash too. Removing one species ripples through the whole web.", wrongFeedback: [null, "Removing a predator always ripples through the food web — it never does nothing.", "With no foxes, rabbits will eat the grass faster than it can grow.", "The disease has nothing to do with the sun."] }
+        ]
+      }
+    },
+    {
+      type: "challenge", id: "speed", label: "6. Speed Round ⚡",
+      data: {
+        kind: "timed", title: "Speed Round", startLabel: "Start ⚡", timer: 20,
+        intro: "20 seconds per question. Answer fast — if the timer runs out it counts as a miss!",
+        rounds: [
+          { question: "Grass is a…", opts: ["Producer", "Consumer", "Decomposer", "Predator"], correct: 0, exp: "Grass makes its own food from sunlight — a producer." },
+          { question: "A mushroom is a…", opts: ["Producer", "Consumer", "Decomposer", "Herbivore"], correct: 2, exp: "Fungi break down dead matter — decomposers." },
+          { question: "Arrows in a food chain point toward the…", opts: ["Food", "Eater", "Sun", "Soil"], correct: 1, exp: "Toward the eater — the direction energy flows." },
+          { question: "Energy passing to the next level is about…", opts: ["10%", "90%", "100%", "50%"], correct: 0, exp: "The 10% rule." },
+          { question: "A rabbit that eats only plants is a…", opts: ["Carnivore", "Omnivore", "Herbivore", "Producer"], correct: 2, exp: "Plants only = herbivore." },
+          { question: "Energy in an ecosystem starts with the…", opts: ["Soil", "Sun", "Water", "Bacteria"], correct: 1, exp: "The sun powers the producers." }
+        ]
+      }
+    },
+    {
+      type: "glossary", id: "words", label: "7. Word Bank",
+      data: {
+        intro: "Every word your test might use. Learn them precisely.",
+        terms: [
+          { t: "Ecosystem", d: "All the living and non-living things in one area interacting together." },
+          { t: "Producer", d: "A living thing that makes its own food from sunlight (e.g., plants, algae)." },
+          { t: "Consumer", d: "A living thing that eats other living things for energy." },
+          { t: "Decomposer", d: "Breaks down dead organisms and returns nutrients to the soil (fungi, bacteria)." },
+          { t: "Herbivore", d: "An animal that eats only plants." },
+          { t: "Carnivore", d: "An animal that eats only other animals." },
+          { t: "Omnivore", d: "An animal that eats both plants and animals." },
+          { t: "Photosynthesis", d: "The process plants use to make food from sunlight, water, and carbon dioxide." },
+          { t: "Food chain", d: "A single line showing the path of energy from one organism to the next." },
+          { t: "Food web", d: "Many food chains linked together, showing all the feeding relationships." },
+          { t: "Energy pyramid", d: "A diagram showing how energy decreases at each higher level of a food chain." },
+          { t: "Predator / Prey", d: "A predator hunts and eats another animal (the prey)." }
+        ]
+      }
+    },
+    {
+      type: "cheatsheet", id: "sheet", label: "8. Study Sheet ⎙",
+      data: {
+        title: "One-page study sheet", intro: "Print this and review it the night before the test.",
+        blocks: [
+          { title: "The big idea", wide: true, text: "Energy flows: Sun → Producers → Consumers → Decomposers. Producers make food from sunlight; consumers eat to get energy; decomposers recycle dead matter back into the soil." },
+          { title: "The three roles", items: ["Producer = makes its own food (plants)", "Consumer = eats other things (animals)", "Decomposer = recycles dead matter (fungi, bacteria)"] },
+          { title: "Three kinds of consumer", items: ["Herbivore = plants only", "Carnivore = animals only", "Omnivore = both"] },
+          { title: "Remember these rules", items: ["Arrows point toward the EATER", "Only ~10% of energy moves up each level", "Fewer animals at the top of the pyramid", "Energy starts at the SUN"] },
+          { title: "Test traps to avoid", wide: true, items: ["Mushrooms are decomposers, NOT producers", "Arrows show energy flow (toward the eater), not 'who points at food'", "A Venus flytrap is BOTH a producer and a consumer", "Remove one species and the WHOLE web is affected"] }
+        ]
+      }
+    },
+    {
+      type: "sequence", id: "order", label: "9. Put It In Order ⟳",
+      data: {
+        title: "Put it in order", intro: "Arrange the steps correctly to lock in the patterns.",
+        modes: [
+          { key: "energy", label: "Order the energy flow",
+            items: [
+              { id: "e1", label: "☀️ The Sun", why: "The original source of all the energy." },
+              { id: "e2", label: "🌱 Producers (grass)", why: "Capture sunlight through photosynthesis." },
+              { id: "e3", label: "🐇 Herbivores (rabbit)", why: "Eat the producers." },
+              { id: "e4", label: "🦊 Carnivores (fox)", why: "Eat the herbivores." },
+              { id: "e5", label: "🍄 Decomposers (fungi)", why: "Recycle the dead matter back to soil." }
+            ], correct: ["e1", "e2", "e3", "e4", "e5"] },
+          { key: "chain", label: "Order a food chain",
+            items: [
+              { id: "c1", label: "Grass", why: "Producer — start of the chain." },
+              { id: "c2", label: "Grasshopper", why: "Herbivore eats the grass." },
+              { id: "c3", label: "Frog", why: "Eats the grasshopper." },
+              { id: "c4", label: "Snake", why: "Eats the frog." },
+              { id: "c5", label: "Hawk", why: "Top predator — eats the snake." }
+            ], correct: ["c1", "c2", "c3", "c4", "c5"] }
+        ]
+      }
+    }
+  ]
+}
+;
+
+    // ============================================================
+    //  RENDERING ENGINE  — fixed. You never edit below this line.
+    // ============================================================
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('engine', () => ({
+            course: COURSE,
+            tab: COURSE.modules[0].id,
+            S: {},
+            slug: (COURSE.meta.title||'course').toLowerCase().replace(/[^a-z0-9]+/g,'_'),
+
+            init() {
+                for (const m of this.course.modules) {
+                    if (m.type === 'flashcards') {
+                        const saved = JSON.parse(localStorage.getItem(this.slug+'_'+m.id+'_mastered') || '[]');
+                        this.S[m.id] = { ci:0, ans:false, mastered:saved };
+                    } else if (m.type === 'challenge') {
+                        this.S[m.id] = { stage:0, pick:null, confirmed:false, score:0, history:[], timeLeft:0, timerRef:null };
+                    } else if (m.type === 'sequence') {
+                        this.S[m.id] = { modeKey:null, items:[], selected:[], done:false, perfect:false, correctOrder:[] };
+                    }
+                }
+            },
+
+            // ---- shared helpers ----
+            toneClass(t) {
+                return ({neutral:'text-gray-500', good:'text-emerald-400', info:'text-blue-400',
+                        alt:'text-blue-400', bad:'text-red-400', warn:'text-amber-400'})[t] || 'text-gray-500';
+            },
+            optLabel(o){ return (typeof o === 'string') ? o : o.label; },
+            optDetail(o){ return (typeof o === 'object' && o) ? (o.detail||'') : ''; },
+
+            // ---- spaced-repetition (shared across flashcard modules) ----
+            recordReview() {
+                const k = this.slug+'_review_dates';
+                const d = JSON.parse(localStorage.getItem(k) || '[]');
+                const today = new Date().toISOString().split('T')[0];
+                if (!d.includes(today)) { d.push(today); localStorage.setItem(k, JSON.stringify(d)); }
+            },
+            get streak() {
+                const d = JSON.parse(localStorage.getItem(this.slug+'_review_dates') || '[]');
+                if (!d.length) return 0;
+                let s = 1, cur = new Date(); cur.setHours(0,0,0,0);
+                for (let i = d.length-1; i >= 0; i--) {
+                    const rd = new Date(d[i]); rd.setHours(0,0,0,0);
+                    const diff = (cur - rd) / 86400000;
+                    if (diff <= 1) { if (diff === 1) s++; cur = rd; } else break;
+                }
+                return s;
+            },
+            get lastReviewedLabel() {
+                const d = JSON.parse(localStorage.getItem(this.slug+'_review_dates') || '[]');
+                if (!d.length) return 'never';
+                const diff = Math.floor((Date.now() - new Date(d[d.length-1])) / 86400000);
+                return diff===0 ? 'today' : diff===1 ? 'yesterday' : diff+' days ago';
+            },
+
+            // ---- flashcards ----
+            fcMaster(m) {
+                const st = this.S[m.id];
+                st.mastered = st.mastered.includes(st.ci) ? st.mastered.filter(i=>i!==st.ci) : [...st.mastered, st.ci];
+                localStorage.setItem(this.slug+'_'+m.id+'_mastered', JSON.stringify(st.mastered));
+            },
+
+            // ---- sequence ----
+            seqStart(m, key) {
+                const st = this.S[m.id];
+                const mode = m.data.modes.find(x => x.key === key);
+                st.modeKey = key;
+                st.items = [...mode.items].sort(() => Math.random()-0.5);
+                st.correctOrder = mode.correct.map(id => mode.items.find(it => it.id === id));
+                st.selected = []; st.done = false; st.perfect = false;
+            },
+            seqModeLabel(m) {
+                const st = this.S[m.id];
+                const mode = m.data.modes.find(x => x.key === st.modeKey);
+                return mode ? mode.label : '';
+            },
+            seqCheck(m) {
+                const st = this.S[m.id];
+                st.done = true;
+                st.perfect = st.selected.every((item,i) => item.id === st.correctOrder[i].id);
+            },
+
+            // ---- challenge (quiz / rounds / timed / classify) ----
+            chStart(m) {
+                const st = this.S[m.id];
+                st.stage = 1; st.pick = null; st.confirmed = false; st.score = 0; st.history = [];
+                if (m.data.kind === 'timed') this.chTimer(m);
+            },
+            chTimer(m) {
+                const st = this.S[m.id];
+                const r = m.data.rounds[st.stage-1];
+                const dur = r.timer || m.data.timer || 30;
+                st.timeLeft = dur;
+                clearInterval(st.timerRef);
+                st.timerRef = setInterval(() => {
+                    st.timeLeft--;
+                    if (st.timeLeft <= 0) {
+                        clearInterval(st.timerRef);
+                        if (!st.confirmed) { st.pick = -1; this.chConfirm(m); }
+                    }
+                }, 1000);
+            },
+            chPick(m, i) {
+                const st = this.S[m.id];
+                if (st.confirmed) return;
+                st.pick = i;
+                if (m.data.kind === 'timed') this.chConfirm(m);
+            },
+            chConfirm(m) {
+                const st = this.S[m.id];
+                if (st.confirmed || st.pick === null) return;
+                clearInterval(st.timerRef);
+                st.confirmed = true;
+                const correct = st.pick === m.data.rounds[st.stage-1].correct;
+                st.history.push(correct);
+                if (correct) st.score++;
+            },
+            chAdvance(m) {
+                const st = this.S[m.id];
+                if (st.stage < m.data.rounds.length) {
+                    st.stage++; st.pick = null; st.confirmed = false;
+                    if (m.data.kind === 'timed') this.chTimer(m);
+                } else {
+                    st.stage = m.data.rounds.length + 1;
+                    clearInterval(st.timerRef);
+                    const k = this.slug+'_'+m.id+'_best';
+                    const best = JSON.parse(localStorage.getItem(k) || 'null');
+                    if (best === null || st.score > best) localStorage.setItem(k, st.score);
+                    this.recordReview();
+                }
+            },
+            chCorrect(m) {
+                const st = this.S[m.id];
+                return st.pick === m.data.rounds[st.stage-1].correct;
+            },
+            chFeedback(m) {
+                const st = this.S[m.id];
+                const r = m.data.rounds[st.stage-1];
+                if (st.pick === -1) return r.exp || "Time ran out — review this one and try again.";
+                if (r.exp) return r.exp;
+                if (this.chCorrect(m)) return r.rightFeedback || "Correct!";
+                return (r.wrongFeedback && r.wrongFeedback[st.pick]) || "Not quite — review and try again.";
+            },
+            chOptClass(m, oi) {
+                const st = this.S[m.id];
+                const r = m.data.rounds[st.stage-1];
+                if (st.confirmed) {
+                    if (oi === r.correct) return 'border-emerald-500 bg-emerald-950/20';
+                    if (oi === st.pick) return 'border-red-500 bg-red-950/20';
+                    return 'border-gray-800 bg-gray-950 opacity-50';
+                }
+                return st.pick === oi ? 'border-purple-500 bg-purple-950/20' : 'border-gray-800 bg-gray-950 hover:bg-gray-900';
+            },
+            bestScore(m) {
+                return JSON.parse(localStorage.getItem(this.slug+'_'+m.id+'_best') || 'null');
+            },
+            resultMsg(m) {
+                const st = this.S[m.id];
+                const total = m.data.rounds.length;
+                const pct = st.score / total;
+                const kid = this.course.meta.learner === 'kid';
+                if (pct === 1) return kid ? "Perfect! You really know this. 🌟" : "Perfect score — you've got this cold.";
+                if (pct >= 0.7) return kid ? "Great job! Review the ones you missed and try again." : "Strong. Review the misses and run it again.";
+                return kid ? "Good try! Look back at the cards, then give it another go. You'll get it!" : "Good start — review the material and retry.";
+            },
+        }));
+    });
+    </script>
+</body>
+</html>

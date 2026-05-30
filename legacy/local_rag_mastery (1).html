@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Context Lab — Local RAG Mastery Course</title>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4/dist/index.global.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #030712; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .tab-active { border-color: #a855f7; color: #c084fc; background: rgba(168, 85, 247, 0.08); }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        [x-cloak] { display: none !important; }
+        .animate-fade { animation: fadeIn 0.25s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        details > summary { list-style: none; cursor: pointer; }
+        details > summary::-webkit-details-marker { display: none; }
+        pre.code { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; line-height: 1.55; white-space: pre; overflow-x: auto; }
+        /* VS Code Dark+ token colors for the "your version" code box */
+        .vsc { background:#1e1e1e; }
+        .vsc .ln { display:flex; padding:0 0; border-left:3px solid transparent; transition:background .12s,border-color .12s; cursor:pointer; }
+        .vsc .ln:hover { background:#2a2d2e; }
+        .vsc .ln .gutter { width:34px; flex:none; text-align:right; padding-right:10px; color:#858585; user-select:none; }
+        .vsc .ln .lc { white-space:pre; flex:1; }
+        .vsc .ln.hl { background:rgba(168,85,247,0.16); border-left-color:#a855f7; }
+        .vsc .ln.dim { opacity:.32; }
+        .tok-kw   { color:#569cd6; }   /* keywords: def, for, if, import */
+        .tok-fn   { color:#dcdcaa; }   /* function names */
+        .tok-str  { color:#ce9178; }   /* strings */
+        .tok-num  { color:#b5cea8; }   /* numbers */
+        .tok-com  { color:#6a9955; font-style:italic; } /* comments */
+        .tok-cls  { color:#4ec9b0; }   /* class / builtin types */
+        .tok-self { color:#569cd6; }
+        .tok-op   { color:#d4d4d4; }
+        .tok-var  { color:#9cdcfe; }   /* identifiers / params */
+        @media print {
+            body { background: #fff !important; color: #000 !important; }
+            header, .no-print { display: none !important; }
+            .cheat-card { break-inside: avoid; border: 1px solid #ccc !important; background: #fff !important; }
+            .cheat-card * { color: #000 !important; }
+            .cheat-accent { color: #6b21a8 !important; }
+        }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen selection:bg-purple-500 selection:text-white bg-gray-950" x-data="ragCourse">
+
+    <!-- HEADER -->
+    <header class="border-b border-gray-800 bg-gray-900/40 backdrop-blur sticky top-0 z-50 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="h-3 w-3 rounded-full bg-purple-500 animate-pulse"></div>
+                <h1 class="text-base font-bold tracking-wider text-gray-100 font-mono uppercase">Local Context Lab — RAG Mastery</h1>
+            </div>
+            <div class="font-mono text-xs text-gray-500">Roll-your-own local RAG &nbsp;//&nbsp; Architecture · Code · Closed loop</div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- TABS -->
+        <div class="flex border-b border-gray-800 overflow-x-auto scrollbar-hide mb-8 gap-1 font-mono text-xs">
+            <button @click="tab='thesis'"  :class="tab==='thesis'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">1. The Thesis</button>
+            <button @click="tab='pipeline'":class="tab==='pipeline'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">2. Pipeline, Stage by Stage</button>
+            <button @click="tab='map'"     :class="tab==='map'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">3. Architecture Map</button>
+            <button @click="tab='code'"    :class="tab==='code'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">4. The Code ⌨</button>
+            <button @click="tab='myingest'":class="tab==='myingest'?'tab-active':'border-transparent text-amber-400/80 hover:text-amber-300'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">★ Your ingest.py 🔎</button>
+            <button @click="tab='build'"   :class="tab==='build'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">5. Build Path</button>
+            <button @click="tab='recall'"  :class="tab==='recall'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">6. Active Recall</button>
+            <button @click="tab='drills'"  :class="tab==='drills'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">7. Drills</button>
+            <button @click="tab='glossary'":class="tab==='glossary'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">8. Glossary</button>
+            <button @click="tab='cheat'"   :class="tab==='cheat'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">9. Cheat-Sheet ⎙</button>
+            <button @click="tab='quiz'"    :class="tab==='quiz'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">10. Quiz ✦</button>
+            <button @click="tab='game'"    :class="tab==='game'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">11. Build Game ⬡</button>
+            <button @click="tab='speed'"   :class="tab==='speed'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">12. Speed Round ⚡</button>
+            <button @click="tab='gauntlet'":class="tab==='gauntlet'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">13. Failure Gauntlet 🎯</button>
+            <button @click="tab='sequence'":class="tab==='sequence'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">14. Sequence ⟳</button>
+        </div>
+
+        <!-- ============ TAB 1: THESIS ============ -->
+        <div x-show="tab==='thesis'" class="space-y-6 animate-fade" x-cloak>
+            <div class="bg-gradient-to-r from-purple-950/30 to-gray-900/60 border border-purple-900/40 p-6 rounded-xl">
+                <h3 class="text-xs font-bold tracking-widest text-purple-400 uppercase font-mono mb-2">// The one idea everything hangs off</h3>
+                <h2 class="text-xl font-black text-white mb-3 tracking-tight">"The LLM is not the system. The system is the loop around the LLM."</h2>
+                <p class="text-gray-300 leading-relaxed text-sm max-w-4xl">
+                    A RAG product is not "chat with your docs." It is a closed loop:
+                    <span class="text-purple-300 font-semibold">Data → Retrieval → Generation → Logging → Feedback → Evaluation → Improvement</span>.
+                    The model is one swappable component. The durable engineering — the part that makes an AI product
+                    <em>safe, auditable, and improvable</em> — is the deterministic machinery wrapped around it: how you chunk, what you retrieve,
+                    how you constrain generation, what you log, and how you measure whether a change made things better or worse.
+                    Master that loop here and you can build it for any company.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6 text-sm">
+                <div class="bg-gray-900/60 border border-gray-800 p-5 rounded-xl space-y-2">
+                    <div class="text-purple-400 font-mono font-bold text-[11px]">LAYER 01 // RETRIEVAL</div>
+                    <h4 class="font-bold text-white">Find the right evidence</h4>
+                    <p class="text-gray-400 leading-relaxed">Ingest, chunk, embed, store, and fetch the top-k chunks for a query. If the right chunk isn't here, no model can save you. <strong>Debug retrieval before you ever touch the prompt.</strong></p>
+                </div>
+                <div class="bg-gray-900/60 border border-gray-800 p-5 rounded-xl space-y-2">
+                    <div class="text-emerald-400 font-mono font-bold text-[11px]">LAYER 02 // GENERATION</div>
+                    <h4 class="font-bold text-white">Answer only from evidence</h4>
+                    <p class="text-gray-400 leading-relaxed">A constrained prompt forces the model to answer from retrieved context, cite sources, and refuse when context is missing. Grounded before smart.</p>
+                </div>
+                <div class="bg-gray-900/60 border border-gray-800 p-5 rounded-xl space-y-2">
+                    <div class="text-gray-300 font-mono font-bold text-[11px]">LAYER 03 // THE LOOP</div>
+                    <h4 class="font-bold text-white">Observe, label, improve</h4>
+                    <p class="text-gray-400 leading-relaxed">Every run leaves a trace in SQLite. Feedback classifies failures. Evals tell you if a change helped. This is what turns a demo into a product.</p>
+                </div>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
+                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">The five design principles — say them out loud, they justify every choice</h3>
+                <div class="grid md:grid-cols-2 gap-3 text-xs">
+                    <div class="bg-gray-950 border border-gray-800 rounded-lg p-4 space-y-1">
+                        <div class="font-bold text-purple-400 mono">Local-first</div>
+                        <p class="text-gray-400 leading-relaxed">All core data and inference stay on the machine (Ollama + Chroma + SQLite). No cloud dependency. This is the foundation of the "closed-loop, safer stack" story — nothing leaves the boundary you control.</p>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-lg p-4 space-y-1">
+                        <div class="font-bold text-purple-400 mono">Grounded before smart</div>
+                        <p class="text-gray-400 leading-relaxed">Prioritize source-grounded retrieval and citations over fluent prose. A confidently wrong answer is worse than "the context is insufficient."</p>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-lg p-4 space-y-1">
+                        <div class="font-bold text-purple-400 mono">Retrieval before generation</div>
+                        <p class="text-gray-400 leading-relaxed">Build and debug the retrieval-only CLI first. Confirm the right chunks come back before you ask the LLM to write anything. Most "bad answers" are bad retrieval.</p>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-lg p-4 space-y-1">
+                        <div class="font-bold text-purple-400 mono">Human-in-the-loop</div>
+                        <p class="text-gray-400 leading-relaxed">The system suggests; the human decides. Feedback drives improvement. No autonomous mutation of source material in the MVP.</p>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-lg p-4 space-y-1 md:col-span-2">
+                        <div class="font-bold text-purple-400 mono">Observable by default</div>
+                        <p class="text-gray-400 leading-relaxed">Every answer leaves a trace: query, retrieved chunks, answer, model, sources cited, feedback, failure notes. You cannot improve a system you cannot see.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-3">
+                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">The maturity ladder — never skip a rung</h3>
+                <p class="text-xs text-gray-400">The single biggest mistake in AI products is adding autonomy before observability. The correct path is bottom-up:</p>
+                <div class="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+                    <span class="px-2.5 py-1 rounded bg-purple-950 text-purple-300 border border-purple-900/50">Grounded answers</span><span class="text-gray-600">→</span>
+                    <span class="px-2.5 py-1 rounded bg-purple-950 text-purple-300 border border-purple-900/50">Citations</span><span class="text-gray-600">→</span>
+                    <span class="px-2.5 py-1 rounded bg-purple-950 text-purple-300 border border-purple-900/50">Logs</span><span class="text-gray-600">→</span>
+                    <span class="px-2.5 py-1 rounded bg-purple-950 text-purple-300 border border-purple-900/50">Feedback</span><span class="text-gray-600">→</span>
+                    <span class="px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-900/50">Evals</span><span class="text-gray-600">→</span>
+                    <span class="px-2.5 py-1 rounded bg-amber-950 text-amber-300 border border-amber-900/50">Recommendations</span><span class="text-gray-600">→</span>
+                    <span class="px-2.5 py-1 rounded bg-red-950 text-red-300 border border-red-900/50">Human-approved actions</span><span class="text-gray-600">→</span>
+                    <span class="px-2.5 py-1 rounded bg-red-950 text-red-300 border border-red-900/50">Limited automation</span>
+                </div>
+                <p class="text-xs text-gray-500 italic pt-1">When you advise a company on a "safer AI stack," this ladder is the spine of the advice: prove the system is grounded and observable before you give it any power to act.</p>
+            </div>
+        </div>
+
+        <!-- ============ TAB 2: PIPELINE ============ -->
+        <div x-show="tab==='pipeline'" class="space-y-4 animate-fade" x-cloak>
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">Speak to every stage: role, why, the alternative, the tradeoff</h3>
+                <p class="text-xs text-gray-400 mt-1">Expand each stage. The <span class="text-amber-400 font-semibold">Gotcha</span> is the subtle failure that bites people building their first RAG — know it cold.</p>
+            </div>
+
+            <template x-for="c in pipeline" :key="c.key">
+                <details class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden group">
+                    <summary class="p-4 flex items-center justify-between hover:bg-gray-900/60 transition">
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded" :class="c.badgeClass" x-text="c.layer"></span>
+                            <span class="font-bold text-white text-sm" x-text="c.name"></span>
+                        </div>
+                        <span class="text-gray-600 font-mono text-xs group-open:rotate-90 transition-transform">▶</span>
+                    </summary>
+                    <div class="px-4 pb-5 pt-1 space-y-3 text-xs border-t border-gray-800/60">
+                        <div><span class="text-gray-500 uppercase tracking-wider text-[10px] font-mono block mb-0.5">Role in the system</span><p class="text-gray-300 leading-relaxed" x-text="c.role"></p></div>
+                        <div><span class="text-emerald-400 uppercase tracking-wider text-[10px] font-mono block mb-0.5">Why this choice</span><p class="text-gray-300 leading-relaxed" x-text="c.why"></p></div>
+                        <div><span class="text-blue-400 uppercase tracking-wider text-[10px] font-mono block mb-0.5">The alternative &amp; when it'd win</span><p class="text-gray-300 leading-relaxed" x-text="c.alt"></p></div>
+                        <div><span class="text-red-400 uppercase tracking-wider text-[10px] font-mono block mb-0.5">The tradeoff / what it costs you</span><p class="text-gray-300 leading-relaxed" x-text="c.tradeoff"></p></div>
+                        <div class="bg-amber-950/20 border border-amber-900/40 rounded-lg p-3">
+                            <span class="text-amber-400 uppercase tracking-wider text-[10px] font-mono block mb-1">⚠ Gotcha &amp; how you handle it</span>
+                            <p class="text-amber-200/90 leading-relaxed italic mb-1" x-text="c.trapQ"></p>
+                            <p class="text-gray-300 leading-relaxed" x-text="c.trapA"></p>
+                        </div>
+                    </div>
+                </details>
+            </template>
+        </div>
+
+        <!-- ============ TAB 3: ARCHITECTURE MAP ============ -->
+        <div x-show="tab==='map'" class="space-y-6 animate-fade" x-cloak>
+            <div class="bg-gray-900 border border-gray-800 p-5 rounded-xl space-y-4">
+                <div>
+                    <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">Two data flows — narrate each one</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Click any node to see what it does and the failure modes it owns. Top row = ingestion path (offline). Bottom row = query path (online). The band underneath = the closed loop.</p>
+                </div>
+                <div class="w-full space-y-3 font-mono text-xs overflow-x-auto p-3 bg-gray-950 rounded-xl border border-gray-800/80 min-w-[860px] scrollbar-hide select-none">
+
+                    <div class="text-[9px] font-bold text-gray-500 uppercase tracking-widest px-1">Ingestion path — run offline whenever sources change</div>
+                    <div class="grid grid-cols-11 gap-2 items-stretch">
+                        <button @click="node='raw'" :class="nodeClass('raw')" class="col-span-2 p-2 border rounded text-left"><div class="font-bold text-white text-[10px]">data/raw/*.md</div><div class="text-[9px] text-purple-400 font-sans mt-0.5">Source docs</div></button>
+                        <div class="flex items-center justify-center text-gray-800 font-bold">➔</div>
+                        <button @click="node='chunk'" :class="nodeClass('chunk')" class="col-span-2 p-2 border rounded text-left"><div class="font-bold text-white text-[10px]">Chunker</div><div class="text-[9px] text-purple-400 font-sans mt-0.5">+ metadata</div></button>
+                        <div class="flex items-center justify-center text-gray-800 font-bold">➔</div>
+                        <button @click="node='embed'" :class="nodeClass('embed')" class="col-span-2 p-2 border rounded text-left"><div class="font-bold text-white text-[10px]">nomic-embed-text</div><div class="text-[9px] text-purple-400 font-sans mt-0.5">via Ollama</div></button>
+                        <div class="flex items-center justify-center text-gray-800 font-bold">➔</div>
+                        <button @click="node='chroma'" :class="nodeClass('chroma')" class="col-span-2 p-2 border rounded text-left"><div class="font-bold text-white text-[10px]">Chroma upsert</div><div class="text-[9px] text-emerald-400 font-sans mt-0.5">vector store</div></button>
+                    </div>
+
+                    <div class="text-[9px] font-bold text-gray-500 uppercase tracking-widest px-1 pt-2">Query path — runs per user question</div>
+                    <div class="grid grid-cols-11 gap-2 items-stretch">
+                        <button @click="node='query'" :class="nodeClass('query')" class="col-span-2 p-2 border rounded text-left"><div class="font-bold text-white text-[10px]">User query</div><div class="text-[9px] text-purple-400 font-sans mt-0.5">ask.py</div></button>
+                        <div class="flex items-center justify-center text-gray-800 font-bold">➔</div>
+                        <button @click="node='retrieve'" :class="nodeClass('retrieve')" class="col-span-2 p-2 border rounded text-left"><div class="font-bold text-white text-[10px]">Retriever</div><div class="text-[9px] text-purple-400 font-sans mt-0.5">embed + top-k</div></button>
+                        <div class="flex items-center justify-center text-gray-800 font-bold">➔</div>
+                        <button @click="node='prompt'" :class="nodeClass('prompt')" class="col-span-2 p-2 border rounded text-left"><div class="font-bold text-white text-[10px]">Prompt builder</div><div class="text-[9px] text-purple-400 font-sans mt-0.5">constrained ctx</div></button>
+                        <div class="flex items-center justify-center text-gray-800 font-bold">➔</div>
+                        <button @click="node='gen'" :class="nodeClass('gen')" class="col-span-2 p-2 border rounded text-left"><div class="font-bold text-white text-[10px]">llama3.1:8b</div><div class="text-[9px] text-emerald-400 font-sans mt-0.5">answer + cites</div></button>
+                    </div>
+
+                    <div class="w-full pt-2">
+                        <button @click="node='loop'" :class="node==='loop'?'border-purple-500 bg-purple-950/30 text-purple-300':'border-gray-800 text-gray-300 hover:border-gray-700'" class="w-full p-2 border rounded-lg flex items-center justify-between px-4">
+                            <span class="text-[9px] text-emerald-500 font-bold tracking-wider">[CLOSED LOOP]</span>
+                            <span class="font-bold text-xs text-gray-300">SQLite run log → feedback (helpful? failure type?) → eval set → change one thing → re-run</span>
+                            <span class="text-emerald-500 text-xs">⟳</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-4 bg-black/60 rounded-xl border border-purple-900/30 space-y-2">
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-purple-400 block" x-text="'// ' + (nodes[node]?.title || 'Click a node')"></span>
+                    <p class="text-sm text-white font-sans" x-text="nodes[node]?.role || 'Click any node above to inspect its role and failure modes.'"></p>
+                    <pre class="whitespace-pre-wrap font-sans text-xs leading-relaxed text-gray-300" x-text="nodes[node]?.uses || ''"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ TAB 4: THE CODE ============ -->
+        <div x-show="tab==='code'" class="space-y-5 animate-fade" x-cloak>
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">The whole codebase — read it in build order</h3>
+                <p class="text-xs text-gray-400 mt-1">Real, runnable Python for an Ollama + Chroma + SQLite local RAG. Pick a file. The annotations on the right explain <em>why</em> the code is shaped this way — that's the part that makes you an expert, not just a copy-paster.</p>
+            </div>
+
+            <div class="grid lg:grid-cols-[260px_1fr] gap-4">
+                <!-- file tree -->
+                <div class="bg-gray-950 border border-gray-800 rounded-xl p-3 h-fit lg:sticky lg:top-24 font-mono text-xs space-y-0.5">
+                    <div class="text-[10px] text-gray-500 uppercase tracking-widest px-2 pb-2">local-rag-lab/app/</div>
+                    <template x-for="(f,i) in files" :key="f.name">
+                        <button @click="fileI=i"
+                            :class="fileI===i ? 'bg-purple-950/40 text-purple-300 border-purple-800/60' : 'text-gray-400 hover:text-gray-200 border-transparent'"
+                            class="w-full text-left px-2.5 py-1.5 rounded border flex items-center justify-between gap-2">
+                            <span x-text="f.name"></span>
+                            <span class="text-[9px] text-gray-600" x-text="f.step"></span>
+                        </button>
+                    </template>
+                    <div class="text-[10px] text-gray-600 px-2 pt-3 leading-relaxed">Run order:<br>healthcheck → ingest → retrieve → ask → eval</div>
+                </div>
+
+                <!-- code + notes -->
+                <div class="space-y-4 min-w-0">
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                        <div class="bg-gray-900 px-4 py-2.5 border-b border-gray-800 flex items-center justify-between font-mono text-xs">
+                            <span class="text-purple-300 font-bold" x-text="'app/' + files[fileI].name"></span>
+                            <span class="text-gray-500" x-text="files[fileI].tag"></span>
+                        </div>
+                        <pre class="code text-gray-300 p-4 max-h-[520px] overflow-auto" x-text="files[fileI].code"></pre>
+                    </div>
+
+                    <div class="bg-gray-900 border border-purple-900/30 rounded-xl p-4 space-y-2.5">
+                        <span class="text-[10px] font-mono uppercase tracking-widest text-purple-400 block">// Why it's written this way</span>
+                        <template x-for="n in files[fileI].notes" :key="n">
+                            <p class="text-xs text-gray-300 leading-relaxed pl-3 border-l-2 border-purple-900/40" x-html="n"></p>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ TAB: YOUR INGEST.PY WALKTHROUGH ============ -->
+        <div x-show="tab==='myingest'" class="space-y-5 animate-fade" x-cloak>
+            <div class="bg-gradient-to-r from-amber-950/20 to-gray-900/60 border border-amber-900/40 rounded-xl p-5">
+                <h3 class="text-xs font-bold tracking-widest text-amber-400 uppercase font-mono mb-2">// Your code, annotated</h3>
+                <h2 class="text-lg font-black text-white mb-2">The ingest.py you hand-typed — what each part does and why it matters</h2>
+                <p class="text-gray-300 text-sm leading-relaxed max-w-4xl">This whole file <em>is</em> the offline ingestion path — stages 01→04 of the pipeline (read → chunk → embed → store). Nothing here is queried yet; <code class="mono text-amber-300">retrieve.py</code> later reads exactly what this writes. That means every decision in this file silently sets the ceiling on retrieval quality. Read your code section by section below — the right column explains the <span class="text-emerald-400">why</span> and the <span class="text-blue-400">how-it-fits</span>, and flags what you'd evolve next.</p>
+            </div>
+
+            <div class="grid lg:grid-cols-[1fr_1fr] gap-4 items-start">
+                <!-- code, sticky -->
+                <div class="lg:sticky lg:top-24">
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                        <div class="bg-gray-900 px-4 py-2.5 border-b border-gray-800 flex items-center justify-between font-mono text-xs">
+                            <span class="text-amber-300 font-bold">app/ingest.py</span>
+                            <span class="flex items-center gap-2">
+                                <span x-show="activeSection" class="text-purple-300" x-text="activeSection?('§'+activeSection+' highlighted'):''"></span>
+                                <button x-show="activeSection" @click="activeSection=null" class="text-gray-500 hover:text-gray-300 border border-gray-700 rounded px-1.5">clear</button>
+                                <span x-show="!activeSection" class="text-gray-500">your version</span>
+                            </span>
+                        </div>
+                        <pre class="code vsc p-3 max-h-[600px] overflow-auto"><template x-for="(line,li) in myIngestLines" :key="li"><div class="ln" :class="lineClass(li+1)" @click="selectSectionForLine(li+1)"><span class="gutter" x-text="li+1"></span><span class="lc" x-html="line.html"></span></div></template></pre>
+                    </div>
+                    <p class="text-[11px] text-gray-500 mt-2 font-mono">Tip: click a <span class="text-purple-300">"What it does"</span> card on the right to highlight its lines here — or click any line of code to jump to its explanation.</p>
+                </div>
+
+                <!-- section annotations -->
+                <div class="space-y-3">
+                    <template x-for="s in myIngest" :key="s.n">
+                        <div class="bg-gray-900 border rounded-xl p-4 space-y-2 transition-colors" :class="activeSection===s.n?'border-purple-600/70 ring-1 ring-purple-700/40':'border-gray-800'" :id="'sec-'+s.n">
+                            <button @click="setSection(s.n)" class="w-full text-left flex items-center gap-2 group">
+                                <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded" :class="activeSection===s.n?'bg-purple-700 text-white':'bg-amber-950 text-amber-300'" x-text="'§'+s.n"></span>
+                                <span class="font-bold text-white text-sm group-hover:text-purple-300 transition-colors" x-text="s.title"></span>
+                                <span class="text-[9px] font-mono ml-auto flex items-center gap-2"><span class="text-gray-500" x-text="'lines '+s.lines[0]+'–'+s.lines[1]"></span><span class="text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">highlight ↰</span></span>
+                            </button>
+                            <div><button @click="setSection(s.n)" class="text-left w-full"><span class="text-gray-500 uppercase tracking-wider text-[10px] font-mono block mb-0.5 hover:text-purple-300">▸ What it does</span></button><p class="text-gray-300 text-xs leading-relaxed" x-html="s.what"></p></div>
+                            <div><span class="text-emerald-400 uppercase tracking-wider text-[10px] font-mono block mb-0.5">Why it's necessary</span><p class="text-gray-300 text-xs leading-relaxed" x-html="s.why"></p></div>
+                            <div><span class="text-blue-400 uppercase tracking-wider text-[10px] font-mono block mb-0.5">How it fits the whole RAG</span><p class="text-gray-300 text-xs leading-relaxed" x-html="s.fit"></p></div>
+                            <div x-show="s.next" class="bg-amber-950/20 border border-amber-900/40 rounded-lg p-2.5">
+                                <span class="text-amber-400 uppercase tracking-wider text-[10px] font-mono block mb-0.5">↗ What you'd evolve next</span>
+                                <p class="text-amber-200/90 text-xs leading-relaxed" x-html="s.next"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-3">
+                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">The one decision worth understanding deeply: rebuild vs. upsert</h3>
+                <div class="grid md:grid-cols-2 gap-3 text-xs">
+                    <div class="bg-gray-950 border border-emerald-900/30 rounded-lg p-3 space-y-1">
+                        <div class="font-bold text-emerald-400 mono">Your choice: delete_collection then add (rebuild)</div>
+                        <p class="text-gray-400 leading-relaxed">Every run wipes the collection and re-indexes from scratch. <strong>Pro:</strong> dead simple, and the index always exactly matches what's on disk — no stale or orphaned chunks, ever. Perfect for an MVP where you re-ingest the whole small corpus each time.</p>
+                    </div>
+                    <div class="bg-gray-950 border border-blue-900/30 rounded-lg p-3 space-y-1">
+                        <div class="font-bold text-blue-400 mono">The alternative: upsert with deterministic IDs</div>
+                        <p class="text-gray-400 leading-relaxed">Re-embed only what changed; same <code class="mono">id</code> overwrites. <strong>Pro:</strong> fast incremental updates on a large corpus. <strong>Con:</strong> if a doc shrinks, old chunk IDs linger as orphans unless you reconcile. More moving parts.</p>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 italic">For a single-user local lab, your rebuild approach is the <em>right</em> call — simpler and self-correcting. Reach for upsert only when re-embedding everything starts to feel slow. Knowing <em>when</em> to switch is the expert move, and you've already picked correctly for where you are.</p>
+            </div>
+        </div>
+
+        <!-- ============ TAB 5: BUILD PATH ============ -->
+        <div x-show="tab==='build'" class="space-y-5 animate-fade" x-cloak>
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">Eight milestones — build in this exact order</h3>
+                <p class="text-xs text-gray-400 mt-1">Each milestone has an acceptance criterion. Don't move on until it's green. Resist the urge to add a UI, Docker, or agents early — those hide the pipeline behavior you're trying to learn.</p>
+            </div>
+
+            <template x-for="m in milestones" :key="m.n">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-3">
+                    <div class="flex items-center gap-3">
+                        <span class="text-[11px] font-mono font-bold px-2.5 py-1 rounded bg-purple-950 text-purple-300" x-text="'M'+m.n"></span>
+                        <h3 class="font-bold text-white text-sm" x-text="m.title"></h3>
+                    </div>
+                    <p class="text-xs text-gray-400 leading-relaxed" x-text="m.goal"></p>
+                    <div class="grid md:grid-cols-2 gap-3 text-xs">
+                        <div class="bg-gray-950 border border-gray-800 rounded-lg p-3">
+                            <span class="text-purple-400 font-mono uppercase text-[10px] tracking-wider block mb-1">Files / commands</span>
+                            <pre class="mono text-[11px] text-gray-300 whitespace-pre-wrap" x-text="m.files"></pre>
+                        </div>
+                        <div class="bg-gray-950 border border-emerald-900/30 rounded-lg p-3">
+                            <span class="text-emerald-400 font-mono uppercase text-[10px] tracking-wider block mb-1">✓ Acceptance criterion</span>
+                            <p class="text-gray-300 leading-relaxed" x-text="m.accept"></p>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <div class="bg-gray-900 border border-amber-900/40 rounded-xl p-5 space-y-2">
+                <span class="text-amber-400 text-[10px] font-mono uppercase tracking-widest block">The daily development rhythm</span>
+                <pre class="mono text-[11px] text-gray-300 whitespace-pre-wrap leading-relaxed">uv run python app/ingest.py
+uv run python app/retrieve.py "test question"   # debug retrieval FIRST
+uv run python app/ask.py "test question"        # then generation
+uv run python app/eval.py                        # did it regress?
+uv run pytest</pre>
+                <p class="text-xs text-gray-500 italic">When an answer is bad, always run retrieve.py before you touch the prompt. 80% of "the LLM is dumb" turns out to be "the right chunk was never retrieved."</p>
+            </div>
+        </div>
+
+        <!-- ============ TAB 6: ACTIVE RECALL ============ -->
+        <div x-show="tab==='recall'" class="space-y-6 animate-fade" x-cloak x-init="$watch('tab', v => { if(v==='recall') recordReview(); })">
+            <div class="max-w-2xl mx-auto bg-gray-900/50 border border-gray-800 rounded-xl p-4 flex items-center justify-between gap-6 font-mono text-xs">
+                <span class="text-gray-400">Progress:</span>
+                <div class="flex-1 h-2 bg-gray-950 rounded-full overflow-hidden border border-gray-800">
+                    <div class="h-full bg-gradient-to-r from-purple-600 to-fuchsia-500 transition-all" :style="'width:'+(mastered.length/cards.length*100)+'%'"></div>
+                </div>
+                <span class="text-purple-300 font-bold" x-text="mastered.length+'/'+cards.length+' mastered'"></span>
+            </div>
+            <div class="max-w-2xl mx-auto flex items-center justify-center gap-6 font-mono text-[11px] text-gray-500">
+                <span>🔥 Streak: <span class="text-amber-400 font-bold" x-text="streak"></span> day(s)</span>
+                <span>Last reviewed: <span class="text-gray-300" x-text="lastReviewedLabel"></span></span>
+            </div>
+            <div class="max-w-2xl mx-auto bg-gray-900 border border-gray-800 rounded-xl p-6 text-center space-y-6">
+                <div class="flex justify-between items-center text-xs font-mono uppercase tracking-widest text-purple-400">
+                    <span>Active recall</span>
+                    <span x-text="'Card '+(ci+1)+' of '+cards.length"></span>
+                </div>
+                <div class="min-h-[150px] flex items-center justify-center px-4">
+                    <p class="leading-relaxed text-white transition-all" :class="ans?'text-gray-300 text-xs text-left bg-gray-950 p-4 rounded-lg border border-gray-800 font-sans':'text-base font-medium'" x-text="ans?cards[ci].a:cards[ci].q"></p>
+                </div>
+                <div class="pt-4 border-t border-gray-800 flex justify-between items-center font-mono text-xs">
+                    <button @click="ans=!ans" class="bg-gray-800 hover:bg-gray-700 font-bold px-4 py-2 rounded" x-text="ans?'Show question':'Reveal answer'"></button>
+                    <div class="flex gap-2">
+                        <button @click="toggleMastered(cards[ci].id)" :class="mastered.includes(cards[ci].id)?'bg-emerald-950 border border-emerald-500/40 text-emerald-300':'bg-gray-900 border border-gray-800 text-gray-400'" class="px-3 py-2 rounded font-bold"><span x-text="mastered.includes(cards[ci].id)?'✓ Mastered':'Mark mastered'"></span></button>
+                        <button @click="ans=false; ci=(ci+1)%cards.length" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded font-bold text-white">Next ➔</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ TAB 7: DRILLS ============ -->
+        <div x-show="tab==='drills'" class="space-y-8 animate-fade" x-cloak>
+            <template x-for="d in drills" :key="d.key">
+                <div class="bg-gray-900 border border-gray-800 p-6 rounded-xl max-w-3xl mx-auto space-y-4">
+                    <span class="tracking-wider font-bold uppercase text-xs font-mono" :class="d.tagClass" x-text="d.tag"></span>
+                    <h3 class="text-sm font-bold text-white" x-text="d.q"></h3>
+                    <div class="space-y-3 text-xs font-mono">
+                        <template x-for="(o,oi) in d.opts" :key="oi">
+                            <button @click="drillPick[d.key]=oi"
+                                :class="drillPick[d.key]===oi ? (oi===d.correct ? 'border-emerald-500 bg-emerald-950/20' : 'border-red-500 bg-red-950/20') : 'border-gray-800 bg-gray-950 hover:bg-gray-900'"
+                                class="w-full text-left p-4 rounded-lg border flex gap-3 items-start">
+                                <span class="font-bold" :class="oi===d.correct?'text-emerald-400':'text-gray-500'" x-text="String.fromCharCode(65+oi)+'.'"></span>
+                                <span class="text-gray-300 leading-normal font-sans" x-text="o"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <div x-show="drillPick[d.key]!==undefined && drillPick[d.key]===d.correct" x-cloak class="p-4 rounded-lg bg-gray-950 border border-emerald-900/50 text-xs leading-relaxed text-emerald-300/90">
+                        <span class="font-bold uppercase tracking-wider block mb-1 text-[10px]">✓ Right call</span>
+                        <span x-text="d.right"></span>
+                    </div>
+                    <div x-show="drillPick[d.key]!==undefined && drillPick[d.key]!==d.correct" x-cloak class="p-4 rounded-lg bg-gray-950 border border-red-900/50 text-xs leading-relaxed text-red-300/90">
+                        <span class="font-bold uppercase tracking-wider block mb-1 text-[10px]">✗ Not quite</span>
+                        <span x-text="drillPick[d.key]!==undefined ? d.wrong[drillPick[d.key]] : ''"></span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ============ TAB 8: GLOSSARY ============ -->
+        <div x-show="tab==='glossary'" class="space-y-6 animate-fade" x-cloak>
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-xl">
+                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">Glossary — the vocabulary of RAG, used precisely</h3>
+                <p class="text-xs text-gray-400 mt-1">Every term here is one you'll use when designing or defending a retrieval system. Knowing the precise meaning is what separates an engineer from a prompt-tinkerer.</p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-4 text-xs">
+                <template x-for="g in glossary" :key="g.t">
+                    <div class="space-y-1.5 p-4 bg-gray-950 rounded-lg border border-gray-800/80">
+                        <h4 class="font-bold text-purple-400 font-mono text-xs uppercase tracking-wider" x-text="g.t"></h4>
+                        <p class="text-gray-400 leading-normal" x-text="g.d"></p>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- ============ TAB 9: CHEAT-SHEET ============ -->
+        <div x-show="tab==='cheat'" class="space-y-5 animate-fade" x-cloak>
+            <div class="no-print flex items-center justify-between bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <div>
+                    <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">One-page glance sheet</h3>
+                    <p class="text-xs text-gray-400 mt-1">The whole system on one page. Print it and keep it next to you while you build.</p>
+                </div>
+                <button onclick="window.print()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded font-mono font-bold text-xs text-white transition whitespace-nowrap">⎙ Print</button>
+            </div>
+
+            <div class="cheat-card bg-gray-900 border border-purple-900/40 rounded-xl p-5">
+                <span class="cheat-accent text-purple-400 text-[10px] font-mono uppercase tracking-widest block mb-1">The thesis</span>
+                <p class="text-white font-bold text-base">"The LLM is not the system. The system is the loop around the LLM."</p>
+                <p class="text-gray-400 text-xs mt-1">Data → Retrieval → Generation → Logging → Feedback → Evaluation → Improvement. The model is swappable; the loop is the product.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="cheat-card bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-1.5 text-xs">
+                    <span class="cheat-accent text-purple-400 text-[10px] font-mono uppercase tracking-widest block">Query path</span>
+                    <p class="text-gray-300 leading-relaxed">query → <strong>embed query</strong> → <strong>Chroma</strong> top-k chunks → <strong>build constrained prompt</strong> (label each source, "answer only from context, cite, refuse if missing") → <strong>llama3.1:8b</strong> → answer + citations → <strong>SQLite</strong> run log → feedback.</p>
+                </div>
+                <div class="cheat-card bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-1.5 text-xs">
+                    <span class="cheat-accent text-purple-400 text-[10px] font-mono uppercase tracking-widest block">Ingestion path</span>
+                    <p class="text-gray-300 leading-relaxed">read <strong>data/raw/*.md</strong> → extract metadata → <strong>chunk</strong> (~800 chars / 120 overlap, keep heading) → <strong>embed</strong> via nomic-embed-text → <strong>upsert</strong> to Chroma with deterministic IDs (re-run never duplicates).</p>
+                </div>
+            </div>
+
+            <div class="cheat-card bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-1.5 text-xs">
+                <span class="cheat-accent text-purple-400 text-[10px] font-mono uppercase tracking-widest block">Two storage layers — different jobs</span>
+                <p class="text-gray-300 leading-relaxed"><strong>Chroma</strong> answers "which chunks are semantically relevant?" (vectors + metadata). <strong>SQLite</strong> answers "what happened, was it useful, how do we improve?" (rag_runs, rag_run_sources, feedback, eval_results). Chroma stores what the retriever needs; SQLite stores what the product needs.</p>
+            </div>
+
+            <div class="cheat-card bg-gray-900 border border-amber-900/40 rounded-xl p-5">
+                <span class="cheat-accent text-amber-400 text-[10px] font-mono uppercase tracking-widest block mb-2">Failure taxonomy — classify before you fix</span>
+                <div class="grid md:grid-cols-2 gap-x-6 gap-y-3 text-xs">
+                    <div><p class="text-white font-semibold">bad_retrieval</p><p class="text-gray-400 leading-relaxed">Right source not in top-k. Fix: chunking, metadata, top-k, hybrid search, reranking.</p></div>
+                    <div><p class="text-white font-semibold">missing_source</p><p class="text-gray-400 leading-relaxed">Data isn't in the KB at all. Fix: add the doc, improve ingestion coverage.</p></div>
+                    <div><p class="text-white font-semibold">unsupported_answer</p><p class="text-gray-400 leading-relaxed">Right chunks retrieved, model claimed beyond them. Fix: stronger prompt, less noise, citation-per-claim.</p></div>
+                    <div><p class="text-white font-semibold">bad_citation</p><p class="text-gray-400 leading-relaxed">Cited a source that doesn't support the claim. Fix: prompt, citation validation.</p></div>
+                    <div><p class="text-white font-semibold">unclear_question</p><p class="text-gray-400 leading-relaxed">Query too broad/ambiguous. Fix: clarify, query rewriting, mode selection.</p></div>
+                    <div><p class="text-white font-semibold">false-green eval</p><p class="text-gray-400 leading-relaxed">Passed on keywords but answer is wrong. Fix: better grounding checks, LLM-as-judge later.</p></div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="cheat-card bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-1.5 text-xs">
+                    <span class="cheat-accent text-purple-400 text-[10px] font-mono uppercase tracking-widest block">Commands</span>
+                    <pre class="mono text-[10.5px] text-gray-300 whitespace-pre-wrap leading-relaxed">ollama pull llama3.1:8b
+ollama pull nomic-embed-text
+uv run python app/healthcheck.py
+uv run python app/ingest.py
+uv run python app/retrieve.py "..."
+uv run python app/ask.py "..."
+uv run python app/eval.py</pre>
+                </div>
+                <div class="cheat-card bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-1.5 text-xs">
+                    <span class="cheat-accent text-purple-400 text-[10px] font-mono uppercase tracking-widest block">MVP eval targets</span>
+                    <ul class="text-gray-300 leading-relaxed list-disc list-inside space-y-0.5">
+                        <li>Expected source in top-6: <strong>80%+</strong></li>
+                        <li>Citation presence: <strong>90%+</strong></li>
+                        <li>Refusal correctness: <strong>80%+</strong></li>
+                    </ul>
+                    <p class="text-gray-400 leading-relaxed pt-1">Don't chase perfect scores early. Evals exist to tell you whether a change <em>improved or degraded</em> the system — that delta is the whole point.</p>
+                </div>
+            </div>
+            <footer class="text-center pt-2 border-t border-gray-900 text-[10px] font-mono text-gray-600">
+                Built from the Local Context Lab design docs — your own closed-loop RAG.
+            </footer>
+        </div>
+
+        <!-- ============ TAB 10: QUIZ ============ -->
+        <div x-show="tab==='quiz'" class="space-y-5 animate-fade max-w-2xl mx-auto" x-cloak>
+            <div x-show="!quizDone" class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-5">
+                <div class="flex justify-between items-center font-mono text-xs">
+                    <span class="text-purple-400 uppercase tracking-widest" x-text="'Question '+(quizI+1)+' / '+quizQuestions.length"></span>
+                    <span class="text-gray-500">Score: <span class="text-emerald-400 font-bold" x-text="quizScore"></span><span x-show="bestQuizScore!==null" class="text-gray-600" x-text="' · best '+bestQuizScore"></span></span>
+                </div>
+                <h3 class="text-sm font-bold text-white leading-relaxed" x-text="quizQuestions[quizI].q"></h3>
+                <div class="space-y-2.5 text-xs">
+                    <template x-for="(o,oi) in quizQuestions[quizI].opts" :key="oi">
+                        <button @click="!quizAns && (quizSel=oi)"
+                            :class="quizAns ? (oi===quizQuestions[quizI].c ? 'border-emerald-500 bg-emerald-950/20' : (oi===quizSel ? 'border-red-500 bg-red-950/20':'border-gray-800 bg-gray-950 opacity-50')) : (quizSel===oi ? 'border-purple-500 bg-purple-950/20':'border-gray-800 bg-gray-950 hover:bg-gray-900')"
+                            class="w-full text-left p-3.5 rounded-lg border flex gap-3 items-start font-mono">
+                            <span class="font-bold text-gray-500" x-text="String.fromCharCode(65+oi)+'.'"></span>
+                            <span class="text-gray-300 leading-normal font-sans" x-text="o"></span>
+                        </button>
+                    </template>
+                </div>
+                <div x-show="quizAns" x-cloak class="p-4 rounded-lg bg-gray-950 border border-gray-800 text-xs leading-relaxed text-gray-300">
+                    <span class="font-bold uppercase tracking-wider block mb-1 text-[10px]" :class="quizSel===quizQuestions[quizI].c?'text-emerald-400':'text-red-400'" x-text="quizSel===quizQuestions[quizI].c?'✓ Correct':'✗ Incorrect'"></span>
+                    <span x-text="quizQuestions[quizI].exp"></span>
+                </div>
+                <button @click="nextQuiz()" :disabled="quizSel===null" class="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2.5 rounded font-mono font-bold text-xs text-white transition" x-text="quizAns ? (quizI<quizQuestions.length-1?'Next ➔':'See results') : 'Check answer'"></button>
+            </div>
+            <div x-show="quizDone" x-cloak class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-4">
+                <div class="text-5xl font-black text-white" x-text="quizScore+'/'+quizQuestions.length"></div>
+                <p class="text-sm text-gray-400" x-text="quizScore===quizQuestions.length?'Perfect — you understand the whole loop.':(quizScore>=quizQuestions.length*0.7?'Strong. Review the misses and run it again.':'Good start — revisit the Pipeline and Code tabs, then retry.')"></p>
+                <div class="flex flex-wrap justify-center gap-1.5">
+                    <template x-for="(h,hi) in quizHistory" :key="hi"><span class="h-2.5 w-2.5 rounded-full" :class="h.correct?'bg-emerald-500':'bg-red-500'"></span></template>
+                </div>
+                <button @click="resetQuiz()" class="bg-purple-600 hover:bg-purple-500 px-5 py-2 rounded font-mono font-bold text-xs text-white">Retry quiz</button>
+            </div>
+        </div>
+
+        <!-- ============ TAB 11: BUILD GAME ============ -->
+        <div x-show="tab==='game'" class="space-y-5 animate-fade max-w-3xl mx-auto" x-cloak>
+            <div x-show="archStage===0" class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-4">
+                <h3 class="text-lg font-black text-white">Build the RAG, decision by decision</h3>
+                <p class="text-sm text-gray-400 max-w-lg mx-auto">8 rounds. Each round is a real design fork you'll hit building a local RAG. Pick the right move and assemble the stack. You're scored on architectural judgment, not trivia.</p>
+                <button @click="archReset(); archStage=1" class="bg-purple-600 hover:bg-purple-500 px-6 py-2.5 rounded font-mono font-bold text-sm text-white">Start build ⬡</button>
+            </div>
+
+            <template x-if="archStage>=1 && archStage<=archRounds.length">
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between font-mono text-xs">
+                        <span class="text-purple-400 uppercase tracking-widest" x-text="archRounds[archStage-1].title"></span>
+                        <span class="text-gray-500">Stack: <span class="text-emerald-400 font-bold" x-text="archScore"></span> pieces</span>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+                        <p class="text-sm text-gray-200 leading-relaxed" x-text="archRounds[archStage-1].scenario"></p>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="con in archRounds[archStage-1].constraints" :key="con"><span class="text-[10px] font-mono px-2 py-1 rounded bg-gray-950 border border-gray-800 text-gray-400" x-text="con"></span></template>
+                        </div>
+                        <h4 class="text-xs font-bold text-white font-mono uppercase tracking-wide" x-text="archRounds[archStage-1].question"></h4>
+                        <div class="space-y-2.5 text-xs">
+                            <template x-for="(o,oi) in archRounds[archStage-1].opts" :key="oi">
+                                <button @click="!archConfirmed && (archPick=oi)"
+                                    :class="archConfirmed ? (oi===archRounds[archStage-1].correct ? 'border-emerald-500 bg-emerald-950/20' : (oi===archPick?'border-red-500 bg-red-950/20':'border-gray-800 bg-gray-950 opacity-50')) : (archPick===oi?'border-purple-500 bg-purple-950/20':'border-gray-800 bg-gray-950 hover:bg-gray-900')"
+                                    class="w-full text-left p-3.5 rounded-lg border">
+                                    <div class="font-bold text-white font-sans" x-text="o.label"></div>
+                                    <div class="text-gray-500 font-sans mt-0.5 leading-normal" x-text="o.detail"></div>
+                                </button>
+                            </template>
+                        </div>
+                        <div x-show="archConfirmed" x-cloak class="p-4 rounded-lg text-xs leading-relaxed" :class="archPick===archRounds[archStage-1].correct?'bg-gray-950 border border-emerald-900/50 text-emerald-300/90':'bg-gray-950 border border-red-900/50 text-red-300/90'">
+                            <span class="font-bold uppercase tracking-wider block mb-1 text-[10px]" x-text="archPick===archRounds[archStage-1].correct?'✓ Added: '+archRounds[archStage-1].stackAdded:'✗ Reconsider'"></span>
+                            <span x-text="archPick===archRounds[archStage-1].correct ? archRounds[archStage-1].rightFeedback : archRounds[archStage-1].wrongFeedback[archPick]"></span>
+                        </div>
+                        <div class="flex justify-end">
+                            <button x-show="!archConfirmed" @click="archNextRound()" :disabled="archPick===null" class="bg-purple-600 hover:bg-purple-500 disabled:opacity-40 px-5 py-2 rounded font-mono font-bold text-xs text-white">Confirm</button>
+                            <button x-show="archConfirmed" @click="archAdvance()" class="bg-purple-600 hover:bg-purple-500 px-5 py-2 rounded font-mono font-bold text-xs text-white" x-text="archStage<archRounds.length?'Next round ➔':'See result'"></button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <div x-show="archStage===archRounds.length+1" x-cloak class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-4">
+                <div class="text-5xl font-black text-white" x-text="archScore+'/'+archRounds.length"></div>
+                <p class="text-sm text-gray-400" x-text="archScore===archRounds.length?'You assembled the whole stack correctly. You can defend every component.':'Solid. Revisit the rounds you missed in the Pipeline tab.'"></p>
+                <button @click="archReset()" class="bg-purple-600 hover:bg-purple-500 px-5 py-2 rounded font-mono font-bold text-xs text-white">Rebuild</button>
+            </div>
+        </div>
+
+        <!-- ============ TAB 12: SPEED ROUND ============ -->
+        <div x-show="tab==='speed'" class="space-y-5 animate-fade max-w-2xl mx-auto" x-cloak>
+            <div x-show="speedStage===0" class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-4">
+                <h3 class="text-lg font-black text-white">Speed Round ⚡</h3>
+                <p class="text-sm text-gray-400 max-w-lg mx-auto">30 seconds per question. Fast recall of the design rules. If the timer runs out, it counts as a miss — answer on instinct.</p>
+                <button @click="startSpeed()" class="bg-amber-600 hover:bg-amber-500 px-6 py-2.5 rounded font-mono font-bold text-sm text-white">Start ⚡</button>
+            </div>
+            <div x-show="speedStage===1" x-cloak class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
+                <div class="flex items-center justify-between font-mono text-xs">
+                    <span class="text-amber-400 uppercase tracking-widest" x-text="'Q '+(speedQI+1)+'/'+speedQuestions.length"></span>
+                    <span :class="speedTimeLeft<=10?'text-red-400':'text-gray-400'" class="font-bold" x-text="speedTimeLeft+'s'"></span>
+                </div>
+                <div class="h-1.5 bg-gray-950 rounded-full overflow-hidden border border-gray-800"><div class="h-full bg-amber-500 transition-all" :style="'width:'+(speedTimeLeft/30*100)+'%'"></div></div>
+                <h3 class="text-sm font-bold text-white leading-relaxed" x-text="speedQuestions[speedQI].q"></h3>
+                <div class="space-y-2 text-xs">
+                    <template x-for="(o,oi) in speedQuestions[speedQI].opts" :key="oi">
+                        <button @click="!speedAns && (speedSel=oi, confirmSpeed())"
+                            :class="speedAns ? (oi===speedQuestions[speedQI].c?'border-emerald-500 bg-emerald-950/20':(oi===speedSel?'border-red-500 bg-red-950/20':'border-gray-800 bg-gray-950 opacity-50')) : 'border-gray-800 bg-gray-950 hover:bg-gray-900'"
+                            class="w-full text-left p-3 rounded-lg border font-sans text-gray-300" x-text="o"></button>
+                    </template>
+                </div>
+                <div x-show="speedAns" x-cloak class="p-3 rounded-lg bg-gray-950 border border-gray-800 text-xs text-gray-300 leading-relaxed" x-text="speedQuestions[speedQI].exp"></div>
+                <button x-show="speedAns" @click="nextSpeed()" class="w-full bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded font-mono font-bold text-xs text-white" x-text="speedQI<speedQuestions.length-1?'Next ➔':'Finish'"></button>
+            </div>
+            <div x-show="speedStage===2" x-cloak class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-4">
+                <div class="text-5xl font-black text-white" x-text="speedScore+'/'+speedQuestions.length"></div>
+                <div class="flex flex-wrap justify-center gap-1.5">
+                    <template x-for="(h,hi) in speedHistory" :key="hi"><span class="h-2.5 w-2.5 rounded-full" :class="h?'bg-emerald-500':'bg-red-500'"></span></template>
+                </div>
+                <button @click="startSpeed()" class="bg-amber-600 hover:bg-amber-500 px-5 py-2 rounded font-mono font-bold text-xs text-white">Run again</button>
+            </div>
+        </div>
+
+        <!-- ============ TAB 13: FAILURE GAUNTLET ============ -->
+        <div x-show="tab==='gauntlet'" class="space-y-5 animate-fade max-w-3xl mx-auto" x-cloak>
+            <div x-show="gauntletStage===0" class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-4">
+                <h3 class="text-lg font-black text-white">Failure Gauntlet 🎯</h3>
+                <p class="text-sm text-gray-400 max-w-lg mx-auto">The skill that makes a closed-loop system work: looking at a bad answer and correctly classifying <em>why</em> it failed, so you fix the right layer. 9 broken runs — diagnose each one.</p>
+                <button @click="gauntletStage=1; gauntletScore=0; gauntletPick=null; gauntletAns=false" class="bg-red-600 hover:bg-red-500 px-6 py-2.5 rounded font-mono font-bold text-sm text-white">Enter gauntlet 🎯</button>
+            </div>
+            <template x-if="gauntletStage>=1 && gauntletStage<=gauntletScenarios.length">
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between font-mono text-xs">
+                        <span class="text-red-400 uppercase tracking-widest" x-text="'Broken run '+gauntletStage+'/'+gauntletScenarios.length"></span>
+                        <span class="text-gray-500">Diagnosed: <span class="text-emerald-400 font-bold" x-text="gauntletScore"></span></span>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded" :class="gauntletScenarios[gauntletStage-1].whoClass" x-text="gauntletScenarios[gauntletStage-1].who"></span>
+                        </div>
+                        <div class="bg-gray-950 border border-gray-800 rounded-lg p-3 font-mono text-[11px] text-gray-400 leading-relaxed" x-text="gauntletScenarios[gauntletStage-1].symptom"></div>
+                        <h4 class="text-xs font-bold text-white" x-text="gauntletScenarios[gauntletStage-1].question"></h4>
+                        <div class="space-y-2 text-xs">
+                            <template x-for="(o,oi) in gauntletScenarios[gauntletStage-1].opts" :key="oi">
+                                <button @click="!gauntletAns && (gauntletPick=oi)"
+                                    :class="gauntletAns ? (oi===gauntletScenarios[gauntletStage-1].correct?'border-emerald-500 bg-emerald-950/20':(oi===gauntletPick?'border-red-500 bg-red-950/20':'border-gray-800 bg-gray-950 opacity-50')) : (gauntletPick===oi?'border-purple-500 bg-purple-950/20':'border-gray-800 bg-gray-950 hover:bg-gray-900')"
+                                    class="w-full text-left p-3 rounded-lg border font-sans text-gray-300 leading-normal" x-text="o"></button>
+                            </template>
+                        </div>
+                        <div x-show="gauntletAns" x-cloak class="p-4 rounded-lg text-xs leading-relaxed" :class="gauntletPick===gauntletScenarios[gauntletStage-1].correct?'bg-gray-950 border border-emerald-900/50 text-emerald-300/90':'bg-gray-950 border border-red-900/50 text-red-300/90'">
+                            <span class="font-bold uppercase tracking-wider block mb-1 text-[10px]" x-text="gauntletPick===gauntletScenarios[gauntletStage-1].correct?'✓ Correct diagnosis':'✗ Wrong layer'"></span>
+                            <span x-text="gauntletPick===gauntletScenarios[gauntletStage-1].correct ? gauntletScenarios[gauntletStage-1].rightFeedback : gauntletScenarios[gauntletStage-1].wrongFeedback[gauntletPick]"></span>
+                        </div>
+                        <div class="flex justify-end">
+                            <button x-show="!gauntletAns" @click="confirmGauntlet()" :disabled="gauntletPick===null" class="bg-purple-600 hover:bg-purple-500 disabled:opacity-40 px-5 py-2 rounded font-mono font-bold text-xs text-white">Diagnose</button>
+                            <button x-show="gauntletAns" @click="nextGauntlet()" class="bg-purple-600 hover:bg-purple-500 px-5 py-2 rounded font-mono font-bold text-xs text-white" x-text="gauntletStage<gauntletScenarios.length?'Next ➔':'See result'"></button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <div x-show="gauntletStage===gauntletScenarios.length+1" x-cloak class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-4">
+                <div class="text-5xl font-black text-white" x-text="gauntletScore+'/'+gauntletScenarios.length"></div>
+                <p class="text-sm text-gray-400">Diagnosing failures correctly is the engine of the closed loop — every correct classification points you at the one layer worth changing.</p>
+                <button @click="gauntletStage=0" class="bg-red-600 hover:bg-red-500 px-5 py-2 rounded font-mono font-bold text-xs text-white">Run again</button>
+            </div>
+        </div>
+
+        <!-- ============ TAB 14: SEQUENCE ============ -->
+        <div x-show="tab==='sequence'" class="space-y-5 animate-fade max-w-2xl mx-auto" x-cloak>
+            <div x-show="!seqMode" class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-5">
+                <h3 class="text-lg font-black text-white">Sequence Challenge ⟳</h3>
+                <p class="text-sm text-gray-400 max-w-lg mx-auto">Put the steps in the right order. Internalizing the order is how you stop guessing and start reasoning about where a bug lives.</p>
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button @click="startSeq('query')" class="bg-purple-600 hover:bg-purple-500 px-5 py-2.5 rounded font-mono font-bold text-xs text-white">Order the query path</button>
+                    <button @click="startSeq('ingest')" class="bg-gray-800 hover:bg-gray-700 px-5 py-2.5 rounded font-mono font-bold text-xs text-gray-200">Order the ingestion path</button>
+                    <button @click="startSeq('loop')" class="bg-gray-800 hover:bg-gray-700 px-5 py-2.5 rounded font-mono font-bold text-xs text-gray-200">Order the improvement loop</button>
+                </div>
+            </div>
+            <template x-if="seqMode">
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="font-mono text-xs text-purple-400 uppercase tracking-widest" x-text="seqLabel"></span>
+                        <button @click="seqMode=null" class="font-mono text-xs text-gray-500 hover:text-gray-300">← modes</button>
+                    </div>
+                    <p class="text-xs text-gray-400 font-mono">Tap items in the correct order. Tap a chosen item to remove it.</p>
+                    <div class="grid sm:grid-cols-2 gap-3">
+                        <div class="space-y-2">
+                            <div class="text-[10px] font-mono uppercase tracking-widest text-gray-500">Available</div>
+                            <template x-for="item in seqItems" :key="item.id">
+                                <button x-show="!seqSelected.find(s=>s.id===item.id)" @click="seqSelected.push(item)" class="w-full text-left p-3 rounded-lg border border-gray-800 bg-gray-950 hover:bg-gray-900 text-xs text-gray-300 font-sans" x-text="item.label"></button>
+                            </template>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="text-[10px] font-mono uppercase tracking-widest text-gray-500">Your order</div>
+                            <template x-for="(item,idx) in seqSelected" :key="item.id">
+                                <button @click="seqSelected=seqSelected.filter(s=>s.id!==item.id)" :class="seqDone ? (item.id===seqCorrectOrder[idx]?.id?'border-emerald-600 bg-emerald-950/20':'border-red-600 bg-red-950/20'):'border-purple-800 bg-purple-950/10'" class="w-full text-left p-3 rounded-lg border text-xs text-gray-200 font-sans flex gap-2">
+                                    <span class="font-mono font-bold text-purple-400" x-text="(idx+1)+'.'"></span><span x-text="item.label"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                    <button x-show="!seqDone && seqSelected.length===seqItems.length" @click="checkSeq()" class="w-full bg-purple-600 hover:bg-purple-500 px-4 py-2.5 rounded font-mono font-bold text-xs text-white">Check order</button>
+                    <div x-show="seqDone" x-cloak class="p-4 rounded-lg border text-xs" :class="seqPerfect?'bg-gray-950 border-emerald-900/50':'bg-gray-950 border-amber-900/50'">
+                        <span class="font-bold uppercase tracking-wider block mb-2 text-[10px]" :class="seqPerfect?'text-emerald-400':'text-amber-400'" x-text="seqPerfect?'✓ Perfect order':'⚠ Not quite — correct order below'"></span>
+                        <ol class="space-y-1.5">
+                            <template x-for="(item,idx) in seqCorrectOrder" :key="item.id">
+                                <li class="text-gray-300 leading-relaxed"><span class="font-mono text-purple-400 font-bold" x-text="(idx+1)+'. '"></span><span class="font-semibold text-white" x-text="item.label"></span> — <span class="text-gray-400" x-text="item.why"></span></li>
+                            </template>
+                        </ol>
+                        <button @click="startSeq(seqMode)" class="mt-3 bg-gray-800 hover:bg-gray-700 px-4 py-1.5 rounded font-mono font-bold text-xs text-gray-200">Shuffle &amp; retry</button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+    </main>
+
+    <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('ragCourse', () => ({
+            tab: 'thesis',
+
+            // ─────────── Your ingest.py: code highlighting ───────────
+            activeSection: null,
+            _pyKW: ['def','return','for','in','if','else','elif','not','and','or','is','import','from','as','try','except','pass','raise','with','while','None','True','False','class','lambda'],
+            _pyBuiltin: ['Path','len','print','enumerate','RuntimeError','Exception','range','list','dict','str','int','open','range'],
+            escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); },
+            tokenizePy(line){
+                if(line.trim()===''){ return '&nbsp;'; }
+                // full-line comment
+                const lead = line.match(/^(\s*)/)[0];
+                let rest = line.slice(lead.length);
+                if(rest.startsWith('#')) return lead + '<span class="tok-com">'+this.escHtml(rest)+'</span>';
+                let out = lead, i = 0;
+                const isId = c => /[A-Za-z0-9_]/.test(c);
+                while(i < rest.length){
+                    const c = rest[i];
+                    // strings (single or double, incl f-strings handled by preceding identifier)
+                    if(c==='"' || c==="'"){
+                        let j=i+1; while(j<rest.length && rest[j]!==c){ if(rest[j]==='\\') j++; j++; }
+                        const str = rest.slice(i, Math.min(j+1, rest.length));
+                        out += '<span class="tok-str">'+this.escHtml(str)+'</span>'; i = j+1; continue;
+                    }
+                    // comment mid-line
+                    if(c==='#'){ out += '<span class="tok-com">'+this.escHtml(rest.slice(i))+'</span>'; break; }
+                    // numbers
+                    if(/[0-9]/.test(c) && !isId(rest[i-1]||'')){
+                        let j=i; while(j<rest.length && /[0-9.]/.test(rest[j])) j++;
+                        out += '<span class="tok-num">'+this.escHtml(rest.slice(i,j))+'</span>'; i=j; continue;
+                    }
+                    // identifiers / keywords / function calls
+                    if(isId(c)){
+                        let j=i; while(j<rest.length && isId(rest[j])) j++;
+                        const word = rest.slice(i,j);
+                        const after = rest.slice(j).replace(/^\s*/,'');
+                        let cls;
+                        if(this._pyKW.includes(word)) cls='tok-kw';
+                        else if(word==='self') cls='tok-self';
+                        else if(this._pyBuiltin.includes(word)) cls='tok-cls';
+                        else if(after.startsWith('(')) cls='tok-fn';
+                        else cls='tok-var';
+                        out += '<span class="'+cls+'">'+this.escHtml(word)+'</span>'; i=j; continue;
+                    }
+                    out += '<span class="tok-op">'+this.escHtml(c)+'</span>'; i++;
+                }
+                return out;
+            },
+            get myIngestLines(){ return this.myIngestRaw.map(l => ({ html: this.tokenizePy(l) })); },
+            lineClass(lineNo){
+                if(!this.activeSection) return '';
+                const sec = this.myIngest.find(s=>s.n===this.activeSection);
+                if(!sec || !sec.lines) return '';
+                return (lineNo>=sec.lines[0] && lineNo<=sec.lines[1]) ? 'hl' : 'dim';
+            },
+            setSection(n){
+                this.activeSection = (this.activeSection===n) ? null : n;
+                if(this.activeSection){
+                    this.$nextTick(()=>{
+                        const sec=this.myIngest.find(s=>s.n===n);
+                        const pre=document.querySelector('.vsc');
+                        if(pre && sec){ const target=pre.querySelectorAll('.ln')[sec.lines[0]-1]; if(target) target.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+                    });
+                }
+            },
+            selectSectionForLine(lineNo){
+                const sec = this.myIngest.find(s=>s.lines && lineNo>=s.lines[0] && lineNo<=s.lines[1]);
+                if(sec){ this.activeSection = sec.n; this.$nextTick(()=>{ const el=document.getElementById('sec-'+sec.n); if(el) el.scrollIntoView({block:'center',behavior:'smooth'}); }); }
+            },
+
+            // ─────────── architecture map ───────────
+            node: 'retrieve',
+            nodeClass(n){ return this.node===n ? 'border-purple-500 bg-purple-950/20 text-purple-300' : 'border-gray-800 bg-gray-950 text-gray-400 hover:border-gray-700'; },
+            nodes: {
+                raw:      { title:'data/raw/*.md — source documents', role:'The knowledge boundary. Everything the system can answer about must live here first. Local files only for the MVP.', uses:'• Add a .md/.txt file here, then re-ingest.\n• Failure mode: missing_source — if it is not here, the only correct answer is "context is insufficient".' },
+                chunk:    { title:'Chunker (+ metadata)', role:'Splits each document into ~800-char windows with ~120-char overlap, preserving the source filename and nearest markdown heading.', uses:'• Overlap stops an answer being cut in half at a boundary.\n• Failure mode: bad_retrieval — chunks too big = noisy embeddings; too small = lost context.' },
+                embed:    { title:'nomic-embed-text (via Ollama)', role:'Turns each chunk into a vector so semantic similarity becomes distance in space. Wrapped behind one function so the model is swappable.', uses:'• Query and chunks MUST use the same embedding model.\n• Failure mode: change the embed model and forget to re-ingest = every distance is garbage.' },
+                chroma:   { title:'Chroma — persistent vector store', role:'Stores chunk text, embeddings, and metadata on disk. Answers "which chunks are semantically closest to this query?".', uses:'• Deterministic IDs (doc::chunk-N) + upsert = re-ingest never duplicates.\n• Chroma stores what the retriever needs; SQLite stores what the product needs.' },
+                query:    { title:'User query (ask.py)', role:'The entry point for the online path. Orchestrates retrieve → generate → log → feedback.', uses:'• One command per question.\n• Times the run for the latency metric.' },
+                retrieve: { title:'Retriever (embed + top-k)', role:'Embeds the query with the SAME model, asks Chroma for the top-k nearest chunks, returns them with distance scores.', uses:'• Debug here FIRST with retrieve.py before touching the prompt.\n• Distance tells you confidence — large distances mean "context may be insufficient".' },
+                prompt:   { title:'Prompt builder', role:'Assembles a constrained context window: each chunk labeled as [Source N], plus rules — answer only from context, cite, refuse when insufficient.', uses:'• Labeling sources is what makes citations possible.\n• Failure mode: unsupported_answer / bad_citation live here and in generation.' },
+                gen:      { title:'llama3.1:8b (via Ollama)', role:'Generates the grounded answer from the constrained prompt at low temperature, citing source labels.', uses:'• The model is the most swappable part — try a bigger model only after retrieval is solid.\n• Low temperature keeps it from improvising facts.' },
+                loop:     { title:'The closed loop (SQLite + feedback + evals)', role:'Every run is logged: query, answer, retrieved chunks, sources cited, model, latency. Feedback labels failures. Evals measure regressions.', uses:'• This is the difference between a demo and a product.\n• Change ONE thing (chunk size, top-k, prompt, model) → re-run evals → keep or revert.' },
+            },
+
+            // ─────────── pipeline stages ───────────
+            pipeline: [
+                { key:'ingest', layer:'STAGE 01 · INGEST', badgeClass:'bg-purple-950 text-purple-300',
+                  name:'Ingestion', role:'Reads .md/.txt from data/raw, extracts metadata, and feeds the chunker. The boundary of what the system can know.',
+                  why:'Local Markdown first keeps the MVP simple and fully observable — you can open the source by hand and verify what got indexed.',
+                  alt:'PDF/HTML/DOCX or GitHub/web ingestion broadens coverage, but each adds parsing complexity, auth, and rate limits. Defer until the loop works on plain text.',
+                  tradeoff:'Plain-text-only means you cannot answer about anything not yet converted to Markdown. Coverage gaps show up as missing_source failures.',
+                  trapQ:'You re-run ingestion and now have duplicate chunks polluting retrieval.',
+                  trapA:'Use deterministic IDs (doc_id::chunk-N) and upsert, not add. The same file/chunk overwrites itself instead of creating a second copy. Idempotent ingestion is non-negotiable.' },
+                { key:'chunk', layer:'STAGE 02 · CHUNK', badgeClass:'bg-purple-950 text-purple-300',
+                  name:'Chunking', role:'Splits documents into retrievable units (~800 chars, ~120 overlap), preserving source filename and section heading.',
+                  why:'Chunk size is the single biggest lever on retrieval quality. ~800 chars balances enough context to be meaningful with tight enough scope for a clean embedding.',
+                  alt:'Semantic / heading-aware splitting keeps ideas whole and beats fixed windows on structured docs; recursive splitters handle mixed content. Worth it once fixed-size retrieval plateaus.',
+                  tradeoff:'Too large = noisy vectors and the model drowns in irrelevant text; too small = the answer is split across chunks and never fully retrieved. There is no universal right size — you tune it against evals.',
+                  trapQ:'Answers keep getting cut off mid-thought even when the right doc is retrieved.',
+                  trapA:'Your chunks are too small or have no overlap, so a single idea spans two chunks and only one comes back. Add overlap and/or increase size, then re-run evals to confirm it helped and did not regress others.' },
+                { key:'embed', layer:'STAGE 03 · EMBED', badgeClass:'bg-purple-950 text-purple-300',
+                  name:'Embeddings', role:'Converts text into vectors via Ollama (nomic-embed-text), wrapped behind a single swappable function.',
+                  why:'A local embedding model keeps the stack closed-loop and free. Wrapping it in one function means swapping to mxbai-embed-large, Voyage, or OpenAI later is a one-file change.',
+                  alt:'Larger or hosted embedding models (mxbai-embed-large, OpenAI, Voyage) often retrieve better, especially on technical jargon — at the cost of locality, money, or latency.',
+                  tradeoff:'Embedding quality caps retrieval quality. A weak embedder misses acronyms, filenames, and named entities that exact-match search would catch.',
+                  trapQ:'You switched embedding models and retrieval suddenly returns nonsense.',
+                  trapA:'Query and stored chunks must be embedded by the SAME model. Changing the embedder means you MUST re-ingest everything; otherwise you are comparing vectors from two different spaces.' },
+                { key:'store', layer:'STAGE 04 · STORE', badgeClass:'bg-emerald-950 text-emerald-300',
+                  name:'Vector store (Chroma)', role:'Persists chunk text, embeddings, and metadata on disk; serves nearest-neighbor queries.',
+                  why:'Chroma is local, persistent, zero-infra, and dead simple to run for an MVP — exactly the "local-first" principle. Metadata travels with each vector for filtering and citations.',
+                  alt:'Qdrant / pgvector / Weaviate scale further and offer richer filtering and hybrid search. Migrate when collection size, concurrency, or advanced filtering outgrow Chroma.',
+                  tradeoff:'Chroma is great for single-user local work but is not built for high-concurrency production scale. Migrating later means re-embedding and re-indexing.',
+                  trapQ:'retrieve.py returns nothing even though you ran ingest.',
+                  trapA:'Either the collection is empty (ingest pointed at the wrong path) or you opened a different collection name. Check collection.count() in a healthcheck and fail loudly: "No indexed chunks found. Run ingestion first."' },
+                { key:'retrieve', layer:'STAGE 05 · RETRIEVE', badgeClass:'bg-purple-950 text-purple-300',
+                  name:'Retrieval', role:'Embeds the query, asks Chroma for top-k chunks, returns them with distance scores and source metadata.',
+                  why:'Retrieval is where most "bad answers" are actually born. A retrieval-only CLI lets you inspect exactly what the model will see before generation muddies the picture.',
+                  alt:'Hybrid (vector + keyword) search, metadata filtering, query rewriting, and reranking all lift recall/precision. Add them one at a time, measuring each against evals.',
+                  tradeoff:'Higher top-k finds more but floods the prompt with noise (raising unsupported_answer risk and cost). Lower top-k is cleaner but risks missing the right chunk.',
+                  trapQ:'The answer is wrong. Is the model dumb?',
+                  trapA:'Run retrieve.py first. If the right chunk is not in the top-k, it is bad_retrieval — no prompt change can fix it. Fix retrieval before ever editing the generation prompt.' },
+                { key:'prompt', layer:'STAGE 06 · PROMPT', badgeClass:'bg-purple-950 text-purple-300',
+                  name:'Prompt builder', role:'Builds a constrained context window: each chunk labeled [Source N], with rules to answer only from context, cite sources, and refuse when insufficient.',
+                  why:'The prompt is your safety contract. Explicit source labels enable citations; the "refuse when insufficient" rule is what prevents confident hallucination.',
+                  alt:'Per-claim citation, structured/JSON output, or few-shot grounding examples tighten faithfulness further — at the cost of prompt length and brittleness.',
+                  tradeoff:'A stricter prompt reduces hallucination but can make the model over-refuse on borderline-relevant context. You balance helpfulness against faithfulness.',
+                  trapQ:'The model answers from its own training data, ignoring (or contradicting) the sources.',
+                  trapA:'Tighten the instruction ("use ONLY the sources above; if they do not contain the answer, say the context is insufficient") and reduce noisy chunks. Then verify with a refusal eval that asks something not in the KB.' },
+                { key:'gen', layer:'STAGE 07 · GENERATE', badgeClass:'bg-emerald-950 text-emerald-300',
+                  name:'Generation', role:'The local chat model produces the grounded, cited answer at low temperature.',
+                  why:'llama3.1:8b is a capable, fast local model that keeps the stack closed. Low temperature keeps it factual and reduces improvisation.',
+                  alt:'A larger local model or a hosted model (Claude, GPT) usually improves grounding and citation discipline. Compare them on the SAME eval set before committing.',
+                  tradeoff:'The model is the most swappable component — and the most tempting scapegoat. Upgrading it papers over retrieval problems instead of fixing them.',
+                  trapQ:'Should you reach for a bigger model when answers are weak?',
+                  trapA:'Only after retrieval is proven good. If the right chunks are retrieved and the answer is still unsupported, that is when a stronger model (or a stricter prompt) earns its place.' },
+                { key:'log', layer:'STAGE 08 · LOG', badgeClass:'bg-purple-950 text-purple-300',
+                  name:'Run logging (SQLite)', role:'Writes every run to rag_runs + rag_run_sources: query, answer, retrieved chunks, distances, which were cited, model, latency.',
+                  why:'Observability by default. The source table lets you tell apart "retrieval found the right chunk but the model ignored it" from "retrieval never found it" — completely different fixes.',
+                  alt:'A dashboard or a hosted observability tool visualizes this better, but the raw SQLite log is the source of truth and enough to debug from on day one.',
+                  tradeoff:'Logging adds a little code and storage, and you must remember to log the things that matter (cited-vs-retrieved) — they do not appear for free.',
+                  trapQ:'A run "succeeded" but the answer was useless. How do you even know later?',
+                  trapA:'Because you logged the retrieved chunks and which were cited. Without that trace you are debugging blind. The log is what turns a vague complaint into a precise failure classification.' },
+                { key:'feedback', layer:'STAGE 09 · FEEDBACK', badgeClass:'bg-amber-950 text-amber-300',
+                  name:'Feedback (human-in-the-loop)', role:'After each answer: helpful? optional correction? failure type? Stored against the run id.',
+                  why:'Feedback turns each answer into a labeled signal. The failure taxonomy (bad_retrieval, missing_source, unsupported_answer, bad_citation...) tells you which layer to change.',
+                  alt:'Implicit signals (did the user copy the answer? rephrase?) scale better but are noisier. Explicit thumbs + failure type is the highest-signal place to start.',
+                  tradeoff:'Explicit feedback asks effort of the user, so you get less of it — but what you get is precise. Design the prompt to be one keystroke.',
+                  trapQ:'You collect "not helpful" but never act on it.',
+                  trapA:'Feedback only matters if it feeds the loop. A failure type points at a layer; the eval set is where you prove the fix worked. Feedback without evals is just venting.' },
+                { key:'eval', layer:'STAGE 10 · EVAL', badgeClass:'bg-emerald-950 text-emerald-300',
+                  name:'Evaluation', role:'Runs a fixed question set and checks: expected source in top-k? required concepts present? citation present? refused when it should?',
+                  why:'Evals answer the only question that matters: is the system getting more useful and more grounded over time? They catch regressions when you tune chunking, prompts, or models.',
+                  alt:'LLM-as-judge and semantic grounding checks are far better than keyword matching, but start with simple deterministic checks you fully understand.',
+                  tradeoff:'Keyword-based checks can go false-green (pass on a present keyword while the answer is wrong). They are a floor, not a ceiling — but a cheap, repeatable floor.',
+                  trapQ:'You improved one answer but quietly broke three others.',
+                  trapA:'That is exactly what regression evals catch. Change ONE variable, re-run the whole eval set, and keep the change only if the aggregate score holds or improves. This is the core operating loop of a real AI product.' },
+            ],
+
+            // ─────────── the code ───────────
+            fileI: 0,
+            files: [
+                { name:'config.py', step:'M1', tag:'constants',
+                  notes:[
+                    'Every magic value lives here and is <strong>imported</strong>, never duplicated. When you tune chunk size or top-k during evals, you change it in exactly one place.',
+                    'Keeping <code class="mono text-purple-300">CHUNK_SIZE</code>, <code class="mono text-purple-300">TOP_K</code>, and model names here makes the rest of the codebase read like prose and makes experiments reproducible.',
+                  ],
+                  code:`"""Central configuration. Import these; never hard-code them elsewhere."""
+from pathlib import Path
+
+# Models served locally by Ollama
+CHAT_MODEL = "llama3.1:8b"
+EMBED_MODEL = "nomic-embed-text"
+OLLAMA_HOST = "http://localhost:11434"
+
+# Storage
+CHROMA_PATH = "chroma_db"
+COLLECTION_NAME = "local_context_lab"
+SQLITE_PATH = "logs/local_context_lab.sqlite3"
+
+# Data
+RAW_DATA_DIR = Path("data/raw")
+EVAL_PATH = Path("data/eval/eval_set.json")
+
+# Chunking  (tune these against evals, not vibes)
+CHUNK_SIZE = 800      # characters
+CHUNK_OVERLAP = 120   # characters
+
+# Retrieval
+TOP_K = 6` },
+
+                { name:'llm.py', step:'M2', tag:'model wrapper',
+                  notes:[
+                    'This thin wrapper is the <strong>swap point</strong>. The whole pipeline calls <code class="mono text-purple-300">embed_query()</code> and <code class="mono text-purple-300">chat()</code> — it never imports <code class="mono">ollama</code> directly.',
+                    'To move from Ollama to OpenAI/Voyage/Claude later, you rewrite <em>only this file</em>. That is the "wrap the model behind a small local function" principle made real.',
+                    'Generation uses a <strong>low temperature</strong> so the model stays factual instead of improvising.',
+                  ],
+                  code:`"""Thin wrapper around the local model server.
+Swap THIS FILE to change providers (Ollama -> OpenAI -> Voyage)
+without touching the rest of the pipeline."""
+import ollama
+from app.config import CHAT_MODEL, EMBED_MODEL
+
+
+def embed_texts(texts: list[str]) -> list[list[float]]:
+    """One vector per input. Used at ingest time."""
+    vectors = []
+    for t in texts:
+        resp = ollama.embeddings(model=EMBED_MODEL, prompt=t)
+        vectors.append(resp["embedding"])
+    return vectors
+
+
+def embed_query(text: str) -> list[float]:
+    """Query MUST use the same model as the chunks."""
+    return embed_texts([text])[0]
+
+
+def chat(system: str, user: str) -> str:
+    resp = ollama.chat(
+        model=CHAT_MODEL,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        options={"temperature": 0.1},
+    )
+    return resp["message"]["content"]` },
+
+                { name:'ingest.py', step:'M2', tag:'ingestion + chunking',
+                  notes:[
+                    'The chunker is a predictable character window with overlap, and it tracks the most recent markdown heading so every chunk carries a <code class="mono text-purple-300">section_title</code> — better retrieval and better citations.',
+                    'IDs are <strong>deterministic</strong> (<code class="mono text-purple-300">doc::chunk-N</code>) and we <code class="mono text-purple-300">upsert</code>, so re-running ingestion <em>updates</em> rather than duplicating. This idempotency is the acceptance criterion for M2.',
+                    'Each chunk gets full metadata. Metadata is cheap to store and priceless when debugging retrieval.',
+                  ],
+                  code:`"""Read markdown/text from data/raw, chunk, embed, upsert into Chroma.
+Idempotent: deterministic IDs mean re-running updates instead of duplicating."""
+import time
+import chromadb
+
+from app.config import (RAW_DATA_DIR, CHROMA_PATH, COLLECTION_NAME,
+                        CHUNK_SIZE, CHUNK_OVERLAP)
+from app.llm import embed_texts
+
+
+def split_into_chunks(text, size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
+    """Char window with overlap. Carries the nearest markdown heading."""
+    chunks, start, n = [], 0, len(text)
+    while start < n:
+        end = min(start + size, n)
+        window = text[start:end].strip()
+        # last heading seen up to this point becomes the section title
+        section = ""
+        for line in text[:end].splitlines():
+            if line.startswith("#"):
+                section = line.lstrip("# ").strip()
+        if window:
+            chunks.append((window, section))
+        if end == n:
+            break
+        start = end - overlap          # overlap so ideas are not cut in half
+    return chunks
+
+
+def ingest():
+    client = chromadb.PersistentClient(path=CHROMA_PATH)
+    collection = client.get_or_create_collection(name=COLLECTION_NAME)
+
+    files = sorted([*RAW_DATA_DIR.glob("*.md"), *RAW_DATA_DIR.glob("*.txt")])
+    if not files:
+        print("No .md or .txt files found in data/raw.")
+        return
+
+    print(f"Found {len(files)} source files.")
+    ids, docs, metas = [], [], []
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        doc_id = path.stem                       # stable per filename
+        for i, (chunk_text, section) in enumerate(split_into_chunks(text)):
+            cid = f"{doc_id}::chunk-{i}"          # deterministic id
+            ids.append(cid)
+            docs.append(chunk_text)
+            metas.append({
+                "doc_id": doc_id,
+                "source_file": path.name,
+                "chunk_id": cid,
+                "chunk_index": i,
+                "section_title": section,
+                "content_type": "markdown",
+                "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            })
+
+    print(f"Created {len(ids)} chunks.")
+    embeddings = embed_texts(docs)
+    print(f"Embedded {len(embeddings)} chunks.")
+    collection.upsert(ids=ids, documents=docs,        # upsert, not add
+                      embeddings=embeddings, metadatas=metas)
+    print(f"Upserted {len(ids)} chunks into Chroma collection "
+          f"{COLLECTION_NAME}.")
+
+
+if __name__ == "__main__":
+    ingest()` },
+
+                { name:'retrieve.py', step:'M3', tag:'retrieval-only CLI',
+                  notes:[
+                    'This file deliberately does <strong>not</strong> call the LLM. Its whole job is to let you <em>see</em> what the model would see. Build and trust this before generation exists.',
+                    'It returns the <code class="mono text-purple-300">distance</code> with every hit. Large distances are your early warning that "context may be insufficient".',
+                    'When an answer is wrong later, this is the first command you run. If the right chunk is not here, the bug is in retrieval — not the prompt.',
+                  ],
+                  code:`"""Retrieval-only: prove the right chunks are found BEFORE the LLM is involved."""
+import sys
+import chromadb
+
+from app.config import CHROMA_PATH, COLLECTION_NAME, TOP_K
+from app.llm import embed_query
+
+
+def retrieve(query: str, top_k: int = TOP_K) -> list[dict]:
+    client = chromadb.PersistentClient(path=CHROMA_PATH)
+    collection = client.get_or_create_collection(name=COLLECTION_NAME)
+    if collection.count() == 0:
+        raise RuntimeError("No indexed chunks found. Run ingestion first.")
+
+    q_emb = embed_query(query)                 # SAME model as ingest
+    res = collection.query(query_embeddings=[q_emb], n_results=top_k)
+
+    hits = []
+    for doc, meta, dist in zip(res["documents"][0],
+                              res["metadatas"][0],
+                              res["distances"][0]):
+        hits.append({"text": doc, "meta": meta, "distance": dist})
+    return hits
+
+
+def main():
+    query = " ".join(sys.argv[1:]) or "What is Local Context Lab?"
+    hits = retrieve(query)
+    print(f"Query: {query}\\n\\nTop {len(hits)} chunks:\\n")
+    for rank, h in enumerate(hits, 1):
+        m = h["meta"]
+        print(f"{rank}. source: {m['source_file']}")
+        print(f"   chunk: {m['chunk_id']}")
+        print(f"   distance: {h['distance']:.3f}")
+        print(f"   preview: {h['text'][:90]}...\\n")
+
+
+if __name__ == "__main__":
+    main()` },
+
+                { name:'answer.py', step:'M4', tag:'prompt + generation',
+                  notes:[
+                    'The <code class="mono text-purple-300">SYSTEM</code> prompt is the safety contract: answer only from sources, cite as [Source N], refuse when insufficient, never invent. This is where hallucination is prevented.',
+                    '<code class="mono text-purple-300">build_prompt</code> labels each chunk as a numbered source — that labeling is what makes inline citations possible and auditable.',
+                    'If nothing was retrieved, it refuses <em>without</em> calling the model. Cheaper, safer, and the correct behavior.',
+                  ],
+                  code:`"""Build a constrained, grounded prompt and generate a cited answer."""
+from app.llm import chat
+
+SYSTEM = (
+    "You are a grounded assistant. Answer ONLY from the provided sources. "
+    "Cite sources inline as [Source N]. If the sources do not contain the "
+    "answer, say the context is insufficient. Never invent facts."
+)
+
+
+def build_prompt(query: str, hits: list[dict]) -> str:
+    blocks = []
+    for i, h in enumerate(hits, 1):
+        m = h["meta"]
+        blocks.append(
+            f"[Source {i}] ({m['source_file']} - chunk {m['chunk_index']})\\n"
+            f"{h['text']}"
+        )
+    context = "\\n\\n".join(blocks)
+    return (
+        f"Sources:\\n{context}\\n\\n"
+        f"Question: {query}\\n\\n"
+        f"Answer using only the sources above, with [Source N] citations."
+    )
+
+
+def generate(query: str, hits: list[dict]) -> str:
+    if not hits:
+        return "Context is insufficient: no sources were retrieved."
+    return chat(SYSTEM, build_prompt(query, hits))` },
+
+                { name:'ask.py', step:'M4', tag:'orchestrator',
+                  notes:[
+                    'This is the full online loop in one place: retrieve → generate → print sources → <strong>log the run</strong> → collect feedback. Reading it top to bottom <em>is</em> the query path.',
+                    'It times the run for the latency metric and passes the hits to the logger so the cited-vs-retrieved distinction is captured.',
+                    'Notice it never talks to Ollama or Chroma directly — it composes the other modules. That separation is what keeps each piece testable.',
+                  ],
+                  code:`"""End-to-end query path: retrieve -> generate -> log -> feedback."""
+import sys
+import time
+
+from app.config import CHAT_MODEL, EMBED_MODEL, TOP_K
+from app.retrieve import retrieve
+from app.answer import generate
+from app import db, feedback
+
+
+def ask(query: str):
+    t0 = time.time()
+    hits = retrieve(query)
+    answer = generate(query, hits)
+    latency_ms = int((time.time() - t0) * 1000)
+
+    print(f"\\nAnswer:\\n{answer}\\n")
+    print("Sources:")
+    for i, h in enumerate(hits, 1):
+        m = h["meta"]
+        print(f"{i}. {m['source_file']} - chunk {m['chunk_index']}")
+
+    run_id = db.log_run(query, answer, hits,
+                        CHAT_MODEL, EMBED_MODEL, TOP_K, latency_ms)
+    feedback.collect(run_id)
+
+
+if __name__ == "__main__":
+    ask(" ".join(sys.argv[1:]) or "What is Local Context Lab?")` },
+
+                { name:'db.py', step:'M5', tag:'SQLite logging',
+                  notes:[
+                    'Chroma stores what the <em>retriever</em> needs; this stores what the <em>product</em> needs. Three tables: <code class="mono text-purple-300">rag_runs</code>, <code class="mono text-purple-300">rag_run_sources</code>, <code class="mono text-purple-300">feedback</code>.',
+                    'The killer feature is <code class="mono text-purple-300">rag_run_sources</code>: it records every retrieved chunk, its distance, rank, and <strong>whether it was cited</strong>. That lets you distinguish "retrieval missed" from "model ignored a good chunk".',
+                    'Schema is created with <code class="mono">IF NOT EXISTS</code> on every connect, so there is no separate migration step for the MVP.',
+                  ],
+                  code:`"""SQLite: stores what the PRODUCT needs (runs, sources, feedback)."""
+import sqlite3
+import time
+from pathlib import Path
+
+from app.config import SQLITE_PATH
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS rag_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  query TEXT NOT NULL, answer TEXT,
+  chat_model TEXT NOT NULL, embed_model TEXT NOT NULL,
+  top_k INTEGER NOT NULL, latency_ms INTEGER, created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS rag_run_sources (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  rag_run_id INTEGER NOT NULL, chunk_id TEXT NOT NULL,
+  source_file TEXT NOT NULL, chunk_index INTEGER, distance REAL,
+  rank INTEGER NOT NULL, was_cited INTEGER DEFAULT 0,
+  FOREIGN KEY (rag_run_id) REFERENCES rag_runs(id)
+);
+CREATE TABLE IF NOT EXISTS feedback (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  rag_run_id INTEGER NOT NULL, helpful INTEGER, correction TEXT,
+  failure_type TEXT, notes TEXT, created_at TEXT NOT NULL,
+  FOREIGN KEY (rag_run_id) REFERENCES rag_runs(id)
+);
+"""
+
+
+def connect():
+    Path(SQLITE_PATH).parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.executescript(SCHEMA)
+    return conn
+
+
+def log_run(query, answer, hits, chat_model, embed_model, top_k, latency_ms):
+    now = time.strftime("%Y-%m-%dT%H:%M:%S")
+    conn = connect()
+    cur = conn.execute(
+        "INSERT INTO rag_runs (query, answer, chat_model, embed_model, "
+        "top_k, latency_ms, created_at) VALUES (?,?,?,?,?,?,?)",
+        (query, answer, chat_model, embed_model, top_k, latency_ms, now),
+    )
+    run_id = cur.lastrowid
+    for rank, h in enumerate(hits, 1):
+        m = h["meta"]
+        was_cited = 1 if f"[Source {rank}]" in (answer or "") else 0
+        conn.execute(
+            "INSERT INTO rag_run_sources (rag_run_id, chunk_id, source_file, "
+            "chunk_index, distance, rank, was_cited) VALUES (?,?,?,?,?,?,?)",
+            (run_id, m["chunk_id"], m["source_file"], m["chunk_index"],
+            h["distance"], rank, was_cited),
+        )
+    conn.commit()
+    conn.close()
+    return run_id` },
+
+                { name:'feedback.py', step:'M6', tag:'human-in-the-loop',
+                  notes:[
+                    'The failure taxonomy is the whole point. A free-text "it was bad" is useless; a label like <code class="mono text-purple-300">bad_retrieval</code> vs <code class="mono text-purple-300">unsupported_answer</code> tells you which layer to change.',
+                    'Each feedback row links back to a <code class="mono text-purple-300">rag_run_id</code>, so you can later join feedback to the exact chunks that were retrieved.',
+                    'Kept to one keystroke (y/n) because the easier you make feedback, the more of it you get.',
+                  ],
+                  code:`"""Human-in-the-loop: turn each answer into a labeled training signal."""
+import time
+
+from app import db
+
+FAILURE_TYPES = ["bad_retrieval", "missing_source", "unsupported_answer",
+                "bad_citation", "unclear_question", "other"]
+
+
+def collect(run_id: int):
+    helpful = input("Was this helpful? [y/n]: ").strip().lower().startswith("y")
+    correction, failure_type = None, None
+    if not helpful:
+        correction = input("Optional correction: ").strip() or None
+        ft = input(f"Failure type {FAILURE_TYPES}: ").strip()
+        failure_type = ft if ft in FAILURE_TYPES else "other"
+    save(run_id, helpful, correction, failure_type)
+
+
+def save(run_id, helpful, correction, failure_type, notes=None):
+    conn = db.connect()
+    conn.execute(
+        "INSERT INTO feedback (rag_run_id, helpful, correction, "
+        "failure_type, notes, created_at) VALUES (?,?,?,?,?,?)",
+        (run_id, int(helpful), correction, failure_type, notes,
+        time.strftime("%Y-%m-%dT%H:%M:%S")),
+    )
+    conn.commit()
+    conn.close()` },
+
+                { name:'eval.py', step:'M7', tag:'the closed loop',
+                  notes:[
+                    'This is what makes it a product, not a demo. It runs a fixed question set and checks four things: was the expected source retrieved, are the required concepts present, is there a citation, and did it refuse when it should.',
+                    'The checks are deliberately simple and deterministic so you fully understand them. They are a <strong>floor</strong>; LLM-as-judge comes later.',
+                    'The operating loop: change ONE variable (chunk size, top-k, prompt, model) → run this → keep the change only if the aggregate holds or improves. That single discipline is the core of safe AI iteration.',
+                  ],
+                  code:`"""Repeatable evals over the whole pipeline:
+retrieval, grounding, citation, and refusal quality."""
+import json
+
+from app.config import EVAL_PATH
+from app.retrieve import retrieve
+from app.answer import generate
+
+
+def run_one(case: dict) -> dict:
+    hits = retrieve(case["question"])
+    answer = generate(case["question"], hits)
+    a = answer.lower()
+
+    hint = case.get("expected_source_contains")
+    source_found = (hint is None) or any(
+        hint.lower() in h["meta"]["source_file"].lower()
+        or hint.lower() in h["text"].lower() for h in hits
+    )
+    concepts = case.get("ideal_answer_contains", [])
+    concepts_found = all(c.lower() in a for c in concepts)
+    citation_present = "[source" in a or any(
+        h["meta"]["source_file"].lower() in a for h in hits
+    )
+    refused = any(w in a for w in ("insufficient", "cannot", "not in"))
+    should_refuse = case.get("should_refuse", False)
+
+    if should_refuse:
+        passed = refused
+    else:
+        passed = source_found and concepts_found and citation_present
+
+    return {"id": case["id"], "passed": passed, "source_found": source_found,
+            "should_refuse": should_refuse}
+
+
+def main():
+    cases = json.loads(EVAL_PATH.read_text())
+    print(f"Running {len(cases)} evals...\\n")
+    passed = 0
+    for c in cases:
+        r = run_one(c)
+        passed += r["passed"]
+        print(f"Eval {r['id']}: {'PASS' if r['passed'] else 'FAIL'}")
+        if not r["passed"] and not r["should_refuse"] and not r["source_found"]:
+            print("  likely failure: bad_retrieval")
+    print(f"\\nSummary: {passed} passed / {len(cases)} total")
+
+
+if __name__ == "__main__":
+    main()` },
+
+                { name:'healthcheck.py', step:'M1', tag:'fail fast',
+                  notes:[
+                    'Run this first, always. It fails with an <strong>actionable</strong> message — "run ollama pull X" — instead of a stack trace 200 lines deep in a library.',
+                    'Good error messages are an architecture decision. Each failure mode (Ollama down, model missing, empty store) maps to one clear next action.',
+                  ],
+                  code:`"""Fail fast with a clear message if the local foundation is not ready."""
+import sys
+import ollama
+import chromadb
+
+from app.config import CHAT_MODEL, EMBED_MODEL, CHROMA_PATH, COLLECTION_NAME
+
+
+def check():
+    try:
+        tags = ollama.list()
+    except Exception:
+        sys.exit("Ollama is not reachable at localhost:11434. "
+                "Start Ollama and retry.")
+
+    names = [m["model"] for m in tags["models"]]
+    if not any(CHAT_MODEL in n for n in names):
+        sys.exit(f"Missing chat model. Run: ollama pull {CHAT_MODEL}")
+    if not any(EMBED_MODEL in n for n in names):
+        sys.exit(f"Missing embedding model. Run: ollama pull {EMBED_MODEL}")
+
+    client = chromadb.PersistentClient(path=CHROMA_PATH)
+    client.get_or_create_collection(name=COLLECTION_NAME)
+    print("\\u2705 Local RAG foundation is ready.")
+
+
+if __name__ == "__main__":
+    check()` },
+            ],
+
+            // ─────────── YOUR ingest.py walkthrough ───────────
+            myIngestRaw: [
+                'from pathlib import Path',
+                'import chromadb',
+                'import ollama',
+                '',
+                '',
+                'RAW_DATA_DIR = Path("data/raw")',
+                'CHROMA_PATH = "chroma_db"',
+                'COLLECTION_NAME = "local_context_lab"',
+                'EMBED_MODEL = "nomic-embed-text"',
+                '',
+                '',
+                'def read_markdown_files():',
+                '    documents = []',
+                '',
+                '    for file_path in RAW_DATA_DIR.glob("*.md"):',
+                '        text = file_path.read_text(encoding="utf-8")',
+                '',
+                '        documents.append({',
+                '            "source_file": file_path.name,',
+                '            "text": text,',
+                '        })',
+                '',
+                '    return documents',
+                '',
+                '',
+                'def chunk_text(text, max_chars=700):',
+                '    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]',
+                '',
+                '    chunks = []',
+                '    current_chunk = ""',
+                '',
+                '    for paragraph in paragraphs:',
+                '        if len(current_chunk) + len(paragraph) > max_chars and current_chunk:',
+                '            chunks.append(current_chunk.strip())',
+                '            current_chunk = paragraph',
+                '        else:',
+                '            current_chunk += "\n\n" + paragraph if current_chunk else paragraph',
+                '',
+                '    if current_chunk:',
+                '        chunks.append(current_chunk.strip())',
+                '',
+                '    return chunks',
+                '',
+                '',
+                'def embed_text(text):',
+                '    response = ollama.embed(',
+                '        model=EMBED_MODEL,',
+                '        input=text,',
+                '    )',
+                '',
+                '    embeddings = response.get("embeddings", [])',
+                '',
+                '    if not embeddings:',
+                '        raise RuntimeError("No embedding returned from Ollama.")',
+                '',
+                '    return embeddings[0]',
+                '',
+                '',
+                'def main():',
+                '    documents = read_markdown_files()',
+                '',
+                '    if not documents:',
+                '        print("No markdown files found in data/raw.")',
+                '        return',
+                '',
+                '    client = chromadb.PersistentClient(path=CHROMA_PATH)',
+                '',
+                '    try:',
+                '        client.delete_collection(COLLECTION_NAME)',
+                '        print(f"Deleted existing collection: {COLLECTION_NAME}")',
+                '    except Exception:',
+                '        pass',
+                '',
+                '    collection = client.get_or_create_collection(COLLECTION_NAME)',
+                '',
+                '    total_chunks = 0',
+                '',
+                '    for document in documents:',
+                '        chunks = chunk_text(document["text"])',
+                '',
+                '        for chunk_index, chunk in enumerate(chunks):',
+                '            chunk_id = f"{document[\'source_file\']}::chunk-{chunk_index}"',
+                '            embedding = embed_text(chunk)',
+                '',
+                '            collection.add(',
+                '                ids=[chunk_id],',
+                '                embeddings=[embedding],',
+                '                documents=[chunk],',
+                '                metadatas=[{',
+                '                    "source_file": document["source_file"],',
+                '                    "chunk_index": chunk_index,',
+                '                }],',
+                '            )',
+                '',
+                '            total_chunks += 1',
+                '            print(f"Indexed {chunk_id}")',
+                '',
+                '    print(f"\nIndexed {total_chunks} chunks into Chroma.")',
+                '',
+                '',
+                'if __name__ == "__main__":',
+                '    main()'
+            ],
+            myIngest: [
+                { n:1, lines:[1,9], title:'Imports & config constants', maps:'foundation',
+                  what:'Pulls in <code class="mono">pathlib</code> (clean file paths), <code class="mono">chromadb</code> (the vector store), and <code class="mono">ollama</code> (local model server). Then pins the four things the rest of the file depends on: where raw docs live, where Chroma persists, the collection name, and which embedding model to use.',
+                  why:'These four constants are the contract between ingestion and retrieval. <code class="mono text-amber-300">COLLECTION_NAME</code> and <code class="mono text-amber-300">EMBED_MODEL</code> in particular MUST match what <code class="mono">retrieve.py</code> uses, or you will query an empty/foreign collection or compare vectors from two different models.',
+                  fit:'This is the single source of truth for the offline path. When you later split into multiple files, these constants graduate into <code class="mono">config.py</code> and get imported everywhere — same values, one place.',
+                  next:'Move these into a shared <code class="mono">config.py</code> so <code class="mono">retrieve.py</code> imports the <em>same</em> <code class="mono">COLLECTION_NAME</code> and <code class="mono">EMBED_MODEL</code> instead of redefining them. Drift between the two files is the #1 cause of "why is retrieval empty?".' },
+                { n:2, lines:[12,23], title:'read_markdown_files()', maps:'pipeline stage 01 · ingest',
+                  what:'Globs every <code class="mono">*.md</code> in <code class="mono">data/raw</code>, reads each as UTF-8 text, and returns a list of <code class="mono">{source_file, text}</code> dicts.',
+                  why:'This is the knowledge boundary of the entire system. The assistant can only ever answer about what this function loads. Keeping the raw filename alongside the text is what makes citations and source-file metadata possible downstream.',
+                  fit:'It is the first stage of the pipeline and feeds the chunker. Anything not picked up here becomes a <code class="mono text-red-300">missing_source</code> failure at query time — the model literally cannot know about it.',
+                  next:'Add <code class="mono">.txt</code> support (a second glob), and capture a <code class="mono">source_hash</code> per file so you can later detect which docs actually changed between runs.' },
+                { n:3, lines:[26,42], title:'chunk_text() — paragraph-aware splitting', maps:'pipeline stage 02 · chunk',
+                  what:'Splits text on blank lines into paragraphs, then greedily packs paragraphs into chunks until adding the next one would exceed ~700 chars. Whole paragraphs are never split mid-way.',
+                  why:'Chunk shape is the biggest lever on retrieval quality. Packing by paragraph (rather than slicing at an arbitrary character index) keeps each chunk semantically coherent, which produces cleaner embeddings and more relevant matches. This is a genuinely good choice — better than a naive fixed-width cut.',
+                  fit:'Each chunk becomes one searchable unit in Chroma. Get this wrong and even perfect embeddings + a perfect model can\'t help: the right idea is either buried in noise (chunks too big) or split across two chunks so only half comes back (chunks too small).',
+                  next:'Two upgrades, each testable against evals: (1) add a small <strong>overlap</strong> (~100–150 chars) so an idea spanning a paragraph boundary still lands whole in at least one chunk; (2) track the nearest markdown <strong>heading</strong> and store it as <code class="mono">section_title</code> metadata — it improves both retrieval and the readability of citations.' },
+                { n:4, lines:[45,56], title:'embed_text() — the model wrapper', maps:'pipeline stage 03 · embed',
+                  what:'Calls <code class="mono">ollama.embed(model=..., input=text)</code>, defensively reads <code class="mono">response["embeddings"]</code>, raises loudly if nothing comes back, and returns the first vector.',
+                  why:'This is your <strong>swap point</strong>. Because every embedding goes through this one function, switching to <code class="mono">mxbai-embed-large</code>, Voyage, or OpenAI later is a one-function change — the rest of the file never knows. The explicit <code class="mono">RuntimeError</code> turns a silent empty-vector bug into an obvious, early failure.',
+                  fit:'Embeddings are how "semantic similarity" becomes "distance in space" that Chroma can search. The exact same model must embed the query in <code class="mono">retrieve.py</code> — that symmetry is non-negotiable.',
+                  next:'Add a <code class="mono">embed_texts(list)</code> batch variant. Embedding one chunk per call (as in §6) is fine for a small lab but gets slow on big corpora; batching is the easy win when ingest starts to drag.' },
+                { n:5, lines:[59,76], title:'main() — connect & rebuild the collection', maps:'pipeline stage 04 · store',
+                  what:'Opens a <em>persistent</em> Chroma client at <code class="mono">chroma_db/</code>, deletes any existing collection of the same name (ignoring the error if it doesn\'t exist), then creates it fresh.',
+                  why:'The persistent client is what makes the index survive between runs — it lives on disk, not in memory. The delete-then-create gives you a clean rebuild: the index always exactly mirrors what\'s in <code class="mono">data/raw</code>, with zero risk of stale or duplicate chunks.',
+                  fit:'This is the store the whole query path reads from. <code class="mono">retrieve.py</code> opens this exact collection and runs nearest-neighbor search over what this loop writes. If this is empty or misnamed, retrieval silently returns nothing.',
+                  next:'This rebuild approach is correct for now (see the box below). The alternative — <code class="mono">upsert</code> with deterministic IDs for incremental updates — only earns its complexity once re-embedding the whole corpus each run becomes painfully slow.' },
+                { n:6, lines:[78,98], title:'main() — the index loop', maps:'pipeline stage 04 · store',
+                  what:'For each document, chunks it, and for each chunk: builds a deterministic <code class="mono">chunk_id</code> (<code class="mono">file.md::chunk-N</code>), embeds it, and <code class="mono">add</code>s the id + embedding + text + metadata to Chroma. Prints progress and a final count.',
+                  why:'This is where text actually becomes searchable knowledge. Storing the <code class="mono">document</code> text alongside the vector means retrieval can return the readable chunk (not just an ID), and the metadata (<code class="mono">source_file</code>, <code class="mono">chunk_index</code>) is what lets you cite and debug. The per-chunk progress print is real observability — you can see exactly what got indexed.',
+                  fit:'Completes the offline path. After this runs, the system "knows" things. Every later <code class="mono text-red-300">bad_retrieval</code> traces back to a decision in this loop or in §3 — which is why you debug retrieval before ever blaming the LLM.',
+                  next:'Carry richer metadata (<code class="mono">section_title</code>, <code class="mono">created_at</code>, <code class="mono">content_type</code>) so you can filter and sort later, and batch the <code class="mono">add</code> calls once you optimize embedding.' },
+            ],
+
+            // ─────────── milestones ───────────
+            milestones: [
+                { n:1, title:'Project cleanup & healthcheck', goal:'Clean folder structure, a single config module, and a healthcheck that fails with actionable messages. Get the foundation green before building anything.',
+                  files:'app/config.py\napp/healthcheck.py\n\nuv run python app/healthcheck.py', accept:'Healthcheck passes; config values are imported, never duplicated.' },
+                { n:2, title:'Markdown ingestion', goal:'Read .md/.txt from data/raw, chunk with metadata, embed via Ollama, and store in Chroma. (This is the file you already wrote.)',
+                  files:'app/ingest.py\n\nuv run python app/ingest.py', accept:'At least one file ingests; Chroma holds chunks; re-running does not corrupt the index (rebuild or idempotent upsert).' },
+                { n:3, title:'Retrieval-only CLI', goal:'Query Chroma and print top-k chunks with source + distance — WITHOUT the LLM. Make retrieval inspectable first.',
+                  files:'app/retrieve.py\n\nuv run python app/retrieve.py "..."', accept:'Query returns top-k chunks with source metadata and distances you can eyeball.' },
+                { n:4, title:'Grounded answer generation', goal:'Build the constrained prompt, generate a cited answer, and refuse when context is insufficient.',
+                  files:'app/answer.py\napp/ask.py\n\nuv run python app/ask.py "..."', accept:'Answer is grounded in retrieved chunks, references source labels, and admits when it cannot answer.' },
+                { n:5, title:'SQLite run logging', goal:'Log every run: query, answer, retrieved chunks, distances, which were cited, model, latency.',
+                  files:'app/db.py', accept:'Each ask.py run inserts a rag_run + its rag_run_sources; logs are inspectable in SQLite.' },
+                { n:6, title:'Feedback collection', goal:'After each answer, capture helpful?/correction/failure-type and link it to the run.',
+                  files:'app/feedback.py', accept:'Feedback saves to SQLite, joined to the run id, with a failure type from the fixed taxonomy.' },
+                { n:7, title:'Basic evals', goal:'A repeatable eval set checking retrieval, grounding, citation, and refusal. The closed loop.',
+                  files:'app/eval.py\ndata/eval/eval_set.json\n\nuv run python app/eval.py', accept:'All eval questions run and print pass/fail; you can change one variable and see the score move.' },
+                { n:8, title:'Documentation', goal:'A README so the system is operable and extendable — setup, models, commands, troubleshooting.',
+                  files:'README.md', accept:'A new person can clone, pull models, ingest, ask, and run evals from the README alone.' },
+            ],
+
+            // ─────────── active recall ───────────
+            ci: 0, ans: false,
+            mastered: JSON.parse(localStorage.getItem('rag_mastered') || '[]'),
+            cards: [
+                { id:'c1', q:'In one sentence: what is "the system" in a RAG product?', a:'The deterministic loop around the LLM — Data → Retrieval → Generation → Logging → Feedback → Evaluation → Improvement. The model is a swappable component inside it.' },
+                { id:'c2', q:'Why debug retrieval before touching the prompt?', a:'If the right chunk was never retrieved, no prompt change can fix the answer. Most "the LLM is dumb" cases are actually bad_retrieval. Run retrieve.py first.' },
+                { id:'c3', q:'What two storage layers does the system use and what does each answer?', a:'Chroma (vectors): "which chunks are semantically relevant?" SQLite (logs): "what happened, was it useful, how do we improve?" Chroma stores what the retriever needs; SQLite stores what the product needs.' },
+                { id:'c4', q:'Why must query and chunks use the same embedding model?', a:'Embeddings only compare meaningfully within one model\'s vector space. Mix models (or change the model without re-ingesting) and every distance is garbage.' },
+                { id:'c5', q:'What makes ingestion idempotent, and why care?', a:'Deterministic IDs (doc::chunk-N) + upsert, OR a full delete-and-rebuild. Either guarantees re-running does not create duplicate chunks that pollute retrieval.' },
+                { id:'c6', q:'What is chunk overlap and what failure does it prevent?', a:'Repeating ~100–150 chars between adjacent chunks so an idea spanning a boundary still lands whole in at least one chunk. Prevents answers cut off mid-thought.' },
+                { id:'c7', q:'What three rules belong in the generation prompt?', a:'Answer ONLY from the provided sources; cite sources as [Source N]; say the context is insufficient (and never invent) when the answer is not there.' },
+                { id:'c8', q:'Name the six failure types in the taxonomy.', a:'bad_retrieval, missing_source, unsupported_answer, bad_citation, unclear_question, other.' },
+                { id:'c9', q:'Retrieval found the right chunk but the answer is wrong. Which failure, and what is the fix?', a:'unsupported_answer. Fix at the prompt/generation layer: stronger grounding instruction, fewer noisy chunks, require citations, or a stronger model — NOT retrieval.' },
+                { id:'c10', q:'What is the "false-green" eval problem?', a:'A keyword-based check passes because a required word appears, even though the answer is actually wrong. Keyword checks are a floor, not a ceiling; add LLM-as-judge later.' },
+                { id:'c11', q:'What is the single rule of the eval loop?', a:'Change ONE variable (chunk size, top-k, prompt, model), re-run the whole eval set, and keep the change only if the aggregate score holds or improves.' },
+                { id:'c12', q:'Why "no autonomy before observability"?', a:'You cannot safely give a system power to act until you can see, log, and measure what it does. Grounded → cited → logged → feedback → evals → recommendations → approved actions → limited automation.' },
+                { id:'c13', q:'What does rag_run_sources let you distinguish that rag_runs alone cannot?', a:'"Retrieval found the right chunk but the model ignored it" vs "retrieval never found it" — by recording every retrieved chunk, its distance/rank, and whether it was cited. Different fixes.' },
+                { id:'c14', q:'When should you reach for a bigger/hosted LLM?', a:'Only after retrieval is proven good. If the right chunks come back and the answer is still unsupported, that is when a stronger model or stricter prompt earns its place.' },
+                { id:'c15', q:'Why local-first (Ollama + Chroma + SQLite)?', a:'It keeps the entire loop inside a boundary you control — no data leaves, no cloud dependency. This is the foundation of the "safer, closed-loop AI stack" story.' },
+                { id:'c16', q:'What is the tradeoff of higher top-k?', a:'More chunks raises the chance the right one is included, but floods the prompt with noise (raising unsupported_answer risk, latency, and cost). Tune it against evals.' },
+            ],
+            toggleMastered(id){ this.mastered = this.mastered.includes(id) ? this.mastered.filter(i=>i!==id) : [...this.mastered, id]; localStorage.setItem('rag_mastered', JSON.stringify(this.mastered)); },
+            get streak(){ const d=JSON.parse(localStorage.getItem('rag_review_dates')||'[]'); if(!d.length)return 0; let s=1,cur=new Date();cur.setHours(0,0,0,0); for(let i=d.length-1;i>=0;i--){const rd=new Date(d[i]);rd.setHours(0,0,0,0);const diff=(cur-rd)/86400000; if(diff<=1){if(diff===1)s++;cur=rd;}else break;} return s; },
+            get lastReviewedLabel(){ const d=JSON.parse(localStorage.getItem('rag_review_dates')||'[]'); if(!d.length)return 'never'; const diff=Math.floor((Date.now()-new Date(d[d.length-1]))/86400000); return diff===0?'today':diff===1?'yesterday':diff+' days ago'; },
+            recordReview(){ const d=JSON.parse(localStorage.getItem('rag_review_dates')||'[]'); const t=new Date().toISOString().split('T')[0]; if(!d.includes(t)){d.push(t);localStorage.setItem('rag_review_dates',JSON.stringify(d));} },
+
+            // ─────────── drills ───────────
+            drillPick: {},
+            drills: [
+                { key:'d1', tag:'// Chunking drill', tagClass:'text-purple-400',
+                  q:'Your docs are dense technical notes. Answers keep coming back missing half the point even when the right file is retrieved. What do you change first?',
+                  opts:['Increase top-k to 12 so more chunks come back','Add chunk overlap and/or increase chunk size, then re-run evals','Switch to a bigger chat model','Lower the temperature on generation'],
+                  correct:1, right:'The symptom — right file retrieved but the idea is incomplete — means a single idea is split across chunks. Overlap and/or larger chunks keep ideas whole. Then prove it with evals so you do not silently regress other questions.',
+                  wrong:['More chunks adds noise and cost without fixing the root cause: the idea is fragmented at chunk boundaries. You might even dilute the good chunk.', '', 'A bigger model cannot reassemble information that was never retrieved together. This is a chunking problem, not a generation problem.', 'Temperature affects creativity, not which text the model receives. The missing context is a retrieval/chunking issue.'] },
+                { key:'d2', tag:'// Retrieval debugging drill', tagClass:'text-blue-400',
+                  q:'A user says "the answer is just wrong." What is your FIRST move?',
+                  opts:['Rewrite the generation prompt to be stricter','Run retrieve.py on the same query and inspect the top-k chunks','Swap in a larger LLM','Increase the temperature for more nuance'],
+                  correct:1, right:'Always isolate retrieval first. If the right chunk is not in the top-k, it is bad_retrieval and no prompt or model change helps. If it IS there and the answer is still wrong, only THEN is it a generation problem.',
+                  wrong:['You might be tuning the prompt to fix a problem that lives in retrieval. Diagnose the layer before you touch it.', '', 'A bigger model cannot use a chunk that was never retrieved. Confirm what came back first.', 'Temperature is almost never the cause of a flatly wrong grounded answer.'] },
+                { key:'d3', tag:'// Hallucination drill', tagClass:'text-red-400',
+                  q:'The model confidently answers a question about a company that is NOT in data/raw. How should the system behave, and how do you enforce it?',
+                  opts:['Let it answer from general knowledge — it is being helpful','It must say the context is insufficient; enforce via the prompt rule + a refusal eval','Add the company to data/raw automatically','Raise top-k so it finds something to say'],
+                  correct:1, right:'For a grounded system, the correct answer to "not in my sources" is refusal. Enforce it with the explicit prompt rule ("if the sources do not contain the answer, say so") and lock it in with a should_refuse eval case so it never silently regresses.',
+                  wrong:['Answering from training data breaks the grounding contract and is unauditable — exactly the unsafe behavior a closed-loop stack exists to prevent.', '', 'Auto-ingesting arbitrary data has no provenance and defeats the point of a controlled knowledge boundary.', 'Forcing retrieval to "find something" returns irrelevant chunks and invites a confidently wrong answer.'] },
+                { key:'d4', tag:'// Storage-model drill', tagClass:'text-emerald-400',
+                  q:'You want to track which retrieved chunks were actually cited, to tell "model ignored a good chunk" from "retrieval missed." Where does this belong?',
+                  opts:['In Chroma metadata on each vector','In a rag_run_sources row per retrieved chunk in SQLite','In the prompt text','Nowhere — it cannot be measured'],
+                  correct:1, right:'SQLite stores what the product needs. A rag_run_sources row per retrieved chunk — with rank, distance, and a was_cited flag — is exactly what separates a retrieval failure from a generation failure. That distinction drives the right fix.',
+                  wrong:['Chroma stores what the retriever needs (vectors + static metadata), not per-run outcomes. Run-level facts belong in the log.', '', 'The prompt is transient and not queryable later. You need a durable, joinable record.', 'It is very measurable — string-match the [Source N] labels against the answer and store the result.'] },
+                { key:'d5', tag:'// Eval discipline drill', tagClass:'text-amber-400',
+                  q:'You tweak the prompt and one previously-failing question now passes. Ship it?',
+                  opts:['Yes — it fixed the bug','Run the FULL eval set first; keep the change only if the aggregate holds or improves','Only if the answer "looks" better','Ship and watch user feedback for regressions'],
+                  correct:1, right:'A single fixed question tells you nothing about the three you might have quietly broken. Run the whole eval set, compare aggregate scores, and keep the change only if it nets out positive. That regression discipline IS the closed loop.',
+                  wrong:['One passing case is not evidence the system improved overall. Prompt changes routinely fix one thing and break two.', '', '"Looks better" on one answer is exactly the trap evals exist to remove from your judgment.', 'Shipping first and discovering regressions from users is slow, costly, and erodes trust — the eval set is how you catch it before release.'] },
+            ],
+
+            // ─────────── glossary ───────────
+            glossary: [
+                { t:'RAG', d:'Retrieval-Augmented Generation: fetch relevant evidence first, then have the model answer from it. Grounds output in your data instead of the model\'s memory.' },
+                { t:'Chunk', d:'A retrievable slice of a document. The unit that gets embedded, stored, retrieved, and cited. Chunk shape largely determines retrieval quality.' },
+                { t:'Embedding', d:'A vector that encodes the meaning of text. Similar meanings sit close together, so semantic search becomes nearest-neighbor distance.' },
+                { t:'Vector store', d:'A database (here, Chroma) that holds embeddings + text + metadata and answers nearest-neighbor queries efficiently.' },
+                { t:'Top-k retrieval', d:'Returning the k closest chunks to the query. Higher k = more recall but more noise; lower k = cleaner but riskier. Tuned against evals.' },
+                { t:'Distance / similarity', d:'How far a chunk\'s vector is from the query\'s. Smaller distance = more relevant. Large distances are a signal the context may be insufficient.' },
+                { t:'Grounding', d:'Constraining the model to answer only from retrieved context. The opposite of answering from training memory.' },
+                { t:'Citation', d:'A reference ([Source N] / filename) tying a claim back to the chunk that supports it. Requires labeling sources in the prompt.' },
+                { t:'Hallucination', d:'A fluent but unsupported claim. In a grounded system the correct alternative is refusal: "the context is insufficient."' },
+                { t:'Refusal', d:'Declining to answer when the knowledge base lacks the information. A feature, not a bug — and something you should eval for explicitly.' },
+                { t:'Idempotent ingestion', d:'Re-running ingest does not duplicate data — via deterministic IDs + upsert, or a clean delete-and-rebuild.' },
+                { t:'Overlap', d:'Shared characters between adjacent chunks so an idea crossing a boundary still appears whole in at least one chunk.' },
+                { t:'Hybrid search', d:'Combining vector (semantic) and keyword (lexical) search. Catches exact terms — acronyms, filenames, entities — that embeddings can miss.' },
+                { t:'Reranking', d:'A second-pass model that reorders retrieved chunks by relevance. Improves precision at the cost of latency. Add after baseline retrieval is solid.' },
+                { t:'Query rewriting', d:'Reformulating a vague user query into a better retrieval query before searching. Helps with ambiguous or under-specified questions.' },
+                { t:'Eval set', d:'A fixed list of questions with expected sources/concepts/refusal flags, run repeatedly to detect regressions when you change anything.' },
+                { t:'Failure taxonomy', d:'The fixed set of labels (bad_retrieval, missing_source, unsupported_answer, bad_citation, unclear_question, other) that point each failure at the layer to fix.' },
+                { t:'Closed loop', d:'Data → Retrieval → Generation → Logging → Feedback → Evaluation → Improvement. The operating cycle that turns a demo into a product.' },
+                { t:'Observability', d:'Leaving a trace of every run (query, chunks, answer, sources, feedback) so the system can be debugged and improved. Precedes any autonomy.' },
+                { t:'Local-first', d:'Running models and storing data on hardware you control (Ollama + Chroma + SQLite). The basis of a private, closed-loop AI stack.' },
+            ],
+
+            // ─────────── quiz ───────────
+            quizI:0, quizSel:null, quizAns:false, quizScore:0, quizDone:false, quizHistory:[],
+            get bestQuizScore(){ return JSON.parse(localStorage.getItem('rag_best_quiz')||'null'); },
+            quizQuestions: [
+                { q:'A user reports a wrong answer. What is the correct first diagnostic step?', opts:['Rewrite the generation prompt','Run retrieve.py and inspect whether the right chunk is in the top-k','Switch to a larger LLM','Re-ingest all documents'], c:1, exp:'Isolate retrieval before generation. If the right chunk is not retrieved, it is bad_retrieval and no prompt/model change fixes it. Only if the chunk IS there is it a generation problem.' },
+                { q:'Why must the query and the stored chunks be embedded by the same model?', opts:['It is faster','Embeddings are only comparable within one model\'s vector space — mixing them makes distances meaningless','To save disk space','So citations line up'], c:1, exp:'Vectors from different models live in different spaces. Comparing them produces garbage distances. Change the embedder and you MUST re-ingest everything.' },
+                { q:'Retrieval returns the correct chunk, but the answer makes claims beyond it. Which failure type?', opts:['bad_retrieval','missing_source','unsupported_answer','unclear_question'], c:2, exp:'The right context was retrieved but the model over-claimed. Fix at the generation layer: stronger grounding prompt, less noise, require per-claim citations, or a stronger model.' },
+                { q:'What does the rag_run_sources table let you distinguish?', opts:['Fast vs slow queries','Whether retrieval missed the chunk vs the model ignored a good chunk','Which user asked','Embedding model version'], c:1, exp:'By recording every retrieved chunk with rank, distance, and a was_cited flag, you can tell a retrieval miss from a generation miss — completely different fixes.' },
+                { q:'You change chunk size and one failing eval now passes. What do you do?', opts:['Ship it','Run the full eval set and keep the change only if the aggregate holds or improves','Revert immediately','Change top-k too while you are at it'], c:1, exp:'One fixed case says nothing about regressions elsewhere. Change ONE variable, run the whole set, compare aggregate. This regression discipline is the core operating loop.' },
+                { q:'The correct behavior when a question is not covered by data/raw is to…', opts:['Answer from the model\'s general knowledge','Say the context is insufficient and not invent an answer','Return the closest chunk regardless','Ask the user to rephrase'], c:1, exp:'A grounded system refuses when its sources lack the answer. Enforce via the prompt rule and lock it in with a should_refuse eval case.' },
+                { q:'What is the purpose of chunk overlap?', opts:['Reduce storage','Keep an idea that spans a boundary whole in at least one chunk','Speed up embedding','Improve citation formatting'], c:1, exp:'Without overlap, an idea straddling two chunks may only ever be half-retrieved. Overlap repeats a small window so the idea lands intact somewhere.' },
+                { q:'Which choice best matches the "local-first" principle for the MVP?', opts:['OpenAI embeddings + Pinecone','Ollama + Chroma + SQLite on the local machine','A managed RAG SaaS','LangChain cloud'], c:1, exp:'Local-first keeps the whole loop inside a boundary you control — the foundation of a private, closed-loop, auditable AI stack.' },
+                { q:'Why build a retrieval-only CLI before generation?', opts:['It is required by Chroma','To make retrieval behavior inspectable before the LLM obscures it','To save API costs','To populate the database'], c:1, exp:'Generation hides retrieval quality behind fluent prose. A retrieval-only view shows exactly what the model will see, so you can fix the right layer.' },
+                { q:'What is the "false-green" risk in keyword-based evals?', opts:['Tests run too slowly','A check passes on a present keyword while the answer is actually wrong','Chroma returns duplicates','The model refuses too often'], c:1, exp:'Keyword matching is a cheap floor, not proof of correctness. An answer can contain the right word and still be wrong. Add LLM-as-judge or grounding checks as you mature.' },
+                { q:'When does upsert-with-deterministic-IDs beat delete-and-rebuild for ingestion?', opts:['Always','When re-embedding the entire corpus each run becomes too slow','When you have one small file','Never'], c:1, exp:'Rebuild is simpler and self-correcting for small local corpora. Upsert earns its added complexity only when incremental updates on a large corpus matter for speed.' },
+                { q:'In the maturity ladder, what must come before "human-approved actions"?', opts:['Limited automation','Grounded answers, citations, logs, feedback, and evals','A web UI','A bigger model'], c:1, exp:'No autonomy before observability. You earn the right to act only after the system is grounded, cited, logged, feedback-driven, and measured by evals.' },
+                { q:'Higher top-k primarily trades…', opts:['Recall for noise/cost','Latency for accuracy guaranteed','Storage for speed','Citations for refusals'], c:0, exp:'More chunks raises the chance of including the right one (recall) but floods the prompt with irrelevant text, increasing unsupported-answer risk, latency, and cost.' },
+                { q:'Which statement best captures the course thesis?', opts:['The best model wins','The LLM is not the system — the deterministic loop around it is','Prompts are everything','Vector DBs solve RAG'], c:1, exp:'The model is a swappable component. The durable, safe, improvable engineering is the loop: data, retrieval, generation, logging, feedback, evaluation, improvement.' },
+            ],
+            nextQuiz(){ if(this.quizAns){ const correct=this.quizSel===this.quizQuestions[this.quizI].c; this.quizHistory.push({correct}); if(correct)this.quizScore++; if(this.quizI<this.quizQuestions.length-1){this.quizI++;this.quizSel=null;this.quizAns=false;} else { this.quizDone=true; const b=JSON.parse(localStorage.getItem('rag_best_quiz')||'null'); if(b===null||this.quizScore>b)localStorage.setItem('rag_best_quiz',this.quizScore); this.recordReview(); } } else if(this.quizSel!==null){ this.quizAns=true; } },
+            resetQuiz(){ this.quizI=0;this.quizSel=null;this.quizAns=false;this.quizScore=0;this.quizDone=false;this.quizHistory=[]; },
+
+            // ─────────── build game ───────────
+            archStage:0, archPick:null, archConfirmed:false, archChoices:[], archScore:0,
+            archRounds: [
+                { id:1, title:'Round 1 of 8 — The boundary', scenario:'You want the assistant to answer questions about your product notes. Where does the system get its knowledge?',
+                  constraints:['🔒 Local-first','📁 Markdown notes','🧪 MVP'], question:'What is the ingestion source for the MVP?',
+                  opts:[{label:'Local .md/.txt files in data/raw',detail:'Read plain text from a folder you control.'},{label:'Live web crawler over the whole internet',detail:'Crawl and index pages on demand.'},{label:'A hosted SaaS knowledge base',detail:'Push docs to a third-party RAG service.'},{label:'The LLM\'s own training data',detail:'Just ask the model what it knows.'}],
+                  correct:0, wrongFeedback:[null,'A crawler adds auth, rate limits, dedup, and unbounded scope before the loop even works. Defer it — local files are enough to learn on.','A hosted KB breaks local-first and the closed-loop boundary; data leaves your control. Wrong for a safe, private MVP.','That is not RAG at all — it is exactly the ungrounded, unauditable behavior RAG exists to replace.'],
+                  rightFeedback:'Local Markdown is the knowledge boundary: simple, inspectable, fully under your control. Everything the system can answer must live here first.', stackAdded:'data/raw ingestion' },
+                { id:2, title:'Round 2 of 8 — Splitting', scenario:'Your notes are long. They must become retrievable units before embedding.',
+                  constraints:['🧩 Coherence matters','🎯 Retrieval quality','📏 ~700–900 chars'], question:'How do you chunk?',
+                  opts:[{label:'Pack whole paragraphs up to ~800 chars, with a little overlap',detail:'Semantic-ish units, never cut mid-paragraph.'},{label:'Slice every 800 characters exactly, ignoring structure',detail:'Hard cut at a fixed index.'},{label:'One chunk per whole document',detail:'Embed each file as a single vector.'},{label:'One chunk per sentence',detail:'Maximum granularity.'}],
+                  correct:0, wrongFeedback:[null,'Hard fixed-index cuts slice sentences and ideas in half, producing noisy embeddings and half-answers. Respect structure.','A whole-doc vector is too coarse — retrieval returns the entire file and the model drowns in irrelevant text.','Sentence chunks lose surrounding context; an idea gets scattered across many tiny vectors and never retrieved whole.'],
+                  rightFeedback:'Paragraph-packed chunks with overlap keep ideas coherent and retrievable. This is the single biggest lever on retrieval quality.', stackAdded:'Paragraph chunker + overlap' },
+                { id:3, title:'Round 3 of 8 — Embeddings', scenario:'Chunks must become vectors so semantic search works.',
+                  constraints:['🔒 Local','🔁 Swappable later'], question:'How do you embed?',
+                  opts:[{label:'nomic-embed-text via Ollama, wrapped in one function',detail:'Local model behind a single swap point.'},{label:'Call ollama directly from every file that needs an embedding',detail:'Inline the call wherever convenient.'},{label:'Use a different model for queries than for chunks',detail:'Pick whichever is handy each time.'},{label:'Skip embeddings; keyword search only',detail:'Just grep the text.'}],
+                  correct:0, wrongFeedback:[null,'Scattering the call everywhere means swapping providers later is a painful find-and-replace. One wrapper = one-file change.','Catastrophic: query and chunk vectors must come from the SAME model or every distance is meaningless.','Pure keyword search misses paraphrases and semantics — the whole point of embeddings. (Hybrid comes later, as an addition.)'],
+                  rightFeedback:'A local embedder behind one function keeps the stack closed and makes future model swaps trivial. Same model for query and chunks, always.', stackAdded:'Embedding wrapper' },
+                { id:4, title:'Round 4 of 8 — Storage', scenario:'Vectors and text need to persist and be searchable across runs.',
+                  constraints:['💾 Persist to disk','🔍 Nearest-neighbor','🧰 Zero infra'], question:'What stores the vectors for the MVP?',
+                  opts:[{label:'Chroma PersistentClient on local disk',detail:'Local, persistent, simple.'},{label:'An in-memory list you rebuild every run',detail:'Hold vectors in a Python list.'},{label:'Qdrant cluster on Kubernetes',detail:'Full production vector DB now.'},{label:'A plain SQLite table of raw text',detail:'Store text, no vectors.'}],
+                  correct:0, wrongFeedback:[null,'In-memory means no persistence and re-embedding everything on every query — and it does not scale past a toy.','Qdrant-on-k8s is real infra you do not need yet; it hides the pipeline you are trying to learn. Migrate later if you outgrow Chroma.','SQLite is the right place for run logs, not vector search — it cannot do efficient nearest-neighbor over embeddings.'],
+                  rightFeedback:'Chroma persists vectors + text + metadata locally with zero infra and answers nearest-neighbor queries. SQLite handles logs; Chroma handles search.', stackAdded:'Chroma vector store' },
+                { id:5, title:'Round 5 of 8 — Retrieval first', scenario:'Before any answers, you need to know the right chunks come back.',
+                  constraints:['🔬 Inspectable','🐞 Debuggable'], question:'What do you build before generation?',
+                  opts:[{label:'A retrieval-only CLI that prints top-k + distances, no LLM',detail:'See exactly what the model would receive.'},{label:'The full answer pipeline immediately',detail:'Wire query→LLM→answer in one shot.'},{label:'A web UI for asking questions',detail:'Make it pretty first.'},{label:'An autonomous agent that acts on answers',detail:'Let it take actions.'}],
+                  correct:0, wrongFeedback:[null,'Jumping to full generation hides retrieval quality behind fluent prose — you cannot tell a retrieval miss from a generation miss.','A UI hides the pipeline and makes debugging harder. CLI first; UI is a deferred extension.','Autonomy before observability is the cardinal sin. You have not even confirmed retrieval works.'],
+                  rightFeedback:'A retrieval-only CLI makes the most failure-prone layer fully inspectable. Debug retrieval before the LLM ever obscures it.', stackAdded:'retrieve.py (debug)' },
+                { id:6, title:'Round 6 of 8 — The prompt contract', scenario:'Now you generate. The model must stay grounded and honest.',
+                  constraints:['📌 Cite sources','🚫 No hallucination'], question:'What goes in the generation prompt?',
+                  opts:[{label:'Answer ONLY from sources; cite [Source N]; refuse if insufficient',detail:'Explicit grounding + citation + refusal rules.'},{label:'"Be helpful and answer the question"',detail:'Trust the model to do the right thing.'},{label:'Paste all chunks with no instructions',detail:'Let the model figure it out.'},{label:'Tell it to use its own knowledge to fill gaps',detail:'Blend sources with training data.'}],
+                  correct:0, wrongFeedback:[null,'Vague instructions let the model answer from memory, skip citations, and hallucinate. The prompt is your safety contract — be explicit.','No instructions means no grounding guarantee and no citations. The model will improvise.','"Fill gaps with your own knowledge" is an explicit license to hallucinate — the exact opposite of a grounded system.'],
+                  rightFeedback:'The three rules — answer only from sources, cite, refuse when insufficient — are what make the system grounded, auditable, and honest.', stackAdded:'Constrained prompt' },
+                { id:7, title:'Round 7 of 8 — Observability', scenario:'You want to improve the system over time, not just demo it once.',
+                  constraints:['📝 Trace every run','🔗 Joinable'], question:'What do you log, and where?',
+                  opts:[{label:'Query, answer, retrieved chunks (rank/distance/cited), model, latency → SQLite',detail:'A full, joinable trace per run.'},{label:'Just print the answer to the terminal',detail:'Read it and move on.'},{label:'Nothing — logging is premature optimization',detail:'Add it if problems appear.'},{label:'Only the final answer text in a file',detail:'Keep a transcript.'}],
+                  correct:0, wrongFeedback:[null,'A terminal print vanishes. You cannot debug or measure a system whose behavior you did not record.','Without logs you are blind: you cannot distinguish a retrieval miss from a generation miss, or prove anything improved.','The answer alone cannot tell you WHY it was good or bad — you need the retrieved chunks and which were cited.'],
+                  rightFeedback:'Logging the full trace (especially retrieved-vs-cited chunks) is what turns a demo into an improvable product. Observable by default.', stackAdded:'SQLite run log' },
+                { id:8, title:'Round 8 of 8 — Closing the loop', scenario:'How do you know a change (chunk size, top-k, prompt, model) actually helped?',
+                  constraints:['🔁 Repeatable','📊 Regression-safe'], question:'What is the final piece?',
+                  opts:[{label:'A fixed eval set you re-run after changing ONE variable',detail:'Compare aggregate score before/after.'},{label:'Eyeball a few answers and trust your gut',detail:'If it looks better, keep it.'},{label:'Ask users and wait for complaints',detail:'Let production tell you.'},{label:'Change several things at once to move faster',detail:'Batch your improvements.'}],
+                  correct:0, wrongFeedback:[null,'Eyeballing one answer is exactly the bias evals remove. You will keep changes that fixed one case and broke three.','Waiting for complaints is slow, costly, and erodes trust. Catch regressions before release with evals.','Changing several variables at once means you cannot attribute the result. Change one thing, measure, repeat.'],
+                  rightFeedback:'A repeatable eval set + the one-variable rule closes the loop: observe → classify → change one thing → re-run → keep or revert. That is the operating system of a real AI product.', stackAdded:'Eval loop (closed!)' },
+            ],
+            archNextRound(){ if(!this.archConfirmed&&this.archPick!==null){ this.archConfirmed=true; const r=this.archRounds[this.archStage-1]; const correct=this.archPick===r.correct; if(correct)this.archScore++; this.archChoices.push({round:r.id,pick:this.archPick,correct}); } },
+            archAdvance(){ if(this.archStage<this.archRounds.length){this.archStage++;this.archPick=null;this.archConfirmed=false;} else this.archStage=this.archRounds.length+1; },
+            archReset(){ this.archStage=0;this.archPick=null;this.archConfirmed=false;this.archChoices=[];this.archScore=0; },
+
+            // ─────────── speed round ───────────
+            speedStage:0, speedQI:0, speedSel:null, speedAns:false, speedScore:0, speedHistory:[], speedTimeLeft:30, speedTimerRef:null,
+            speedQuestions: [
+                { q:'Bad answer. First command you run?', opts:['Edit the prompt','retrieve.py to inspect top-k','Bigger model','Re-ingest'], c:1, exp:'Isolate retrieval first — if the chunk is not there, nothing downstream can fix it.' },
+                { q:'Change the embedding model. What MUST you also do?', opts:['Nothing','Re-ingest everything','Lower temperature','Raise top-k'], c:1, exp:'Query and chunks must share a vector space. New embedder = re-embed all chunks.' },
+                { q:'Right chunk retrieved, answer over-claims. Failure type?', opts:['bad_retrieval','unsupported_answer','missing_source','unclear_question'], c:1, exp:'Generation-layer problem: tighten the prompt, cut noise, require citations.' },
+                { q:'Question not in your notes. Correct behavior?', opts:['Answer from memory','Say context is insufficient','Guess','Return any chunk'], c:1, exp:'Grounded systems refuse when sources lack the answer. Enforce + eval it.' },
+                { q:'Chroma is for ___, SQLite is for ___.', opts:['logs / vectors','vectors / logs+feedback','both the same','neither'], c:1, exp:'Chroma = what the retriever needs; SQLite = what the product needs.' },
+                { q:'One eval passes after a change. Ship?', opts:['Yes','Run full set, keep if aggregate holds','Revert','Ignore'], c:1, exp:'Guard against regressions: one fix can break three. Compare the whole set.' },
+                { q:'Purpose of chunk overlap?', opts:['Save space','Keep boundary-spanning ideas whole','Faster embed','Nicer citations'], c:1, exp:'Overlap stops an idea being split across two chunks where only one is retrieved.' },
+                { q:'Before "approved actions," you need…', opts:['A UI','Grounded+cited+logged+feedback+evals','A bigger model','Agents'], c:1, exp:'No autonomy before observability — earn power to act by being measurable first.' },
+            ],
+            startSpeed(){ this.speedStage=1;this.speedQI=0;this.speedSel=null;this.speedAns=false;this.speedScore=0;this.speedHistory=[];this.runSpeedTimer(); },
+            runSpeedTimer(){ this.speedTimeLeft=30; clearInterval(this.speedTimerRef); this.speedTimerRef=setInterval(()=>{ this.speedTimeLeft--; if(this.speedTimeLeft<=0){clearInterval(this.speedTimerRef); if(!this.speedAns){this.speedSel=-1;this.confirmSpeed();}} },1000); },
+            confirmSpeed(){ clearInterval(this.speedTimerRef); this.speedAns=true; const correct=this.speedSel===this.speedQuestions[this.speedQI].c; this.speedHistory.push(correct); if(correct)this.speedScore++; },
+            nextSpeed(){ if(this.speedQI<this.speedQuestions.length-1){this.speedQI++;this.speedSel=null;this.speedAns=false;this.runSpeedTimer();} else {this.speedStage=2;clearInterval(this.speedTimerRef);} },
+
+            // ─────────── failure gauntlet ───────────
+            gauntletStage:0, gauntletPick:null, gauntletAns:false, gauntletScore:0,
+            gauntletScenarios: [
+                { who:'Symptom', whoClass:'bg-red-950 text-red-300',
+                  symptom:'Q: "What did the build plan say about evals?"  →  Answer: "The context is insufficient." But you KNOW it is in 05_eval_plan.md.',
+                  question:'Most likely failure and fix?',
+                  opts:['unsupported_answer — strengthen the prompt','bad_retrieval — the eval chunk was not in top-k; fix chunking/top-k/embeddings','missing_source — add the file (it is already there)','bad_citation — fix citation format'],
+                  correct:1, rightFeedback:'The doc exists but the model said it could not find it — so retrieval did not surface the right chunk. Confirm with retrieve.py; then try larger/overlapping chunks, higher top-k, or a better embedder.',
+                  wrongFeedback:['The model refused, it did not over-claim — so it is not a generation over-reach. The chunk never reached the prompt.',null,'The file IS in data/raw, so it is not missing_source. The problem is that retrieval did not find the relevant chunk inside it.','There is no citation to be wrong — the model refused. This is upstream, in retrieval.'] },
+                { who:'Symptom', whoClass:'bg-red-950 text-red-300',
+                  symptom:'retrieve.py shows the perfect chunk at rank 1, distance 0.18. But ask.py\'s answer adds a "fact" that appears nowhere in that chunk.',
+                  question:'Failure and layer to fix?',
+                  opts:['bad_retrieval — improve chunking','unsupported_answer — tighten the grounding prompt / reduce noise / require citations','missing_source — ingest more docs','unclear_question — rewrite the query'],
+                  correct:1, rightFeedback:'Retrieval did its job (rank 1, low distance). The model invented beyond the evidence — a generation-layer failure. Strengthen "answer ONLY from sources," cut noisy extra chunks, require per-claim citations, or use a stronger model.',
+                  wrongFeedback:['Retrieval is provably fine here — the right chunk is rank 1. Changing chunking would fix a problem that does not exist.',null,'The needed source is present and retrieved. Adding docs does nothing.','The query clearly worked — it retrieved the right chunk. The defect is in how the model used it.'] },
+                { who:'Symptom', whoClass:'bg-red-950 text-red-300',
+                  symptom:'Q: "What is our refund SLA?"  →  Answer: "The context is insufficient." You check: there is no refund document anywhere in data/raw.',
+                  question:'Failure and fix?',
+                  opts:['bad_retrieval — raise top-k','missing_source — the knowledge is not in the KB; add the document','unsupported_answer — loosen the prompt so it answers anyway','bad_citation — add source labels'],
+                  correct:1, rightFeedback:'The refusal is CORRECT behavior — the data genuinely is not there. This is missing_source: the fix is to ingest the refund policy, not to weaken the system. A correct refusal is a feature.',
+                  wrongFeedback:['Raising top-k cannot retrieve a document that was never ingested. There is nothing to find.',null,'Loosening the prompt to "answer anyway" would force a hallucination. Never trade grounding for the appearance of helpfulness.','There is no answer to cite — the information does not exist in the KB. Add the source.'] },
+                { who:'Symptom', whoClass:'bg-red-950 text-red-300',
+                  symptom:'Answers cite "[Source 2]" but Source 2 is about CLI usage while the claim is about the data model. The cited source does not support the claim.',
+                  question:'Failure and fix?',
+                  opts:['bad_citation — the model cited a non-supporting source; tighten prompt + add citation validation','bad_retrieval — re-embed everything','missing_source — add more docs','unclear_question — ask the user to clarify'],
+                  correct:0, rightFeedback:'The claim may even be right, but it is attributed to the wrong source — that is bad_citation. Fix with a stricter "cite the specific source that supports each claim" instruction, and eventually a validation step that checks the cited chunk actually contains the claim.',
+                  wrongFeedback:[null,'Retrieval may be fine; the defect is in how the model attributed the claim. Re-embedding is the wrong lever.','The sources exist; the model just pointed at the wrong one. Adding docs will not fix attribution.','The question was understood and answered — the only defect is the citation accuracy.'] },
+                { who:'Symptom', whoClass:'bg-red-950 text-red-300',
+                  symptom:'Q: "Tell me about the thing with the stuff."  →  Answer wanders across unrelated chunks and satisfies no one.',
+                  question:'Failure and fix?',
+                  opts:['unsupported_answer — stronger model','unclear_question — the query is too vague; clarify or rewrite the query before retrieving','bad_retrieval — lower top-k','bad_citation — reformat citations'],
+                  correct:1, rightFeedback:'Garbage in, garbage out: an ambiguous query embeds to a vague vector and retrieves a scatter of loosely-related chunks. Fix at the input: ask a clarifying question, or add a query-rewriting step that sharpens vague questions before retrieval.',
+                  wrongFeedback:['A bigger model cannot rescue a question that has no clear intent. Fix the query, not the model.',null,'Lower top-k just returns fewer of the same scattered chunks. The root cause is the vague query.','Citations are irrelevant when the question itself is unclear and the retrieval is unfocused.'] },
+                { who:'Symptom', whoClass:'bg-red-950 text-red-300',
+                  symptom:'After you increased chunk size to 2000 chars, answers got vaguer and started mixing in irrelevant details, even on questions that used to work.',
+                  question:'What happened and what do you do?',
+                  opts:['Coincidence — re-run and it will pass','Chunks too large = noisy embeddings + irrelevant context in the prompt; revert via evals and find a smaller size that scores better','missing_source — re-ingest','It is a model bug — switch models'],
+                  correct:1, rightFeedback:'Oversized chunks blur the embedding (one vector now represents several ideas) and stuff the prompt with off-topic text. This is exactly what regression evals catch: change one variable, see the aggregate drop, revert, and tune toward a smaller size.',
+                  wrongFeedback:['It is not random — the regression correlates directly with the chunk-size change. Trust the eval signal.',null,'The sources are unchanged; re-ingesting the same oversized chunks reproduces the problem.','Switching models to mask a chunking regression hides the real cause and is expensive. Fix the variable you changed.'] },
+                { who:'Symptom', whoClass:'bg-red-950 text-red-300',
+                  symptom:'Your eval reports eval-002 as PASS, but when you read the actual answer it is clearly wrong — it just happens to contain the required keyword "AWS".',
+                  question:'What is going on?',
+                  opts:['The eval is perfect; trust it','False-green: keyword matching passed on a present word while the answer is wrong; strengthen the grounding check','bad_retrieval — raise top-k','The model is lying to the eval'],
+                  correct:1, rightFeedback:'This is the false-green problem. Keyword presence is a cheap floor, not proof of correctness. Tighten the check (require multiple concepts, check the cited source, or add an LLM-as-judge step) so the eval measures what you actually care about.',
+                  wrongFeedback:['Blindly trusting a keyword match is exactly the trap. A present word does not mean a correct answer.',null,'Retrieval may be fine; the issue is that your eval CHECK is too weak, not that the chunk is missing.','The model is not gaming anything — your eval criterion is simply too lenient to catch a wrong answer.'] },
+                { who:'Symptom', whoClass:'bg-red-950 text-red-300',
+                  symptom:'Latency per query jumped from 1.2s to 9s after you set top_k=25 "to be safe." Quality barely changed.',
+                  question:'Best response?',
+                  opts:['Accept it — more context is always better','Lower top-k: you flooded the prompt with noise for little gain; tune k against evals for the recall/cost sweet spot','Switch to a faster but worse embedder','Cache everything and ignore latency'],
+                  correct:1, rightFeedback:'High top-k bloats the prompt — more tokens, more latency, more chance of unsupported answers — with diminishing recall gains. Bring k back down and let evals find the point where recall is high and noise/cost are low.',
+                  wrongFeedback:['"More context is always better" is false — past a point it adds noise, latency, and hallucination risk without improving recall.',null,'A worse embedder degrades retrieval to fix a problem caused by k, not by embedding quality.','Caching hides the symptom; the real fix is right-sizing k so each query is lean.'] },
+                { who:'Symptom', whoClass:'bg-red-950 text-red-300',
+                  symptom:'You re-ran ingest.py three times. Now retrieve.py returns the same chunk twice in the top-k and answers feel repetitive.',
+                  question:'Root cause and fix?',
+                  opts:['Chroma bug — reinstall','Non-idempotent ingestion created duplicate IDs; use a clean rebuild (delete_collection) or deterministic upsert so re-runs do not duplicate','bad_citation — fix formatting','unclear_question — rewrite query'],
+                  correct:1, rightFeedback:'Duplicates in retrieval are the classic non-idempotent-ingestion smell. Either delete-and-rebuild the collection each run (your current approach) or use deterministic IDs + upsert. Both guarantee one chunk = one entry no matter how many times you ingest.',
+                  wrongFeedback:['Chroma is behaving correctly — it stored what ingestion told it to. The bug is in how ingestion writes IDs.',null,'Citations are downstream; the duplication is created at ingest time.','The query is fine; the index itself contains duplicate chunks. Fix ingestion idempotency.'] },
+            ],
+            confirmGauntlet(){ if(!this.gauntletAns&&this.gauntletPick!==null){ this.gauntletAns=true; if(this.gauntletPick===this.gauntletScenarios[this.gauntletStage-1].correct)this.gauntletScore++; } },
+            nextGauntlet(){ if(this.gauntletStage<this.gauntletScenarios.length){this.gauntletStage++;this.gauntletPick=null;this.gauntletAns=false;} else this.gauntletStage=this.gauntletScenarios.length+1; },
+
+            // ─────────── sequence ───────────
+            seqMode:null, seqItems:[], seqSelected:[], seqDone:false, seqPerfect:false, seqCorrectOrder:[],
+            get seqLabel(){ return this.seqMode==='query'?'Query path — online, per question':this.seqMode==='ingest'?'Ingestion path — offline':'Improvement loop — how you get better'; },
+            seqModes: {
+                query: { items:[
+                    {id:'q1',label:'User submits a query',why:'The entry point — ask.py receives the question.'},
+                    {id:'q2',label:'Embed the query (same model as chunks)',why:'Turn the question into a vector in the same space as the chunks.'},
+                    {id:'q3',label:'Chroma returns top-k nearest chunks',why:'Nearest-neighbor search finds the most relevant evidence.'},
+                    {id:'q4',label:'Build the constrained prompt (label sources, rules)',why:'Assemble context with citation + grounding + refusal rules.'},
+                    {id:'q5',label:'LLM generates a grounded, cited answer',why:'The model answers only from the supplied sources.'},
+                    {id:'q6',label:'Log the run to SQLite (chunks, cites, latency)',why:'Leave a trace so the run is debuggable and measurable.'},
+                    {id:'q7',label:'Collect user feedback (helpful? failure type?)',why:'Turn the answer into a labeled signal for improvement.'},
+                ], correct:['q1','q2','q3','q4','q5','q6','q7'] },
+                ingest: { items:[
+                    {id:'i1',label:'Read .md/.txt files from data/raw',why:'Load the knowledge boundary — only this can be answered about.'},
+                    {id:'i2',label:'Chunk each document (+ metadata)',why:'Split into coherent retrievable units with source info.'},
+                    {id:'i3',label:'Embed each chunk via Ollama',why:'Convert text to vectors for semantic search.'},
+                    {id:'i4',label:'Upsert / add chunks into Chroma',why:'Persist vectors + text + metadata for retrieval.'},
+                    {id:'i5',label:'Print an ingestion summary',why:'Observability — confirm exactly what got indexed.'},
+                ], correct:['i1','i2','i3','i4','i5'] },
+                loop: { items:[
+                    {id:'l1',label:'Observe a failure (from feedback or evals)',why:'You can only improve what you can see.'},
+                    {id:'l2',label:'Classify it (bad_retrieval, unsupported_answer, ...)',why:'The label points at the exact layer to change.'},
+                    {id:'l3',label:'Change ONE variable (chunk/top-k/prompt/model)',why:'One change at a time so you can attribute the result.'},
+                    {id:'l4',label:'Re-run the full eval set',why:'Measure the aggregate effect, not one cherry-picked case.'},
+                    {id:'l5',label:'Keep the change only if the score holds/improves',why:'Guard against regressions — revert if it nets negative.'},
+                ], correct:['l1','l2','l3','l4','l5'] },
+            },
+            startSeq(mode){ this.seqMode=mode; const m=this.seqModes[mode]; this.seqItems=[...m.items].sort(()=>Math.random()-0.5); this.seqCorrectOrder=m.correct.map(id=>m.items.find(it=>it.id===id)); this.seqSelected=[]; this.seqDone=false; this.seqPerfect=false; },
+            checkSeq(){ this.seqDone=true; this.seqPerfect=this.seqSelected.every((item,i)=>item.id===this.seqCorrectOrder[i].id); },
+        }));
+    });
+    </script>
+</body>
+</html>

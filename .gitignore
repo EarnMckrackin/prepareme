@@ -1,0 +1,21 @@
+# env / secrets
+.env
+.env.local
+.env.*.local
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# vercel
+.vercel
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
+
+# legacy local-only artifacts
+generated/
