@@ -18,6 +18,13 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
         details > summary { list-style: none; cursor: pointer; }
         details > summary::-webkit-details-marker { display: none; }
+        .large-text main { font-size: 1.08rem; }
+        .large-text .text-xs { font-size: 0.82rem; }
+        .large-text .text-sm { font-size: 0.98rem; }
+        .calm-mode .animate-fade,
+        .calm-mode .animate-pulse,
+        .calm-mode .animate-spin { animation: none !important; }
+        .focus-mode .focus-hide { display: none !important; }
         @media print {
             body { background: #fff !important; color: #000 !important; }
             header, .no-print { display: none !important; }
@@ -27,7 +34,7 @@
         }
     </style>
 </head>
-<body class="text-gray-100 min-h-screen selection:bg-purple-500 selection:text-white bg-gray-950" x-data="engine">
+<body class="text-gray-100 min-h-screen selection:bg-purple-500 selection:text-white bg-gray-950" x-data="engine" :class="{'large-text':ui.large,'calm-mode':ui.calm,'focus-mode':ui.focus}">
 
     <!-- HEADER -->
     <header class="border-b border-gray-800 bg-gray-900/40 backdrop-blur sticky top-0 z-50 px-4 py-3">
@@ -36,7 +43,14 @@
                 <div class="h-3 w-3 rounded-full bg-purple-500 animate-pulse"></div>
                 <h1 class="text-base font-bold tracking-wider text-gray-100 font-mono uppercase" x-text="course.meta.title"></h1>
             </div>
-            <div class="font-mono text-xs text-gray-500" x-text="course.meta.subtitle"></div>
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <div class="font-mono text-xs text-gray-500 focus-hide" x-text="course.meta.subtitle"></div>
+                <div class="no-print flex items-center gap-1 rounded-lg border border-gray-800 bg-gray-950 p-1 font-mono text-[10px]">
+                    <button @click="ui.focus=!ui.focus" :class="ui.focus?'bg-purple-700 text-white':'text-gray-400 hover:text-gray-200'" class="px-2 py-1 rounded">Focus</button>
+                    <button @click="ui.large=!ui.large" :class="ui.large?'bg-purple-700 text-white':'text-gray-400 hover:text-gray-200'" class="px-2 py-1 rounded">Large</button>
+                    <button @click="ui.calm=!ui.calm" :class="ui.calm?'bg-purple-700 text-white':'text-gray-400 hover:text-gray-200'" class="px-2 py-1 rounded">Calm</button>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -142,6 +156,175 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </template>
+
+            <!-- ===== VISUAL MAP ===== -->
+            <template x-if="m.type==='visual_map'">
+                <div class="space-y-5">
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                        <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide" x-text="m.data.title||'Concept map'"></h3>
+                        <p x-show="m.data.intro" class="text-xs text-gray-400 mt-1 leading-relaxed" x-text="m.data.intro"></p>
+                    </div>
+                    <div class="grid lg:grid-cols-[1.15fr_0.85fr] gap-5">
+                        <div class="grid sm:grid-cols-2 gap-3">
+                            <template x-for="(node,ni) in (m.data.nodes||[])" :key="node.id||ni">
+                                <div class="relative bg-gray-900 border border-gray-800 rounded-xl p-4 overflow-hidden">
+                                    <div class="absolute top-0 left-0 h-full w-1" :class="['bg-purple-500','bg-emerald-500','bg-amber-500','bg-blue-500','bg-rose-500'][ni%5]"></div>
+                                    <div class="pl-2 space-y-2">
+                                        <span x-show="node.tag" class="text-[10px] font-mono uppercase tracking-widest text-gray-500" x-text="node.tag"></span>
+                                        <h4 class="font-bold text-white text-sm" x-text="node.label"></h4>
+                                        <p class="text-xs text-gray-400 leading-relaxed" x-text="node.summary"></p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3">
+                            <div class="text-[10px] font-mono uppercase tracking-widest text-purple-400">Relationships</div>
+                            <template x-for="(link,li) in (m.data.links||[])" :key="li">
+                                <div class="rounded-lg border border-gray-800 bg-gray-900 p-3 text-xs">
+                                    <div class="flex items-center gap-2 text-gray-200">
+                                        <span class="font-semibold" x-text="mapNode(m, link.from)"></span>
+                                        <span class="text-purple-400 font-mono">-></span>
+                                        <span class="font-semibold" x-text="mapNode(m, link.to)"></span>
+                                    </div>
+                                    <p x-show="link.label" class="mt-1 text-gray-500 leading-relaxed" x-text="link.label"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ===== DRAG / SORT PRACTICE ===== -->
+            <template x-if="m.type==='drag_sort'">
+                <div class="space-y-5">
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide" x-text="m.data.title||'Sort the ideas'"></h3>
+                            <p x-show="m.data.intro" class="text-xs text-gray-400 mt-1 leading-relaxed" x-text="m.data.intro"></p>
+                        </div>
+                        <div class="flex items-center gap-2 font-mono text-xs">
+                            <span x-show="S[m.id].done" class="text-emerald-400 font-bold" x-text="sortScore(m)+'/'+(m.data.items||[]).length"></span>
+                            <button @click="sortReset(m)" class="bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded font-bold text-gray-200">Reset</button>
+                        </div>
+                    </div>
+                    <div class="grid lg:grid-cols-[0.8fr_1.2fr] gap-5">
+                        <div class="space-y-2">
+                            <div class="text-[10px] font-mono uppercase tracking-widest text-gray-500">Unsorted</div>
+                            <template x-for="item in sortAvailable(m)" :key="item.id">
+                                <div class="bg-gray-900 border border-gray-800 rounded-lg p-3 text-xs space-y-2">
+                                    <div class="font-bold text-white" x-text="item.label"></div>
+                                    <p x-show="item.detail" class="text-gray-500 leading-relaxed" x-text="item.detail"></p>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        <template x-for="bucket in (m.data.buckets||[])" :key="bucket.id">
+                                            <button @click="sortAssign(m,item,bucket.id)" class="px-2 py-1 rounded bg-purple-950/40 border border-purple-900/50 text-purple-200 font-mono text-[10px]" x-text="bucket.label"></button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                            <p x-show="!sortAvailable(m).length" class="text-xs text-gray-500 bg-gray-950 border border-gray-800 rounded-lg p-3">All items are placed.</p>
+                        </div>
+                        <div class="grid sm:grid-cols-2 gap-3">
+                            <template x-for="bucket in (m.data.buckets||[])" :key="bucket.id">
+                                <div class="bg-gray-950 border border-gray-800 rounded-xl p-3 min-h-[180px]">
+                                    <div class="mb-3">
+                                        <h4 class="text-xs font-bold text-white font-mono uppercase tracking-wide" x-text="bucket.label"></h4>
+                                        <p x-show="bucket.hint" class="text-[11px] text-gray-500 mt-0.5" x-text="bucket.hint"></p>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <template x-for="item in sortBucketItems(m,bucket.id)" :key="item.id">
+                                            <button @click="sortUnassign(m,item)" class="w-full text-left rounded-lg border p-3 text-xs"
+                                                :class="S[m.id].done ? (item.bucket===bucket.id?'border-emerald-600 bg-emerald-950/20':'border-red-600 bg-red-950/20') : 'border-gray-800 bg-gray-900 hover:bg-gray-800'">
+                                                <span class="font-bold text-gray-100" x-text="item.label"></span>
+                                                <span x-show="S[m.id].done && item.bucket!==bucket.id" class="block mt-1 text-red-300" x-text="'Belongs in '+sortBucketLabel(m,item.bucket)"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <button @click="sortCheck(m)" :disabled="Object.keys(S[m.id].assigned).length!==(m.data.items||[]).length" class="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-40 px-4 py-2.5 rounded font-mono font-bold text-xs text-white">Check sorting</button>
+                </div>
+            </template>
+
+            <!-- ===== TEACH BACK ===== -->
+            <template x-if="m.type==='teach_back'">
+                <div class="space-y-5 max-w-3xl mx-auto">
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                        <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide" x-text="m.data.title||'Teach it back'"></h3>
+                        <p x-show="m.data.intro" class="text-xs text-gray-400 mt-1 leading-relaxed" x-text="m.data.intro"></p>
+                    </div>
+                    <template x-for="(prompt,pi) in (m.data.prompts||[])" :key="pi">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+                            <div class="flex items-start gap-3">
+                                <span class="h-6 w-6 shrink-0 rounded bg-purple-700 text-white font-mono text-xs font-bold grid place-items-center" x-text="pi+1"></span>
+                                <h4 class="text-sm font-bold text-white leading-relaxed" x-text="prompt.q"></h4>
+                            </div>
+                            <textarea x-model="S[m.id].answers[pi]" rows="4" class="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-purple-600 focus:outline-none" placeholder="Explain it in your own words."></textarea>
+                            <button @click="teachToggle(m,pi)" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded font-mono font-bold text-xs text-gray-200" x-text="S[m.id].revealed[pi]?'Hide checklist':'Show checklist'"></button>
+                            <div x-show="S[m.id].revealed[pi]" x-cloak class="grid md:grid-cols-2 gap-3 text-xs">
+                                <div class="bg-gray-950 border border-gray-800 rounded-lg p-3">
+                                    <div class="text-[10px] font-mono uppercase tracking-widest text-emerald-400 mb-2">Include these points</div>
+                                    <ul class="space-y-1.5 text-gray-300 list-disc list-inside">
+                                        <template x-for="(kp,ki) in (prompt.keyPoints||[])" :key="ki"><li x-text="kp"></li></template>
+                                    </ul>
+                                </div>
+                                <div class="bg-gray-950 border border-gray-800 rounded-lg p-3">
+                                    <div class="text-[10px] font-mono uppercase tracking-widest text-purple-400 mb-2">Model answer</div>
+                                    <p class="text-gray-300 leading-relaxed" x-text="prompt.sample"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- ===== NOTES ===== -->
+            <template x-if="m.type==='notes'">
+                <div class="space-y-5 max-w-4xl mx-auto">
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                        <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide" x-text="m.data.title||'Study notes'"></h3>
+                        <p x-show="m.data.intro" class="text-xs text-gray-400 mt-1 leading-relaxed" x-text="m.data.intro"></p>
+                    </div>
+                    <template x-for="(section,si) in (m.data.sections||[])" :key="si">
+                        <details class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden" :open="si===0">
+                            <summary class="p-4 flex items-center justify-between hover:bg-gray-900/60 transition">
+                                <span class="font-bold text-white text-sm" x-text="section.heading"></span>
+                                <span class="text-gray-600 font-mono text-xs">open</span>
+                            </summary>
+                            <div class="px-4 pb-5 pt-1 border-t border-gray-800/60 text-xs space-y-3">
+                                <p x-show="section.summary" class="text-gray-300 leading-relaxed" x-text="section.summary"></p>
+                                <ul x-show="section.bullets && section.bullets.length" class="text-gray-400 leading-relaxed list-disc list-inside space-y-1">
+                                    <template x-for="(bullet,bi) in (section.bullets||[])" :key="bi"><li x-text="bullet"></li></template>
+                                </ul>
+                                <div x-show="section.check" class="bg-amber-950/20 border border-amber-900/40 rounded-lg p-3 text-amber-200/90" x-text="section.check"></div>
+                            </div>
+                        </details>
+                    </template>
+                </div>
+            </template>
+
+            <!-- ===== AUDIO SCRIPT ===== -->
+            <template x-if="m.type==='audio_script'">
+                <div class="space-y-5 max-w-3xl mx-auto">
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide" x-text="m.data.title||'Listen mode'"></h3>
+                            <p x-show="m.data.intro" class="text-xs text-gray-400 mt-1 leading-relaxed" x-text="m.data.intro"></p>
+                        </div>
+                        <button @click="stopSpeech()" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded font-mono font-bold text-xs text-gray-200">Stop</button>
+                    </div>
+                    <template x-for="(segment,si) in (m.data.segments||[])" :key="si">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <h4 class="text-xs font-bold text-purple-400 font-mono uppercase tracking-wider" x-text="segment.label||('Part '+(si+1))"></h4>
+                                <button @click="speak(segment.text)" class="bg-purple-600 hover:bg-purple-500 px-3 py-1.5 rounded font-mono font-bold text-[11px] text-white">Read aloud</button>
+                            </div>
+                            <p class="text-sm text-gray-300 leading-relaxed" x-text="segment.text"></p>
+                        </div>
+                    </template>
                 </div>
             </template>
 
@@ -311,7 +494,8 @@
   meta: {
     title: "Ecosystems & Food Webs — Test Prep",
     subtitle: "6th Grade Science  //  swap the COURSE object to make any course",
-    learner: "kid"
+    learner: "kid",
+    learningStyle: "mixed"
   },
   modules: [
     {
@@ -330,7 +514,27 @@
       }
     },
     {
-      type: "concept_cards", id: "concepts", label: "2. Key Concepts",
+      type: "visual_map", id: "map", label: "2. Concept Map",
+      data: {
+        title: "Energy flow map", intro: "See the main parts as connected roles, then read the relationship list on the right.",
+        nodes: [
+          { id: "sun", label: "Sun", tag: "source", summary: "The original energy source for almost all ecosystems." },
+          { id: "producer", label: "Producers", tag: "capture", summary: "Plants and algae capture sunlight through photosynthesis." },
+          { id: "consumer", label: "Consumers", tag: "eat", summary: "Animals get energy by eating producers or other consumers." },
+          { id: "decomposer", label: "Decomposers", tag: "recycle", summary: "Fungi and bacteria return nutrients to the soil." },
+          { id: "pyramid", label: "Energy pyramid", tag: "limit", summary: "Only about 10% of energy moves to the next level." }
+        ],
+        links: [
+          { from: "sun", to: "producer", label: "Sunlight is captured by producers." },
+          { from: "producer", to: "consumer", label: "Consumers eat producers or animals that ate producers." },
+          { from: "consumer", to: "decomposer", label: "Dead organisms and waste are broken down." },
+          { from: "decomposer", to: "producer", label: "Recycled nutrients help producers grow again." },
+          { from: "pyramid", to: "consumer", label: "Less energy is available at higher consumer levels." }
+        ]
+      }
+    },
+    {
+      type: "concept_cards", id: "concepts", label: "3. Key Concepts",
       data: {
         intro: "Tap each card to open it. The amber box is a common test trap — read it carefully.",
         cards: [
@@ -369,7 +573,27 @@
       }
     },
     {
-      type: "flashcards", id: "recall", label: "3. Flashcards",
+      type: "drag_sort", id: "sort", label: "4. Sort It",
+      data: {
+        title: "Sort each example into its ecosystem role",
+        intro: "Place every item into the bucket where it belongs. Check your work when all items are placed.",
+        buckets: [
+          { id: "producer", label: "Producer", hint: "Makes its own food from sunlight." },
+          { id: "consumer", label: "Consumer", hint: "Eats other living things." },
+          { id: "decomposer", label: "Decomposer", hint: "Breaks down dead matter." }
+        ],
+        items: [
+          { id: "grass", label: "Grass", detail: "Uses photosynthesis.", bucket: "producer" },
+          { id: "algae", label: "Algae", detail: "Captures sunlight in water.", bucket: "producer" },
+          { id: "rabbit", label: "Rabbit", detail: "Eats plants.", bucket: "consumer" },
+          { id: "hawk", label: "Hawk", detail: "Eats other animals.", bucket: "consumer" },
+          { id: "fungi", label: "Fungi", detail: "Break down dead organisms.", bucket: "decomposer" },
+          { id: "bacteria", label: "Bacteria", detail: "Recycle nutrients.", bucket: "decomposer" }
+        ]
+      }
+    },
+    {
+      type: "flashcards", id: "recall", label: "5. Flashcards",
       data: { cards: [
         { q: "What is a producer?", a: "A living thing that makes its own food from sunlight (photosynthesis). Example: grass, trees, algae. It starts every food chain." },
         { q: "What is a consumer?", a: "A living thing that eats other living things for energy. Three types: herbivore (plants), carnivore (animals), omnivore (both)." },
@@ -384,7 +608,7 @@
       ] }
     },
     {
-      type: "challenge", id: "quiz", label: "4. Practice Quiz ✦",
+      type: "challenge", id: "quiz", label: "6. Practice Quiz ✦",
       data: {
         kind: "quiz", title: "Practice Quiz", startLabel: "Start quiz",
         intro: "8 questions. Pick an answer, check it, and read the explanation.",
@@ -401,7 +625,26 @@
       }
     },
     {
-      type: "challenge", id: "build", label: "5. Build-a-Web ⬡",
+      type: "teach_back", id: "teach", label: "7. Teach Back",
+      data: {
+        title: "Explain it in your own words",
+        intro: "Write a short explanation, then reveal the checklist and model answer.",
+        prompts: [
+          {
+            q: "Explain why producers are the foundation of an ecosystem.",
+            keyPoints: ["Producers capture sunlight", "They make their own food", "Consumers depend on them for energy"],
+            sample: "Producers are the foundation because they turn sunlight into food. Consumers cannot make their own food, so they depend on producers directly or indirectly for energy."
+          },
+          {
+            q: "Explain why arrows in a food chain point toward the eater.",
+            keyPoints: ["Arrows show energy flow", "The eater receives the energy", "The arrow does not point toward the food"],
+            sample: "The arrow points toward the eater because it shows where the energy goes. In grass -> rabbit, the rabbit gets energy from the grass."
+          }
+        ]
+      }
+    },
+    {
+      type: "challenge", id: "build", label: "8. Build-a-Web ⬡",
       data: {
         kind: "rounds", title: "Build a Food Web", startLabel: "Start building ⬡",
         intro: "5 rounds. Make the right call to assemble a healthy ecosystem.",
@@ -425,7 +668,7 @@
       }
     },
     {
-      type: "challenge", id: "speed", label: "6. Speed Round ⚡",
+      type: "challenge", id: "speed", label: "9. Speed Round ⚡",
       data: {
         kind: "timed", title: "Speed Round", startLabel: "Start ⚡", timer: 20,
         intro: "20 seconds per question. Answer fast — if the timer runs out it counts as a miss!",
@@ -440,7 +683,7 @@
       }
     },
     {
-      type: "glossary", id: "words", label: "7. Word Bank",
+      type: "glossary", id: "words", label: "10. Word Bank",
       data: {
         intro: "Every word your test might use. Learn them precisely.",
         terms: [
@@ -460,7 +703,34 @@
       }
     },
     {
-      type: "cheatsheet", id: "sheet", label: "8. Study Sheet ⎙",
+      type: "notes", id: "notes", label: "11. Notes",
+      data: {
+        title: "Read-first study notes",
+        intro: "A structured pass for learners who retain best by reading and summarizing.",
+        sections: [
+          {
+            heading: "Energy starts with producers",
+            summary: "Plants and algae capture sunlight and turn it into food through photosynthesis.",
+            bullets: ["The sun is the original energy source", "Producers begin most food chains", "Consumers depend on producer energy"],
+            check: "Quick check: can you name two producers?"
+          },
+          {
+            heading: "Consumers move energy through the web",
+            summary: "Herbivores, carnivores, and omnivores get energy by eating other living things.",
+            bullets: ["Herbivore = plants", "Carnivore = animals", "Omnivore = both"],
+            check: "Quick check: why is a bear an omnivore?"
+          },
+          {
+            heading: "Decomposers close the loop",
+            summary: "Fungi and bacteria break down dead organisms and return nutrients to the soil.",
+            bullets: ["Dead matter does not pile up", "Nutrients return to soil", "Producers can keep growing"],
+            check: "Quick check: what would happen without decomposers?"
+          }
+        ]
+      }
+    },
+    {
+      type: "cheatsheet", id: "sheet", label: "12. Study Sheet ⎙",
       data: {
         title: "One-page study sheet", intro: "Print this and review it the night before the test.",
         blocks: [
@@ -473,7 +743,7 @@
       }
     },
     {
-      type: "sequence", id: "order", label: "9. Put It In Order ⟳",
+      type: "sequence", id: "order", label: "13. Put It In Order ⟳",
       data: {
         title: "Put it in order", intro: "Arrange the steps correctly to lock in the patterns.",
         modes: [
@@ -508,6 +778,7 @@
             course: COURSE,
             tab: COURSE.modules[0].id,
             S: {},
+            ui: { focus:false, large:false, calm:false },
             slug: (COURSE.meta.title||'course').toLowerCase().replace(/[^a-z0-9]+/g,'_'),
 
             init() {
@@ -519,6 +790,10 @@
                         this.S[m.id] = { stage:0, pick:null, confirmed:false, score:0, history:[], timeLeft:0, timerRef:null };
                     } else if (m.type === 'sequence') {
                         this.S[m.id] = { modeKey:null, items:[], selected:[], done:false, perfect:false, correctOrder:[] };
+                    } else if (m.type === 'drag_sort') {
+                        this.S[m.id] = { assigned:{}, done:false };
+                    } else if (m.type === 'teach_back') {
+                        this.S[m.id] = { answers:{}, revealed:{} };
                     }
                 }
             },
@@ -530,6 +805,22 @@
             },
             optLabel(o){ return (typeof o === 'string') ? o : o.label; },
             optDetail(o){ return (typeof o === 'object' && o) ? (o.detail||'') : ''; },
+            mapNode(m, id) {
+                const node = (m.data.nodes||[]).find(n => n.id === id);
+                return node ? node.label : id;
+            },
+
+            // ---- audio helpers ----
+            speak(text) {
+                if (!('speechSynthesis' in window) || !text) return;
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                u.rate = this.course.meta.learner === 'kid' ? 0.92 : 0.98;
+                window.speechSynthesis.speak(u);
+            },
+            stopSpeech() {
+                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            },
 
             // ---- spaced-repetition (shared across flashcard modules) ----
             recordReview() {
@@ -561,6 +852,50 @@
                 const st = this.S[m.id];
                 st.mastered = st.mastered.includes(st.ci) ? st.mastered.filter(i=>i!==st.ci) : [...st.mastered, st.ci];
                 localStorage.setItem(this.slug+'_'+m.id+'_mastered', JSON.stringify(st.mastered));
+            },
+
+            // ---- sorting practice ----
+            sortAssign(m, item, bucketId) {
+                const st = this.S[m.id];
+                st.done = false;
+                st.assigned = {...st.assigned, [item.id]: bucketId};
+            },
+            sortUnassign(m, item) {
+                const st = this.S[m.id];
+                if (st.done) return;
+                const next = {...st.assigned};
+                delete next[item.id];
+                st.assigned = next;
+            },
+            sortReset(m) {
+                this.S[m.id] = { assigned:{}, done:false };
+            },
+            sortCheck(m) {
+                this.S[m.id].done = true;
+                this.recordReview();
+            },
+            sortAvailable(m) {
+                const assigned = this.S[m.id].assigned;
+                return (m.data.items||[]).filter(item => !assigned[item.id]);
+            },
+            sortBucketItems(m, bucketId) {
+                const assigned = this.S[m.id].assigned;
+                return (m.data.items||[]).filter(item => assigned[item.id] === bucketId);
+            },
+            sortBucketLabel(m, bucketId) {
+                const bucket = (m.data.buckets||[]).find(b => b.id === bucketId);
+                return bucket ? bucket.label : bucketId;
+            },
+            sortScore(m) {
+                const assigned = this.S[m.id].assigned;
+                return (m.data.items||[]).filter(item => assigned[item.id] === item.bucket).length;
+            },
+
+            // ---- teach-back ----
+            teachToggle(m, idx) {
+                const st = this.S[m.id];
+                st.revealed = {...st.revealed, [idx]: !st.revealed[idx]};
+                this.recordReview();
             },
 
             // ---- sequence ----

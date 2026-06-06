@@ -1,0 +1,2336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interview Prep — Grayscale PPM</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #252535;
+    --accent: #c8ff00;
+    --accent2: #4a9eff;
+    --accent3: #ff6b4a;
+    --text: #e8e8f0;
+    --text-muted: #6b6b80;
+    --text-dim: #3a3a50;
+    --gold: #f0c040;
+  }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: rgba(10,10,15,0.95);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+
+  .status-pill {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-muted);
+  }
+
+  /* NAV TABS */
+  .nav {
+    display: flex;
+    gap: 2px;
+    padding: 16px 32px 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  .nav-tab {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 10px 20px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* MAIN */
+  .main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 32px;
+  }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* OVERVIEW */
+  .thesis-box {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .thesis-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+  .thesis-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .thesis-text {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--text);
+    font-style: italic;
+  }
+
+  .pillars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .pillar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+  .pillar:hover { border-color: var(--accent2); }
+  .pillar-num {
+    font-size: 32px;
+    font-family: 'Fraunces', serif;
+    color: var(--accent2);
+    opacity: 0.4;
+    margin-bottom: 8px;
+  }
+  .pillar-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .pillar-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .risk-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .risk-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent3);
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .risk-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent3);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .risk-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--text);
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+  }
+
+  h3 {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  /* CHAT INTERFACE */
+  .chat-wrapper {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 520px;
+  }
+
+  .chat-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+  }
+
+  .chat-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .chat-title {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .msg {
+    display: flex;
+    gap: 12px;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg-role {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    min-width: 52px;
+    padding-top: 3px;
+    font-weight: 500;
+  }
+  .msg.interviewer .msg-role { color: var(--accent3); }
+  .msg.you .msg-role { color: var(--accent); }
+  .msg.coach .msg-role { color: var(--accent2); }
+
+  .msg-bubble {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .msg.interviewer .msg-bubble {
+    font-family: 'Fraunces', serif;
+    font-size: 15px;
+    font-weight: 300;
+  }
+
+  .chat-input-area {
+    border-top: 1px solid var(--border);
+    padding: 16px 20px;
+    background: var(--surface2);
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .chat-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    resize: none;
+    outline: none;
+    min-height: 44px;
+    max-height: 120px;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent2); }
+  .chat-input::placeholder { color: var(--text-dim); }
+
+  .send-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: #000;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+  }
+  .send-btn:hover { opacity: 0.85; }
+  .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .mode-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .mode-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode-btn:hover { color: var(--text); border-color: var(--text-dim); }
+  .mode-btn.active { background: var(--surface2); border-color: var(--accent2); color: var(--accent2); }
+
+  /* FLASHCARDS */
+  .flashcard-controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .fc-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .fc-btn:hover { border-color: var(--text-dim); color: var(--text); }
+  .fc-btn.primary { border-color: var(--accent); color: var(--accent); }
+  .fc-btn.primary:hover { background: var(--accent); color: #000; }
+
+  .fc-progress {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  .flashcard {
+    perspective: 1000px;
+    height: 280px;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+
+  .flashcard-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
+
+  .fc-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 12px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .fc-front {
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .fc-back {
+    background: var(--surface2);
+    border: 1px solid var(--accent2);
+    transform: rotateY(180deg);
+  }
+
+  .fc-category {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent3);
+    margin-bottom: 16px;
+  }
+
+  .fc-question {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 300;
+    line-height: 1.4;
+    color: var(--text);
+  }
+
+  .fc-hint {
+    margin-top: 16px;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .fc-answer {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  .fc-answer strong {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .fc-nav {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  /* CHECKLIST */
+  .checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .check-item:hover { border-color: var(--text-dim); }
+  .check-item.done { border-color: var(--accent); background: rgba(200,255,0,0.03); }
+
+  .check-box {
+    width: 18px; height: 18px;
+    border: 1px solid var(--text-dim);
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .check-item.done .check-box {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+  }
+  .check-box-icon { font-size: 11px; display: none; }
+  .check-item.done .check-box-icon { display: block; }
+
+  .check-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .check-item.done .check-text {
+    color: var(--text-muted);
+    text-decoration: line-through;
+  }
+
+  .check-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+
+  .loading-dots::after {
+    content: '';
+    animation: dots 1.2s infinite;
+  }
+  @keyframes dots {
+    0% { content: ''; }
+    33% { content: '.'; }
+    66% { content: '..'; }
+    100% { content: '...'; }
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 28px 0;
+  }
+
+  /* INTERVIEW LOOP */
+  .loop-meta {
+    background: var(--surface);
+    border: 1px solid var(--accent2);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .loop-meta::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent2), transparent);
+  }
+  .loop-meta-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 8px;
+  }
+  .loop-meta-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .interviewer-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .interviewer-card:hover { border-color: var(--text-dim); }
+  .interviewer-card.expanded { border-color: var(--accent2); }
+
+  .interviewer-header {
+    padding: 18px 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    user-select: none;
+  }
+
+  .time-badge {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: rgba(240,192,64,0.08);
+    border: 1px solid rgba(240,192,64,0.2);
+    border-radius: 4px;
+    padding: 4px 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .interviewer-info { flex: 1; }
+  .interviewer-name {
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .interviewer-title {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .expand-icon {
+    font-size: 14px;
+    color: var(--text-dim);
+    transition: transform 0.3s;
+    flex-shrink: 0;
+  }
+  .interviewer-card.expanded .expand-icon { transform: rotate(180deg); }
+
+  .interviewer-body {
+    display: none;
+    padding: 0 22px 22px;
+  }
+  .interviewer-card.expanded .interviewer-body { display: block; }
+
+  .intel-section {
+    margin-bottom: 18px;
+  }
+  .intel-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent3);
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .intel-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .intel-text strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .expect-list {
+    list-style: none;
+    padding: 0;
+  }
+  .expect-list li {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    padding: 6px 0 6px 16px;
+    position: relative;
+    border-bottom: 1px solid rgba(37,37,53,0.5);
+  }
+  .expect-list li:last-child { border-bottom: none; }
+  .expect-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent2);
+    font-size: 11px;
+  }
+
+  .question-box {
+    background: var(--surface2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+    margin-top: 12px;
+  }
+  .question-box-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .question-box-text {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  .weak-spots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .weak-spot {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent3);
+    border-radius: 0 6px 6px 0;
+    padding: 12px 14px;
+  }
+  .weak-spot-title {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--accent3);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .weak-spot-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">Grayscale <span>//</span> PPM Defense Prep</div>
+  <div class="status-pill">John Canneto</div>
+</header>
+
+<nav class="nav">
+  <button class="nav-tab active" onclick="showSection('overview')">Overview</button>
+  <button class="nav-tab" onclick="showSection('loop')">Interview Loop</button>
+  <button class="nav-tab" onclick="showSection('defense')">Defense Map</button>
+  <button class="nav-tab" onclick="showSection('web3')">Web3 / Staking</button>
+  <button class="nav-tab" onclick="showSection('security')">Security / Compliance</button>
+  <button class="nav-tab" onclick="showSection('mock')">Mock Interview</button>
+  <button class="nav-tab" onclick="showSection('flashcards')">Flashcards</button>
+  <button class="nav-tab" onclick="showSection('checklist')">Prep Checklist</button>
+</nav>
+
+<main class="main">
+
+  <!-- OVERVIEW -->
+  <section id="overview" class="section active">
+    <div class="thesis-box">
+      <div class="thesis-label">Your C-Suite Story</div>
+      <div class="thesis-text">This is not just a workflow build. It is a repeatable operating pattern that helps Grayscale scale product velocity without losing control: ingest, validate, reconcile, route exceptions, audit every step, then reuse the pattern as the product suite expands.</div>
+    </div>
+
+    <div class="thesis-box" style="border-color:var(--accent2);">
+      <div class="thesis-label" style="color:var(--accent2);">Technical Thesis Underneath</div>
+      <div class="thesis-text">Phase one needs to be deterministic before it can be intelligent. No-code for the human workflow surface. AWS for correctness, audit, and replay. AI for assistive functionality only.</div>
+    </div>
+
+    <h3>The Three Pillars You're Defending</h3>
+    <div class="pillars">
+      <div class="pillar">
+        <div class="pillar-num">01</div>
+        <div class="pillar-title">No-Code for Human Surfaces</div>
+        <div class="pillar-desc">Intake, approval routing, work queues, exception review, dashboards. Human-facing only — no logic creep.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-num">02</div>
+        <div class="pillar-title">AWS for Truth + Audit</div>
+        <div class="pillar-desc">S3 bronze layer (immutable), RDS owns source of truth, Step Functions for HITL, CloudWatch for observability.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-num">03</div>
+        <div class="pillar-title">AI as Assistive Layer</div>
+        <div class="pillar-desc">Exception summaries, incident drafts, ops history search. NOT in the critical path. Foundation must be solid first.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>C-Suite Prep Upgrades</h3>
+    <div class="risk-grid">
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">1. IPO / Public-Company Readiness</div>
+        <div class="risk-desc">Grayscale has publicly filed for a proposed NYSE listing under GRAY. That makes controls, documentation, audit trails, dependency ownership, and operating metrics executive-level concerns. Your system produces evidence, not just automation.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">2. Staking Operational Risk</div>
+        <div class="risk-desc">Recent product launches make staking a live ops theme. Be ready to connect your recon approach to reward calculation, validator/custodian status, lockups, unstaking windows, downtime, smart-contract risk, custody reporting, NAV impact, and exception routing.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">3. C-Suite 6-Week Frame</div>
+        <div class="risk-desc">Six weeks does not mean the whole platform is done. It means one high-risk workflow is live with real data, observable controls, an audit trail, and a reusable operating pattern.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Answer Order</div>
+        <div class="risk-desc">Start with business consequence, then go technical only when pulled. The architecture matters because it lets Grayscale move faster without losing auditability, security, or ownership clarity.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Key Risks You Raised (and Your Mitigations)</h3>
+    <div class="risk-grid">
+      <div class="risk-card">
+        <div class="risk-title">Feed Quality</div>
+        <div class="risk-desc">Late/empty/malformed data. Mitigation: Raw S3 landing, pre-transform validation, checksums, freshness checks, replay, vendor runbook.</div>
+      </div>
+      <div class="risk-card">
+        <div class="risk-title">Recon Hubris</div>
+        <div class="risk-desc">"No exceptions" only counts if records were actually checked. Mitigation: Per-run inspection logs, record counts, skipped counts visible in reporting.</div>
+      </div>
+      <div class="risk-card">
+        <div class="risk-title">No-Code Overreach</div>
+        <div class="risk-desc">Logic creeping into the no-code layer. Mitigation: Written rules for what lives where, periodic reviews, tagging discipline.</div>
+      </div>
+      <div class="risk-card">
+        <div class="risk-title">Org Design Risk</div>
+        <div class="risk-desc">Fund suite outpacing operating model. Software is downstream of org design — worth surfacing to leadership if true.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Your Timeline Commitments</h3>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;gap:16px;padding:12px 16px;background:var(--surface);border-radius:6px;border:1px solid var(--border);">
+        <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);min-width:80px;padding-top:2px;">Wks 1–2</div>
+        <div style="font-size:12px;color:var(--text-muted);">Identify critical workflow with Ops, build vertical slice, ship to lower env, try to break it.</div>
+      </div>
+      <div style="display:flex;gap:16px;padding:12px 16px;background:var(--surface);border-radius:6px;border:1px solid var(--border);">
+        <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);min-width:80px;padding-top:2px;">Wks 3–5</div>
+        <div style="font-size:12px;color:var(--text-muted);">Harden with real recon logic, exception categories, freshness indicators, audit trails. Run parallel against manual.</div>
+      </div>
+      <div style="display:flex;gap:16px;padding:12px 16px;background:var(--surface);border-radius:6px;border:1px solid var(--border);">
+        <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);min-width:80px;padding-top:2px;">Wk 6</div>
+        <div style="font-size:12px;color:var(--text-muted);">Live with real data, deterministic recon, exception handling, audit trail, base metrics. Documented pattern for expansion.</div>
+      </div>
+      <div style="display:flex;gap:16px;padding:12px 16px;background:var(--surface);border-radius:6px;border:1px solid var(--border);">
+        <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);min-width:80px;padding-top:2px;">Wks 7–12</div>
+        <div style="font-size:12px;color:var(--text-muted);">Expand using same pattern, prioritized by operational risk and exception volume.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTERVIEW LOOP -->
+  <section id="loop" class="section">
+    <div class="loop-meta">
+      <div class="loop-meta-label">Cultural Signal</div>
+      <div class="loop-meta-text">Three of five interviewers (Beers, Zhang, Rosenthal) came from <strong>Bridgewater Associates</strong> — and so did Mike (your host) — so radical transparency, operational precision, and intellectual honesty are the baseline. Be direct, be specific, and never bluff. <strong>But the inside read is that it's "80% true to the reputation, 20% myth" — direct and figure-it-out-together, not adversarial or backstabby.</strong> These are described as good people with families. Match the candor without the edge: direct + collaborative, not combative. They will compare notes across all five slots — your story must be consistent but tailored.</div>
+    </div>
+
+    <div class="loop-meta" style="border-color:var(--accent);">
+      <div class="loop-meta-label" style="color:var(--accent);">Your Strategic Advantage</div>
+      <div class="loop-meta-text"><strong>Vanessa (CTO) and the Head of Engineering are already advocates.</strong> You've met them, the chemistry was strong, and they moved you forward. This means the tech leadership is bought in. The remaining question is: do the COO, CISO, and CPO agree? Diana Zhang is now clearly the decisive vote. You can reference your alignment with the technology team naturally — not as name-dropping, but as proof you've already started building the working relationships this role requires. When Norah or Diana asks how you'd work with engineering, you can say "we've already started that conversation" with confidence.</div>
+    </div>
+
+    <div class="loop-meta" style="border-color:var(--accent3);">
+      <div class="loop-meta-label" style="color:var(--accent3);">Energy Management</div>
+      <div class="loop-meta-text">5 back-to-back interviews, no breaks. The most consequential slot (Diana Zhang) comes 4th when fatigue sets in. Vanessa is last but she's already an ally — that's your closing runway. <strong>Arrive ~1:30</strong> — Mike will meet you (text him; his number is on the invite), give you a tour, and you'll catch up before the loop starts at 2:00. Park anywhere (no assigned spots); you'll be on the 4th floor, register, and stay in <strong>one room all day while interviewers rotate to you.</strong> Eat before 2:00. Stay hydrated. Keep early answers crisp. If it goes well, expect them to <strong>move fast to an offer</strong> — be ready for that conversation.</div>
+    </div>
+
+    <div class="loop-meta" style="border-color:var(--gold);">
+      <div class="loop-meta-label" style="color:var(--gold);">C-Suite Translation</div>
+      <div class="loop-meta-text">Do not let the conversation stay at "AWS vs no-code." The executive-level version is: <strong>Grayscale is expanding product surface area quickly, and this role needs to create repeatable operating controls that let the company move faster without losing auditability, security, or ownership clarity.</strong> Your answer should start with business consequence, then go technical only when pulled.</div>
+    </div>
+
+    <div class="loop-meta" style="border-color:var(--accent3);">
+      <div class="loop-meta-label" style="color:var(--accent3);">⚡ Diana's AI Hot Button — Prepare This Cold</div>
+      <div class="loop-meta-text">New from the prep call: <strong>Diana is "gung-ho, especially for this role, on AI."</strong> She's been having AI conversations with candidates across recent roles and will likely want two things from you: <strong>(1) your point of view on AI</strong>, and <strong>(2) how you personally have used it — what you built/changed and what impact and influence it had.</strong> This is a personal-fluency test, not just an architecture question.<br><br><strong>Reconcile it with your "AI thin on purpose" thesis so the two don't clash:</strong> "AI assistive-only" is a discipline about <em>this specific high-risk workflow</em> — deterministic foundations first. It is <em>not</em> a lack of AI conviction. Pair the discipline with a concrete, first-person story of AI you've actually shipped or used to change an outcome, plus a forward vision (exception summaries, incident drafts, ops-history search, root-cause clustering, runbook suggestions) as the phase-two payoff once the deterministic base exists. Land it as: "I'm bullish on AI and use it daily — which is exactly why I'm disciplined about where it belongs in a NAV-sensitive workflow."</div>
+    </div>
+
+    <div class="loop-meta" style="border-color:var(--accent2);">
+      <div class="loop-meta-label" style="color:var(--accent2);">Role Framing — You Chose PPM (and you're the first candidate)</div>
+      <div class="loop-meta-text">From the call: you've decided to <strong>index on the PPM role</strong> over the Head-of role — you want to do the work, the strategy, and help implement. The Head-of role is being <strong>deprioritized</strong> (Vanessa's read: build strong PPMs first). They see ~80% crossover; the 20% that matters is exactly that orientation. <strong>Important nuance:</strong> even as PPM you'll be the <em>most senior PM</em> — a leader who isn't managing but whom others look to, and the JD explicitly expects you to help grow individuals. So when Max or Diana probe leadership, don't disclaim it — show you lead through influence and mentorship, not titles. Also: <strong>you're the first person they've brought in for this newly-scoped role</strong>, so there's no prior candidate to be measured against — and room to help shape what it becomes.</div>
+    </div>
+
+    <!-- Carolyn Bradley -->
+    <div class="interviewer-card" onclick="this.classList.toggle('expanded')">
+      <div class="interviewer-header">
+        <div class="time-badge">2:00–2:30</div>
+        <div class="interviewer-info">
+          <div class="interviewer-name">Carolyn Bradley</div>
+          <div class="interviewer-title">Director, Project Manager — COO Office</div>
+        </div>
+        <div class="expand-icon">▼</div>
+      </div>
+      <div class="interviewer-body">
+        <div class="intel-section">
+          <div class="intel-label">Background Intel</div>
+          <div class="intel-text">At Grayscale since April 2024. Previously a PM and Business Management Analyst at <strong>Quest Partners</strong> (quant fund) for 4 years, and <strong>Chief of Staff to the Head of Real Estate Portfolio Management at UBS</strong>. Master's in Real Estate from Baruch College. She sits in the COO's office — she'd be your closest day-to-day collaborator.</div>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">What She's Evaluating</div>
+          <div class="intel-text">Can you actually ship? Are you a good collaborator? Does your working style mesh with the team? She's the <strong>peer/near-peer check</strong> — tactical execution, not strategy.</div>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">Expect Questions On</div>
+          <ul class="expect-list">
+            <li>How you actually run projects: standups, dependency tracking, escalation</li>
+            <li>What "vertical slice" and "try to break it" in weeks 1–2 looks like in practice</li>
+            <li>Scenarios: vendor misses SLA, ops pushes back on workflow change, engineer says 3x timeline</li>
+            <li>How you manage the parallel run in weeks 3–5 — logistics, not theory</li>
+          </ul>
+        </div>
+        <div class="question-box">
+          <div class="question-box-label">Strong Question to Ask Her</div>
+          <div class="question-box-text">"What does the current project intake and prioritization process look like in the COO office, and where does it break down?"</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Norah Beers -->
+    <div class="interviewer-card" onclick="this.classList.toggle('expanded')">
+      <div class="interviewer-header">
+        <div class="time-badge">2:30–3:00</div>
+        <div class="interviewer-info">
+          <div class="interviewer-name">Norah Beers</div>
+          <div class="interviewer-title">Chief Information Security Officer</div>
+        </div>
+        <div class="expand-icon">▼</div>
+      </div>
+      <div class="interviewer-body">
+        <div class="intel-section">
+          <div class="intel-label">Background Intel</div>
+          <div class="intel-text">Former <strong>Bridgewater Associates</strong> — Co-Head of Investment Engineering, Head of InfoSec for the Investment Engine. Holds a <strong>CISSP</strong>. BA from Dartmouth. Recognized as an Inspiring FinTech Female by NYC Fintech Women. Has spoken publicly about crypto security: she's said attacker sophistication in crypto is notably higher than in traditional finance, and that Grayscale <strong>does not custody assets itself</strong> — they use third-party qualified custodians. She cares deeply about third-party vendor risk.</div>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">What She's Evaluating</div>
+          <div class="intel-text">Your architecture has <strong>security surfaces everywhere</strong>: no-code tool access, AWS integration points, external vendor feeds. She needs to know you won't create security gaps. Your incident response plan (Part 3) is directly in her domain.</div>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">Expect Questions On</div>
+          <ul class="expect-list">
+            <li>No-code tool: what data lives there? Access control? Field-level permissions? Audit log exports?</li>
+            <li>Third-party vendor risk: how you vet feeds, handle format changes, compromised vendor scenario</li>
+            <li>Data classification: which data is sensitive, handling requirements by type</li>
+            <li>Your web3 risks (finality, reorgs) — she'll view these as security problems, not just technical ones</li>
+            <li>Staking risks: validator/custodian failure, lockups, unstaking windows, network downtime, smart-contract exposure</li>
+            <li>Your incident comms and containment strategy — she'll probe this closely</li>
+          </ul>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">Key Approach</div>
+          <div class="intel-text">Show security awareness without pretending to be a security expert. Use language like <strong>"this is where I'd want InfoSec input before committing."</strong> Emphasize your data separation (S3 immutable → RDS truth → no-code display-only) as a security feature. Your "no-code only displays, RDS owns truth" decision is music to a CISO's ears.</div>
+        </div>
+        <div class="question-box">
+          <div class="question-box-label">Strong Question to Ask Her</div>
+          <div class="question-box-text">"As I design these integration points with external feeds and a no-code layer, what are the security review checkpoints you'd want me to build into the delivery process?"</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Max Rosenthal -->
+    <div class="interviewer-card" onclick="this.classList.toggle('expanded')">
+      <div class="interviewer-header">
+        <div class="time-badge">3:00–3:30</div>
+        <div class="interviewer-info">
+          <div class="interviewer-name">Max Rosenthal</div>
+          <div class="interviewer-title">Chief People Officer</div>
+        </div>
+        <div class="expand-icon">▼</div>
+      </div>
+      <div class="interviewer-body">
+        <div class="intel-section">
+          <div class="intel-label">Background Intel</div>
+          <div class="intel-text">Joined from <strong>Citadel</strong> (Head of HR, Global Credit business). Before that, senior HR roles at <strong>Bridgewater Associates</strong>. Started his career as a <strong>labor & employment attorney</strong> at Tarter Krinsky & Drogin, then in-house counsel at Fox Television Stations. JD from Northeastern, BS in Marketing from UMD. Chairs the board of Inwood Academy for Leadership (charter school for underprivileged students).</div>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">What He's Evaluating</div>
+          <div class="intel-text"><strong>Culture and leadership fit — and almost nothing else.</strong> Per the prep call, there's a good chance he <strong>doesn't talk about product or technology once.</strong> Expect it to feel like a "therapy session" / a "what makes you tick" conversation. How you communicate under pressure. How you handle conflict. Are you coachable? Do you take accountability or deflect? As a former employment attorney, he's sharp on how candidates discuss past failures and former colleagues. <strong>Don't try to steer this back to architecture</strong> — let it be about you.</div>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">Expect Questions On</div>
+          <ul class="expect-list">
+            <li>Behavioral: "Tell me about a time you disagreed with a stakeholder and how you handled it"</li>
+            <li>Failure: "Describe a project that failed and what you learned"</li>
+            <li>Your stakeholder management philosophy — beyond the written take-home answers</li>
+            <li>Why Grayscale? Why crypto/digital assets?</li>
+            <li>How you'd handle inheriting a failed project without blaming the previous team</li>
+          </ul>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">Key Approach</div>
+          <div class="intel-text">Be direct but not arrogant. The Bridgewater/Citadel background means he values candor. Your take-home line <strong>"I'd rather make the smaller promise and keep it"</strong> is a great cultural signal — back it up with a career example. When discussing failure, focus on what you did, not what others did wrong. On the prior failed project: "That's exactly why my first discovery question is about what happened — I don't assume I know."</div>
+        </div>
+        <div class="question-box">
+          <div class="question-box-label">Strong Question to Ask Him</div>
+          <div class="question-box-text">"What does the team dynamic look like right now in the ops and technology group, and what kind of working style tends to succeed here?"</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diana Zhang -->
+    <div class="interviewer-card" onclick="this.classList.toggle('expanded')">
+      <div class="interviewer-header">
+        <div class="time-badge">3:30–4:00</div>
+        <div class="interviewer-info">
+          <div class="interviewer-name">Diana Zhang ★</div>
+          <div class="interviewer-title">Chief Operating Officer — The Decisive Vote</div>
+        </div>
+        <div class="expand-icon">▼</div>
+      </div>
+      <div class="interviewer-body">
+        <div class="intel-section">
+          <div class="intel-label">Background Intel</div>
+          <div class="intel-text">Appointed COO in April 2025 (started May 2025) — <strong>been in the seat ~1 year</strong>. She's CEO Peter Mintzberg's first senior executive hire. Previously COO at <strong>BlockTower Capital</strong> (crypto-native institutional fund). Before that, 10+ years at <strong>Bridgewater Associates</strong>: Deputy to the co-CEO, COO of Investment Research. 18+ years total in asset management. Also the founding CEO of <strong>NeighborShare</strong>, a tech-driven nonprofit she built from scratch and scaled to 60+ partner nonprofits across 26 states. Presidential Leadership Scholar (Class of 2022).</div>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">What She's Evaluating</div>
+          <div class="intel-text">This is the most important interview. <strong>With Vanessa and the Head of Engineering already bought in, Diana is the remaining key decision-maker.</strong> She's likely your skip-level or direct manager. She's evaluating strategic thinking, operational judgment, and whether you can be a thought partner — not just an executor. She's done this exact kind of scaling work at Bridgewater and BlockTower. She's building her team. <strong>Per the prep call, she is notably gung-ho on AI for this role</strong> — expect her to want your AI point of view and, specifically, how you've personally used it and what impact it had. You can reference your tech leadership alignment naturally here: "Vanessa and I discussed the product-led transition, and what I outlined in the take-home is designed to support exactly that shift."</div>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">Expect Questions On</div>
+          <ul class="expect-list">
+            <li>Deep "why" behind architecture decisions — not what you'd build, but why this over alternatives</li>
+            <li>Your 6-week scope: she's run ops at Bridgewater — she knows what's realistic. Be precise.</li>
+            <li>Stakeholder alignment approach: she's building a new operating model</li>
+            <li>"What's the prior effort that failed?" — she probably knows. She's testing your intellectual humility.</li>
+            <li>Bigger picture: how does this PPM role evolve over 12–18 months? What's the operating model at scale?</li>
+            <li>Your "meta growth symptom" risk — she's probably thinking about this daily</li>
+            <li>IPO/public-company readiness: whether your controls, evidence, and metrics can survive higher scrutiny</li>
+            <li><strong>AI:</strong> your view on it AND how you've personally used it — concrete examples, the impact, and the influence you had. Have a first-person story ready, not just architecture theory.</li>
+          </ul>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">Key Approach</div>
+          <div class="intel-text">Be strategic, not just tactical. <strong>"Deterministic before intelligent"</strong> resonates with someone who ran research ops at Bridgewater, where systems thinking is everything. If she pushes on your timeline, don't cave — defend scope discipline: "Six weeks does not mean the platform is done. It means one high-risk workflow is live with real data, observable controls, an audit trail, and a reusable operating pattern." She built a nonprofit from scratch with limited resources — your "1 eng resource" awareness resonates here. <strong>On AI, don't hide behind "I kept it thin."</strong> Lead with genuine conviction and a concrete first-person example of AI you've shipped/used, then frame the assistive-only choice as discipline for a NAV-sensitive workflow — not as a lack of AI ambition. Show her the phase-two AI vision so she hears upside, not caution.</div>
+        </div>
+        <div class="question-box">
+          <div class="question-box-label">Strong Question to Ask Her</div>
+          <div class="question-box-text">"As you've been shaping the operating model over the past year, where do you see the biggest gap between where the ops team is today and where it needs to be to support the fund suite at scale?"</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vanessa Fernandes -->
+    <div class="interviewer-card" onclick="this.classList.toggle('expanded')">
+      <div class="interviewer-header">
+        <div class="time-badge">4:00–4:30</div>
+        <div class="interviewer-info">
+          <div class="interviewer-name">Vanessa Fernandes ✦ Advocate</div>
+          <div class="interviewer-title">Chief Technology Officer — You've Already Met</div>
+        </div>
+        <div class="expand-icon">▼</div>
+      </div>
+      <div class="interviewer-body">
+        <div class="intel-section">
+          <div class="intel-label">Prior Relationship</div>
+          <div class="intel-text">You've already met with Vanessa and the Head of Engineering. <strong>She was excited to move you forward.</strong> You and the Head of Engineering were tightly aligned on transitioning from a process-heavy fund org to a true product-led company. This slot is not a cold evaluation — it's a confirmation and a chance to go deeper on shared vision.</div>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">Background Intel</div>
+          <div class="intel-text">Stanford-educated. 25+ years in financial services technology. Previous roles include <strong>Head of Digital Asset Solutions at State Street</strong>, <strong>Chief Digital Experience Officer at BNY Mellon</strong>, and multiple exec roles at <strong>Itaú Unibanco</strong>: CEO of Itaú Digital Assets, CTO of Emerging Technologies & Open Source, Global Head of Corporate Architecture, and CIO. She <strong>pioneered the issuance of tokenized bank products in Brazil</strong>. Deep expertise in blockchain, IoT, quantum computing, and cloud adoption.</div>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">What's Different This Time</div>
+          <div class="intel-text">She's already seen your technical judgment and liked it. In this round, she's likely doing two things: <strong>(1) confirming her read</strong> in front of the broader panel, and <strong>(2) going deeper</strong> on how you'd work day-to-day with her team. She may also use this slot to sell you on the opportunity — she's invested in you being the pick. This is your chance to reinforce the alignment and show the other interviewers (via her feedback) that tech leadership is behind you.</div>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">How to Play This Slot</div>
+          <ul class="expect-list">
+            <li><strong>Build on your prior conversation, don't restart.</strong> Reference what you discussed: "When we talked about the transition to product-led, one thing I kept thinking about was..."</li>
+            <li>Go deeper on the take-home than you did before — she's seen you in conversation, now she's seen your written work. Connect the two.</li>
+            <li>Ask about what she's heard from the other interviewers (if appropriate) — she may share signals about what's landing</li>
+            <li>Use this as a chance to articulate the "process-heavy to product-led" transition vision — this is your shared language with her</li>
+            <li>If she gives you space, ask forward-looking questions: what does she want the tech org to look like in 12 months?</li>
+          </ul>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">Key Approach</div>
+          <div class="intel-text">This is your <strong>closing conversation</strong>, not your toughest test. The energy should feel like two people who've already decided to work together, now getting excited about the specifics. Don't coast — she's still evaluating — but let the warmth and alignment show naturally. If the earlier slots were draining, this one should feel like a second wind. The "process-heavy to product-led" frame from your earlier conversation maps perfectly to your reframed story: repeatable operating controls that let Grayscale scale product velocity without losing auditability, security, or ownership clarity. Make that connection explicit.</div>
+        </div>
+        <div class="question-box">
+          <div class="question-box-label">Strong Question to Ask Her</div>
+          <div class="question-box-text">"Since we last spoke, I've been thinking more about the product-led transition. What's the biggest resistance you're seeing internally, and where do you think this role can have the most immediate impact on shifting that?"</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Potential Weak Spots to Prepare For</h3>
+    <div class="weak-spots">
+      <div class="weak-spot">
+        <div class="weak-spot-title">No Tool Named</div>
+        <div class="weak-spot-desc">No specific no-code tool. Have an answer (Retool, Appsmith, etc.) and know the trade-offs.</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">1 Eng Resource</div>
+        <div class="weak-spot-desc">Is that enough? What if they leave? How do you prioritize their time?</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">AI Section Thin (Diana risk)</div>
+        <div class="weak-spot-desc">Diana is gung-ho on AI and wants your view + personal usage. "Thin on purpose" can read as low conviction. Lead with a first-person AI story and a phase-2 vision; frame assistive-only as discipline, not disinterest.</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">Compliance Gap</div>
+        <div class="weak-spot-desc">No explicit mention of regulatory considerations. In crypto asset management, this is critical.</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">Web3 Depth</div>
+        <div class="weak-spot-desc">Risks are listed but not deeply explored. Be ready to go deeper if Vanessa or Norah pushes.</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">IPO Readiness</div>
+        <div class="weak-spot-desc">Be ready to explain how your operating pattern creates evidence: controls, audit trails, ownership, metrics, and repeatable process.</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">Staking Ops</div>
+        <div class="weak-spot-desc">Know how staking changes the operational risk surface: rewards, validators, custody, lockups, unstaking windows, downtime, and NAV impact.</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">Too Technical</div>
+        <div class="weak-spot-desc">Lead with "scale product velocity without losing control." Then use AWS/no-code/AI as proof, not as the headline.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEFENSE MAP -->
+  <section id="defense" class="section">
+    <div class="thesis-box">
+      <div class="thesis-label">Take-Home Defense Frame</div>
+      <div class="thesis-text">Your best defense is that the take-home already diagnoses the real problem underneath the prompt: no shared operational ground truth, weak end-to-end audit trail, stale data risk, unclear approval state, and downstream NAV or regulatory reporting exposure.</div>
+    </div>
+
+    <h3>Where the Take-Home Is Strongest</h3>
+    <div class="risk-grid">
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Framing Section</div>
+        <div class="risk-desc">Use this with Diana and Max. You did not just solve the visible workflow problem; you identified the operating-model problem underneath it. Say: "The visible issue is manual work. The real issue is lack of shared ground truth and operating evidence."</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Confirm Before Committing</div>
+        <div class="risk-desc">Use this when challenged on not naming a no-code tool. Your defense: choosing Retool/Appsmith/etc. before validating webhook retries, duplicate handling, field permissions, audit exports, and dev-to-prod controls would be premature.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Stack Split</div>
+        <div class="risk-desc">Use this with Vanessa and Norah. "No-code carries the human workflow surface. AWS carries the control layer." That is the simplest explanation of why the architecture avoids shadow systems.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Incident Section</div>
+        <div class="risk-desc">Use this with Norah, Carolyn, and Diana. It shows operational maturity: facts first, blast radius, containment, targeted comms, engineer handoff, then prevention. You explicitly avoid promising "never again."</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Weak-Spot Defense Answers</h3>
+    <div class="weak-spots">
+      <div class="weak-spot">
+        <div class="weak-spot-title">No Tool Named</div>
+        <div class="weak-spot-desc">Defense: "That was intentional. The tool choice is downstream of security, audit export, webhook reliability, duplicate handling, field-level permissions, and change-management fit. I can compare tools, but I would not commit before validating those failure modes."</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">1 Eng Resource</div>
+        <div class="weak-spot-desc">Defense: "That constraint is why I avoided a full custom build. The goal is a small control layer, documented patterns, runbooks, and repeatable integration rules so the system is not dependent on one engineer's memory."</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">AI Section Thin</div>
+        <div class="weak-spot-desc">Defense (esp. for Diana): "I'm bullish on AI and use it daily — that's exactly why I'm disciplined about where it belongs in a NAV-sensitive workflow. It belongs after deterministic audit, state, and exception history exist. Good phase-two examples: exception summaries, incident drafts, ops history search, root-cause clustering, and runbook suggestions." Pair this with a concrete first-person example of AI you've personally shipped or used to change an outcome.</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">Compliance Gap</div>
+        <div class="weak-spot-desc">Defense: "The take-home mentions NAV, regulatory reporting, Finance controls evidence, audit response, and a decision trail thorough enough to deconstruct any decision without asking Ops. I should make that more explicit in conversation."</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">Web3 / Staking Depth</div>
+        <div class="weak-spot-desc">Defense: "I flagged finality, reorgs, timing skews, and non-standard events. For staking products, I would extend that same pattern to rewards, validators, custody status, lockups, unstaking windows, downtime, and NAV impact."</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">Prior Failure</div>
+        <div class="weak-spot-desc">Defense: "I deliberately did not diagnose the prior effort from the outside. The right first move is discovery: when did it go sideways, who felt the pain, what signals were missed, and what would the team do differently?"</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>C-Suite Loop Questions to Practice</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="question-box">
+        <div class="question-box-label">Diana / COO</div>
+        <div class="question-box-text">"How does this become an operating model, not just one workflow?" Answer: one workflow proves the pattern; weeks 7-12 expand by operational risk and exception volume.</div>
+      </div>
+      <div class="question-box">
+        <div class="question-box-label">Norah / CISO</div>
+        <div class="question-box-text">"Where are the security and vendor-risk failure points?" Answer: no-code permissions/audit exports, external feeds, duplicate handling, custody/vendor data, and stale data shown as current.</div>
+      </div>
+      <div class="question-box">
+        <div class="question-box-label">Max / CPO</div>
+        <div class="question-box-text">"How do you handle inheriting a failed effort?" Answer: no blame, no assumptions, diagnose the operating failure, and make a smaller promise the team can trust.</div>
+      </div>
+      <div class="question-box">
+        <div class="question-box-label">Carolyn / COO Office</div>
+        <div class="question-box-text">"What does the parallel run actually look like?" Answer: compare manual vs automated outputs, track exceptions, freshness, records checked, skipped counts, and time-to-resolution before cutover.</div>
+      </div>
+      <div class="question-box">
+        <div class="question-box-label">Vanessa / CTO</div>
+        <div class="question-box-text">"How does this support product-led transition?" Answer: product-led means reusable services, clear ownership, instrumentation, and user-facing workflow surfaces built on a trusted control layer.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WEB3 / STAKING -->
+  <section id="web3" class="section">
+    <div class="thesis-box">
+      <div class="thesis-label">Web3 Depth Frame</div>
+      <div class="thesis-text">Do not try to sound like a protocol engineer. Sound like the PPM who knows crypto-native operations fail differently: chain state changes, off-chain records lag, indexers disagree, staking introduces lockups, and custody/vendor data becomes part of the control surface.</div>
+    </div>
+
+    <h3>The Answer You Want Ready</h3>
+    <div class="question-box">
+      <div class="question-box-label">90-Second Version</div>
+      <div class="question-box-text">"The reason I flagged web3-specific risk is that crypto ops can look clean in the workflow layer while the underlying chain, indexer, custodian, or validator state is still uncertain. I would not design every possible protocol edge case into phase one. I would first identify which chain events the chosen workflow actually touches, then build controls around finality assumptions, off-chain/on-chain timing, source reconciliation, custody/vendor data, and stale data visibility. For staking products, I would extend the same pattern to rewards, validator status, lockups, unstaking windows, downtime, and NAV impact."</div>
+    </div>
+
+    <hr class="divider">
+    <h3>Web3 Risks to Go Deeper On</h3>
+    <div class="risk-grid">
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Finality / Reorgs</div>
+        <div class="risk-desc">A transaction can appear confirmed before it is economically final. Your control question: what confirmation depth or finality signal is sufficient for this workflow, and who owns exceptions when later chain state conflicts with earlier reporting?</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Off-Chain / On-Chain Timing</div>
+        <div class="risk-desc">Custodian, fund admin, vendor, and chain data may update on different clocks. Your mitigation: every record needs source timestamp, observed timestamp, ingestion timestamp, and visible "data as of" status.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Indexer / Event Parsing</div>
+        <div class="risk-desc">Different indexers can parse contract events differently, miss events, or lag. Your mitigation: reconcile source counts and hashes, not just business totals. Preserve raw payloads in S3 so transforms can be replayed.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Address / Asset Mapping</div>
+        <div class="risk-desc">Operational errors often hide in mapping tables: wallet, custodian account, fund, share class, asset, network, and product. Your mitigation: explicit reference data ownership, change approvals, and audit history for mapping changes.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Staking Ops Surface Area</h3>
+    <div class="risk-grid">
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Rewards</div>
+        <div class="risk-desc">Core questions: when are rewards earned, recognized, sold, accrued, or distributed? What source calculates them? What happens when reward data arrives late or differs across validator, custodian, and indexer?</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Validators</div>
+        <div class="risk-desc">Track validator status, commission, slashing exposure, missed attestations/blocks, downtime, and delegation changes. The ops question is not "is staking working?" but "which validator state changed, when, and what product exposure depends on it?"</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Custody</div>
+        <div class="risk-desc">Grayscale does not custody assets itself, so custodian data is a critical dependency. You need custody account state, staking status, transfer restrictions, validator delegation state, and clear vendor escalation paths.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Lockups / Unstaking</div>
+        <div class="risk-desc">Staked assets may not be immediately transferable. Operations need visibility into locked amount, available amount, pending unstake, expected availability, and whether liquidity constraints affect creations, redemptions, NAV, or reporting.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Downtime / Slashing</div>
+        <div class="risk-desc">A validator or network incident can affect rewards or principal. Your response pattern: detect status change, assess exposure, contain stale reporting, notify product/ops/security, and document whether NAV or client-facing reporting is affected.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">NAV Impact</div>
+        <div class="risk-desc">The executive question is whether operational uncertainty can flow into valuation, reporting, or investor communication. Your answer: classify by NAV sensitivity, client-facing exposure, regulatory impact, and whether manual verification is required before reports are used.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Chain Architecture Cheat Sheet</h3>
+    <div class="question-box">
+      <div class="question-box-label">How to Frame This</div>
+      <div class="question-box-text">"The key is not to build a bespoke pipeline for every asset. I would preserve chain-specific raw data, normalize it through explicit adapters, and emit a canonical event model for downstream workflow, reconciliation, and reporting. The system should respect each chain's mechanics without letting every chain leak its complexity into Ops."</div>
+    </div>
+    <div class="risk-grid" style="margin-top:16px;">
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Bitcoin / Dogecoin / Litecoin</div>
+        <div class="risk-desc">UTXO-style payment chains. Key beats: transaction inputs/outputs, confirmations, fees, change outputs, address reuse, no native smart-contract event logs. Downstream challenge: recon is balance/UTXO and confirmation-depth oriented, not event-log oriented.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Ethereum / EVM Chains</div>
+        <div class="risk-desc">Account-based smart-contract platforms. Key beats: blocks, transactions, internal calls, logs/events, gas, contract ABIs, token standards, staking/validator data for ETH. Downstream challenge: one transaction can create many events, and event parsing depends on contract-specific semantics.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Solana</div>
+        <div class="risk-desc">High-throughput account/program model. Key beats: slots, programs, accounts, instructions, inner instructions, rent/compute, staking accounts, epoch mechanics. Downstream challenge: parsing is instruction/account-state heavy, and high event volume makes idempotency and backpressure important.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">XRP / Stellar</div>
+        <div class="risk-desc">Payment-ledger architecture. Key beats: accounts, ledgers, sequence numbers, memos/destination tags, trust lines for issued assets, fast finality assumptions. Downstream challenge: mapping payments to the correct fund/account often depends on reference data like tags, memos, issuer, and destination account.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Avalanche / Sui / Other Alt L1s</div>
+        <div class="risk-desc">Different execution and state models. Avalanche has multiple chains/subnets; Sui is object-centric and Move-based. Downstream challenge: a "transaction" may mean different things across chains, so adapters need chain-specific parsing before events enter a shared workflow model.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Chainlink / Oracle Networks</div>
+        <div class="risk-desc">Not a simple asset-transfer chain use case. Key beats: oracle reports, data feeds, node/operator sets, feed rounds, timestamps, and reference data quality. Downstream challenge: the operational concern is data provenance, freshness, and consensus around reported values.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>How Chain Differences Hit the Stack</h3>
+    <div class="pillars">
+      <div class="pillar">
+        <div class="pillar-num">01</div>
+        <div class="pillar-title">API Gateway</div>
+        <div class="pillar-desc">Treat inbound data as source-specific: chain, network, provider, payload version, cursor/checkpoint, and idempotency key. Do not pretend all chains emit the same event shape at ingress.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-num">02</div>
+        <div class="pillar-title">SQS</div>
+        <div class="pillar-desc">Use queues to isolate chain/source backpressure and retries. Partition by chain + workflow where needed, preserve ordering only where business logic depends on it, and keep DLQs source-specific for replay.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-num">03</div>
+        <div class="pillar-title">Lambda</div>
+        <div class="pillar-desc">Use adapter Lambdas for chain-specific parsing, then emit canonical events. Keep raw payloads in S3 and version transforms so parsing bugs can be replayed without losing the original evidence.</div>
+      </div>
+    </div>
+    <div class="risk-grid" style="margin-top:16px;">
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">S3 Bronze Layer</div>
+        <div class="risk-desc">This is where chain heterogeneity is your friend, not your enemy. Preserve the native payload exactly: UTXO snapshots, EVM logs, Solana instructions, XRP ledger entries, custodian reports, validator files. Replay depends on not over-normalizing too early.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">RDS Source of Truth</div>
+        <div class="risk-desc">RDS should own canonical operational state and reference data: fund/product mappings, wallet/account mappings, chain/network identifiers, finality rules, validator/custodian relationships, and exception state. Avoid stuffing raw chain-specific structures directly into workflow tables.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Step Functions / HITL</div>
+        <div class="risk-desc">Use orchestration when uncertainty requires stateful handling: waiting for finality, retrying a vendor/indexer, routing a staking exception, or pausing for Ops/Security approval. Do not hold long-running executions open for multi-day business waits; persist state and resume via events.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">CloudWatch / Observability</div>
+        <div class="risk-desc">Metrics need chain/source dimensions: last successful ingest by chain, source freshness, parse failure rate, duplicate count, DLQ depth, records checked/skipped, finality-pending count, validator downtime, and exception age by product impact.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">EventBridge / Reporting Events</div>
+        <div class="risk-desc">Emit business events after canonicalization, not just raw technical events. Examples: feed_degraded, finality_pending, staking_reward_discrepancy, validator_status_changed, stale_report_flagged, exception_resolved.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">No-Code Workflow Layer</div>
+        <div class="risk-desc">No-code should show the business interpretation, not expose protocol complexity as a maze. Display source, chain, freshness, finality, exception reason, owner, SLA, and next action. Keep protocol-specific evidence one click away, but do not make Ops parse raw chain data.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Canonical Event Pattern</h3>
+    <div class="question-box">
+      <div class="question-box-label">Design Move</div>
+      <div class="question-box-text">Use a two-layer model: raw chain/vendor payload stays immutable in S3; Lambda converts it into a canonical event envelope that RDS and no-code can understand.</div>
+    </div>
+    <div class="risk-grid" style="margin-top:16px;">
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Canonical Envelope</div>
+        <div class="risk-desc">chain, network, source provider, source payload URI, source event id, canonical event type, asset, amount, from/to or account refs, product/fund mapping, block/slot/ledger height, source timestamp, observed timestamp, ingestion timestamp, finality status.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Chain-Specific Extension</div>
+        <div class="risk-desc">Keep extension fields for UTXO set, EVM logs, Solana instructions, XRP destination tags, validator data, or oracle feed rounds. Do not force every chain into the same lowest-common-denominator schema.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Idempotency</div>
+        <div class="risk-desc">Key by chain + network + source + native transaction/event identifier + payload version. This prevents duplicate webhook/indexer deliveries from creating duplicate workflow state.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Schema Evolution</div>
+        <div class="risk-desc">Version schemas and transforms. New chains, new token standards, new staking fields, and vendor format changes become adapter changes, not rewrites of the entire operations workflow.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Control Pattern</h3>
+    <div class="pillars">
+      <div class="pillar">
+        <div class="pillar-num">01</div>
+        <div class="pillar-title">Source Separation</div>
+        <div class="pillar-desc">Keep chain, custodian, validator, fund admin, and internal workflow data distinguishable. Do not collapse disagreement into a single "clean" value too early.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-num">02</div>
+        <div class="pillar-title">Freshness + Finality</div>
+        <div class="pillar-desc">Show data-as-of, source timestamp, ingestion timestamp, finality assumption, and whether the record is ready for downstream use.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-num">03</div>
+        <div class="pillar-title">Exception Routing</div>
+        <div class="pillar-desc">Route by business impact: NAV-sensitive, client-facing, regulatory, standard ops cleanup. Security gets pulled in when vendor, custodian, validator, or smart-contract compromise is plausible.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Likely Pushbacks</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="question-box">
+        <div class="question-box-label">Vanessa</div>
+        <div class="question-box-text">"Are you overengineering for chain edge cases?" Answer: "I would not build for every chain edge case in phase one. I would identify which chain state the chosen workflow depends on, define finality/freshness assumptions, preserve raw data, and make uncertainty visible."</div>
+      </div>
+      <div class="question-box">
+        <div class="question-box-label">Norah</div>
+        <div class="question-box-text">"Where does security enter this workflow?" Answer: "At vendor feeds, custodian data, validator status, smart-contract or network incidents, access controls in no-code, and any stale data that could be acted on as current."</div>
+      </div>
+      <div class="question-box">
+        <div class="question-box-label">Diana</div>
+        <div class="question-box-text">"Why does this matter operationally?" Answer: "Because product expansion increases the number of protocol-specific exceptions. The operating model needs to normalize how those exceptions are detected, routed, evidenced, and escalated."</div>
+      </div>
+      <div class="question-box">
+        <div class="question-box-label">If You Do Not Know</div>
+        <div class="question-box-text">"I would not want to guess at the protocol-specific answer. The operating answer is that I would identify the dependency, define the control owner, preserve raw evidence, and route uncertainty before downstream reports treat it as clean."</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECURITY / COMPLIANCE -->
+  <section id="security" class="section">
+    <div class="thesis-box">
+      <div class="thesis-label">CISO / Compliance Frame</div>
+      <div class="thesis-text">The stack is defensible if every layer has a clear control job: AWS owns evidence, truth, access boundaries, replay, and monitoring; no-code owns the human workflow surface; AI stays assistive and outside the control path until the deterministic record is trusted.</div>
+    </div>
+
+    <h3>The Answer You Want Ready</h3>
+    <div class="question-box">
+      <div class="question-box-label">90-Second Version</div>
+      <div class="question-box-text">"The way I would guard this stack is by making the control boundary explicit. No-code should not become a shadow database or hidden rules engine; it should present workflow state from RDS, enforce role-based actions, and export its audit logs. AWS should preserve raw evidence in S3, maintain authoritative state in RDS, route approvals through Step Functions only where stateful coordination is needed, and monitor freshness, failures, and exceptions through CloudWatch/EventBridge. From a CISO and compliance perspective, the key is not just preventing failure. It is being able to prove what happened, who touched it, what source data was used, what controls fired, and whether downstream NAV, reporting, or client-facing outputs were affected."</div>
+    </div>
+
+    <hr class="divider">
+    <h3>Control Boundary by Layer</h3>
+    <div class="pillars">
+      <div class="pillar">
+        <div class="pillar-num">01</div>
+        <div class="pillar-title">AWS Control Plane</div>
+        <div class="pillar-desc">S3 raw evidence, RDS source of truth, Lambda transforms, Step Functions approvals, SQS/DLQ replay, CloudWatch/EventBridge monitoring, IAM/KMS/secrets boundaries.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-num">02</div>
+        <div class="pillar-title">No-Code Workflow Surface</div>
+        <div class="pillar-desc">Human queues, approvals, exception review, and dashboards. Least privilege, SSO, field-level permissions, audit export, and no authoritative business logic.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-num">03</div>
+        <div class="pillar-title">AI Assistive Layer</div>
+        <div class="pillar-desc">Summaries, drafts, search, and runbook suggestions after deterministic state exists. No autonomous NAV-sensitive decisions, writes, approvals, or silent data mutation.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Security Surfaces to Name</h3>
+    <div class="risk-grid">
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Identity + Access</div>
+        <div class="risk-desc">SSO, MFA, role-based access, least privilege, break-glass process, periodic access review, and separation between submitter, reviewer, approver, and admin roles.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">No-Code Governance</div>
+        <div class="risk-desc">Validate field-level permissions, audit-log export, environment separation, approval workflow changes, webhook retries, duplicate handling, and whether admins can bypass control steps.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Data Protection</div>
+        <div class="risk-desc">Classify data by sensitivity, encrypt in transit and at rest, use KMS-managed keys where appropriate, keep secrets out of no-code fields, and avoid copying sensitive data into AI prompts.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Inbound Feeds</div>
+        <div class="risk-desc">Authenticate webhooks, enforce idempotency keys, schema validation, row-count anomaly checks, source allowlists, replay paths, and compromised-vendor containment procedures.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">AWS Runtime</div>
+        <div class="risk-desc">IAM least privilege, scoped Lambda permissions, secrets management, private networking where needed, DLQ review, log retention, and alerting on stale or failed control events.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent2);">
+        <div class="risk-title" style="color:var(--accent2);">Third Parties</div>
+        <div class="risk-desc">Custodians, fund admins, indexers, validators, and no-code vendors are all dependency risks. Track ownership, SLAs, format-change process, escalation paths, and evidence packages.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Compliance Evidence Map</h3>
+    <div class="risk-grid">
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Audit Trail</div>
+        <div class="risk-desc">Every meaningful event should answer: who did what, when, from which source data, under which rule version, with which approval or exception outcome.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Data Lineage</div>
+        <div class="risk-desc">Raw S3 payload URI, transform version, canonical RDS record, no-code workflow item, and downstream report status should be traceable end to end.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Control Evidence</div>
+        <div class="risk-desc">Validation results, records checked/skipped, freshness status, reconciliation results, exception category, owner, SLA, approval decision, and timestamped remediation notes.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Change Management</div>
+        <div class="risk-desc">Version schemas, transforms, mapping tables, workflow rules, permissions, and no-code configuration changes. Require review before changes can affect production state.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Segregation of Duties</div>
+        <div class="risk-desc">Separate who submits data, approves exceptions, changes mappings, administers the workflow, and releases production logic. Document any override path.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--accent);">
+        <div class="risk-title" style="color:var(--accent);">Audit Response</div>
+        <div class="risk-desc">The goal is a reproducible evidence packet: source payloads, control results, approvals, exceptions, incident notes, and downstream impact without asking Ops to reconstruct from memory.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Beyond the Take-Home: CISO Conversation Expanders</h3>
+    <div class="question-box">
+      <div class="question-box-label">Portable Executive Line</div>
+      <div class="question-box-text">"I would want this workflow to produce operating evidence that satisfies security, compliance, finance, and audit at the same time: who did what, using which data, under which control version, with what exception path, and what downstream impact."</div>
+    </div>
+    <div class="risk-grid" style="margin-top:16px;">
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Governance</div>
+        <div class="risk-desc">Use the NIST CSF 2.0 executive frame: security is not only identify, protect, detect, respond, and recover. It also needs governance: roles, accountability, risk appetite, policy, oversight, and third-party risk ownership.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Public-Company Cyber Readiness</div>
+        <div class="risk-desc">Tie this to disclosure discipline, board/executive visibility, materiality assessment, incident timelines, and annual cyber risk-management narrative. The system should help leadership know impact quickly, not reconstruct it later.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Customer Information</div>
+        <div class="risk-desc">For any sensitive customer or investor information, talk in terms of written incident-response procedures, detection, response, recovery, notification readiness, and minimizing unnecessary data exposure in workflow tools.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Third-Party Risk</div>
+        <div class="risk-desc">Custodians, fund admins, indexers, validators, no-code vendors, cloud services, and AI vendors need due diligence, SOC 2-style evidence, incident notice SLAs, subprocessor review, BCP/DR posture, and exit plans.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Secure SDLC</div>
+        <div class="risk-desc">For engineering partnership: threat modeling, code review, dependency and secrets scanning, IaC review, production approval gates, rollback plans, and versioned change logs for schemas, transforms, mappings, and workflow rules.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Resilience</div>
+        <div class="risk-desc">Move beyond prevention: RTO/RPO, backup restore testing, immutable logs, manual fallback, incident tabletop exercises, post-incident retros, and measurable control improvements.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Crypto Compliance Vocabulary</div>
+        <div class="risk-desc">Use carefully: OFAC sanctions screening, wallet/address risk, blockchain analytics, geofencing, transaction monitoring, custody controls, suspicious activity escalation, and evidence retention.</div>
+      </div>
+      <div class="risk-card" style="border-left-color:var(--gold);">
+        <div class="risk-title" style="color:var(--gold);">Access Governance</div>
+        <div class="risk-desc">SSO/MFA is only the start. Discuss privileged access, quarterly reviews, joiner/mover/leaver controls, admin override logging, role design, and segregation of duties across Ops, Finance, Product, Security, and Engineering.</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>CISO Pushbacks to Practice</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="question-box">
+        <div class="question-box-label">"Is no-code a security risk?"</div>
+        <div class="question-box-text">"It can be if it becomes the source of truth or a hidden rules engine. My design limits it to authenticated human workflow, display, and approvals. Before choosing a tool, I would validate SSO, RBAC, field permissions, audit exports, environment separation, webhook behavior, and admin override controls."</div>
+      </div>
+      <div class="question-box">
+        <div class="question-box-label">"What data should not live in no-code?"</div>
+        <div class="question-box-text">"Raw sensitive payloads, secrets, private keys, credentials, authoritative fund/account mappings, and anything that determines NAV-sensitive state. No-code can show business state and links to evidence, but RDS/S3 own the record."</div>
+      </div>
+      <div class="question-box">
+        <div class="question-box-label">"What if a vendor feed is compromised?"</div>
+        <div class="question-box-text">"Treat it as an integrity incident: identify last trusted source point, freeze or label downstream outputs as data-as-of, compare against alternate sources where available, route exceptions by NAV/client/regulatory impact, preserve raw evidence, and escalate through the vendor and security runbook."</div>
+      </div>
+      <div class="question-box">
+        <div class="question-box-label">"How do you prove controls are working?"</div>
+        <div class="question-box-text">"Do not rely on a green dashboard alone. Show control evidence: records received, records validated, records skipped, rule version, exception rate, median exception age, stale-feed alerts, approvals, overrides, and post-incident remediations."</div>
+      </div>
+      <div class="question-box">
+        <div class="question-box-label">"Where does compliance enter phase one?"</div>
+        <div class="question-box-text">"In the evidence design. Phase one should produce traceable decisions, audit-ready control results, change history, and clear blast-radius classification for NAV, regulatory reporting, client-facing outputs, and Finance controls."</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>How to Partner With InfoSec</h3>
+    <div class="weak-spots">
+      <div class="weak-spot">
+        <div class="weak-spot-title">Before Tool Choice</div>
+        <div class="weak-spot-desc">Ask InfoSec to review data classification, access model, audit export requirements, vendor posture, no-code admin model, and whether sensitive data can appear in workflow fields.</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">Before Pilot</div>
+        <div class="weak-spot-desc">Run threat modeling on ingress, identity, secrets, vendor feeds, no-code permissions, logs, and AI usage. Define what would block production.</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">Before Cutover</div>
+        <div class="weak-spot-desc">Validate parallel-run evidence, access review, production change approvals, runbooks, incident severity tiers, alert routing, and manual fallback.</div>
+      </div>
+      <div class="weak-spot">
+        <div class="weak-spot-title">After Launch</div>
+        <div class="weak-spot-desc">Report freshness, exceptions, overrides, access changes, failed controls, vendor incidents, and remediation status. Security governance becomes part of the operating rhythm.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MOCK INTERVIEW -->
+  <section id="mock" class="section">
+    <div class="mode-row">
+      <button class="mode-btn active" onclick="setMode('interviewer', this)">Interviewer Mode</button>
+      <button class="mode-btn" onclick="setMode('coach', this)">Coach Mode</button>
+      <button class="mode-btn" onclick="setMode('challenge', this)">Challenge Mode</button>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px;" id="mode-desc">Ask me a question to start the mock interview. I'll respond as a skeptical interviewer.</div>
+
+    <div class="chat-wrapper">
+      <div class="chat-header">
+        <div class="chat-dot"></div>
+        <div class="chat-title" id="chat-role-label">Interviewer Active</div>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="msg interviewer">
+          <div class="msg-role">INT.</div>
+          <div class="msg-bubble">John, thanks for putting this together. Before we get into the architecture, tell me the executive story: what business problem is this really solving for Grayscale?</div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <div class="chat-input-row">
+          <textarea class="chat-input" id="chat-input" placeholder="Type your answer..." rows="2" onkeydown="handleKey(event)"></textarea>
+          <button class="send-btn" id="send-btn" onclick="sendMessage()">Send ↵</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FLASHCARDS -->
+  <section id="flashcards" class="section">
+    <div class="flashcard-controls">
+      <button class="fc-btn" onclick="prevCard()">← Prev</button>
+      <button class="fc-btn primary" onclick="flipCard()">Flip Card</button>
+      <button class="fc-btn" onclick="nextCard()">Next →</button>
+      <div class="fc-progress" id="fc-progress">1 / 12</div>
+    </div>
+
+    <div class="flashcard" id="flashcard" onclick="flipCard()">
+      <div class="flashcard-inner" id="flashcard-inner">
+        <div class="fc-face fc-front">
+          <div class="fc-category" id="fc-category">Architecture</div>
+          <div class="fc-question" id="fc-question">Why does raw data land in S3 before anything else?</div>
+          <div class="fc-hint">Click to reveal answer</div>
+        </div>
+        <div class="fc-face fc-back">
+          <div class="fc-answer" id="fc-answer">
+            S3 is your <strong>bronze layer — immutable and append-only</strong>. This lets you replay state changes when vendors change formats or bugs arise in transforms. Without it, you can't reconstruct what happened. The ability to replay is fundamental to auditability and debugging in a fund ops context where data integrity is non-negotiable.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fc-nav">
+      <button class="fc-btn" onclick="shuffleCards()">Shuffle</button>
+      <button class="fc-btn" onclick="resetCards()">Reset</button>
+    </div>
+  </section>
+
+  <!-- CHECKLIST -->
+  <section id="checklist" class="section">
+    <h2>Pre-Interview Checklist</h2>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:24px;">Click to mark items done. These are the concepts and narratives you need to own before walking in.</div>
+    <div class="checklist" id="checklist"></div>
+  </section>
+
+</main>
+
+<script>
+// ── NAV ──────────────────────────────────────────────────────────
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ── CONTEXT ──────────────────────────────────────────────────────
+const TAKEHOME_CONTEXT = `
+You are helping John Canneto prepare for a live in-person defense of his Grayscale PPM take-home assignment. Here is the full content of his take-home:
+
+THESIS: Phase one needs to be deterministic before it can be intelligent.
+EXECUTIVE STORY: This is not just a workflow build. It is a repeatable operating pattern that helps Grayscale scale product velocity without losing control: ingest, validate, reconcile, route exceptions, audit every step, then reuse the pattern as the product suite expands.
+1. No-code applications for the human workflow surface.
+2. Leverage AWS for correctness, audit and replay.
+3. Layer AI for assistive functionality only.
+
+ARCHITECTURE:
+- Confirm before committing: Step Functions feasibility, whether RDS owns source of truth, no-code webhook/duplicate handling/audit log behavior, web3-specific risks (on-chain finality/reorg handling, off-chain/on-chain timing skews).
+- Stack split: No-code (intake forms, approval routing, work queues, exception review, dashboards) vs AWS (API Gateway + EventBridge, Step Functions for HITL, Lambda for ETL/recon, S3 bronze layer, RDS source of truth, SQS/DLQs, CloudWatch).
+- Key decisions: Raw lands in S3 first (immutable/append-only), RDS owns source of truth (no-code only displays it), event-based reporting on every meaningful step, Step Functions for multistep/HITL/long-running flows only.
+- HITL: Review SLAs vary from minutes (NAV-impacting) to days (standard exceptions). Don't hold open executions across multi-day waits.
+- What he challenged: Pure no-code (weak source of truth, difficult to rewind), custom full build (unreasonable with 1 eng), AI in critical path (foundation must be deterministic first), over-scoping phase 1.
+
+PHASES:
+- Wks 1-2: Identify critical workflow with Ops, vertical slice, ship to lower env, try to break it.
+- Wks 3-5: Harden — real recon logic, exception categories, freshness indicators, audit trails. Run parallel.
+- Wk 6: Live with real data. Audit trail, deterministic recon, exception handling, base metrics.
+- Wks 7-12: Expand by op risk and exception volume.
+- Success metrics: Manual touch time per item reduction rate, median exception age.
+
+RISKS: Feed quality (late/empty/malformed), Recon Hubris ("no exceptions" only counts if records were actually checked), No-code overreach, Eng resource continuity, meta growth symptom (fund suite outpacing operating model).
+C-SUITE UPGRADES:
+- IPO/public-company readiness: Grayscale has publicly filed for a proposed NYSE listing under GRAY. Controls, documentation, audit trails, dependency ownership, and operating metrics matter more under public-company scrutiny.
+- Staking operational risk: Recent product launches make staking a live ops theme. Be ready to connect recon to reward calculation, validator/custodian status, lockups, unstaking windows, downtime, smart-contract risk, custody reporting, NAV impact, and exception routing.
+- C-suite 6-week frame: Six weeks does not mean the whole platform is done. It means one high-risk workflow is live with real data, observable controls, an audit trail, and a reusable operating pattern.
+TAKE-HOME DEFENSE MAP:
+- No tool named: intentional until validating webhook retry behavior, duplicate handling, field-level permissions, audit log exports, and dev-to-prod change management.
+- 1 engineering resource: exactly why full custom build is wrong; use a small AWS control layer, no-code for human surfaces, documented patterns, and runbooks.
+- AI section thin: intentional; AI belongs after deterministic audit/state/exception history exists. Phase-two examples are exception summaries, incident drafts, ops history search, root-cause clustering, and runbook suggestions.
+- Compliance gap: make explicit that the take-home already mentions NAV risk, regulatory reporting, Finance controls evidence, audit response, and an audit trail thorough enough to deconstruct decisions without asking Ops.
+- Web3/staking depth: take-home flags finality, reorgs, timing skews, and non-standard events; extend that same recon pattern to staking rewards, validators, custody, lockups, unstaking windows, downtime, and NAV impact.
+- Prior failed effort: do not diagnose from the outside. Discovery first: when did it go sideways, who felt the pain, what signals were missed, and what would the team do differently?
+WEB3/STAKING DEEP PREP:
+- Web3 frame: do not try to sound like a protocol engineer. Sound like the PPM who knows crypto-native operations fail differently: chain state changes, off-chain records lag, indexers disagree, staking introduces lockups, and custody/vendor data becomes part of the control surface.
+- 90-second answer: crypto ops can look clean in the workflow layer while underlying chain, indexer, custodian, or validator state is uncertain. First identify which chain events the chosen workflow touches, then build controls around finality assumptions, timing, source reconciliation, custody/vendor data, and stale data visibility.
+- Finality/reorgs: define sufficient confirmation/finality for the workflow; know who owns exceptions if later chain state conflicts with earlier reporting.
+- Timing skew: track source timestamp, observed timestamp, ingestion timestamp, and visible data-as-of.
+- Indexer/event parsing: reconcile source counts and hashes, not only totals; preserve raw payloads in S3 so transforms can be replayed.
+- Address/asset mapping: explicit ownership, approval, and audit history for wallet, custodian account, fund, share class, asset, network, and product mappings.
+- Staking rewards: when earned, recognized, sold, accrued, or distributed; what source calculates them; what happens when validator/custodian/indexer disagree.
+- Validators: status, commission, slashing exposure, missed attestations/blocks, downtime, delegation changes.
+- Custody: custodian account state, staking status, transfer restrictions, validator delegation state, and vendor escalation paths.
+- Lockups/unstaking: locked amount, available amount, pending unstake, expected availability, and impact on creations, redemptions, NAV, or reporting.
+- Downtime/slashing: detect status change, assess exposure, contain stale reporting, notify product/ops/security, document NAV/client impact.
+- Control pattern: source separation, freshness/finality visibility, exception routing by business impact.
+CHAIN ARCHITECTURE PREP:
+- Current Grayscale product examples include Bitcoin, Ethereum staking, Solana staking, XRP, Dogecoin, Chainlink, and multi-asset ETP exposure, plus private/public funds around many other assets such as Avalanche, Sui, Litecoin, Stellar, Filecoin, Near, Optimism, Stacks, Zcash, and others.
+- Key frame: do not build a bespoke operations workflow per asset. Preserve chain-specific raw data, normalize through explicit adapters, and emit a canonical event model for downstream workflow, reconciliation, and reporting.
+- Bitcoin/Dogecoin/Litecoin: UTXO-style chains; recon is inputs/outputs, confirmations, fees, change outputs, and balance/UTXO oriented.
+- Ethereum/EVM: account-based smart-contract chains; one transaction can create many logs/events/internal calls; parsing depends on ABI and contract semantics.
+- Solana: high-throughput account/program model; slots, programs, accounts, instructions, inner instructions, staking accounts, epochs; higher volume means idempotency/backpressure matter.
+- XRP/Stellar: payment-ledger architecture; ledgers, sequence numbers, memos/destination tags, trust lines; mapping depends heavily on reference data.
+- Avalanche/Sui/alt L1s: different execution/state models; Avalanche has multiple chains/subnets, Sui is object-centric/Move-based; adapters need chain-specific parsing before shared workflow state.
+- Chainlink/oracle networks: focus on data provenance, freshness, feed rounds, source consensus, timestamps, and reported values.
+- API Gateway impact: inbound payloads must be source-specific with chain, network, provider, payload version, checkpoint/cursor, and idempotency key.
+- SQS impact: isolate backpressure and retries by chain/source/workflow; preserve ordering only where business logic needs it; keep source-specific DLQs for replay.
+- Lambda impact: adapter Lambdas parse chain-specific data, preserve raw payloads in S3, and emit canonical events.
+- S3 impact: preserve native raw payloads exactly so chain-specific structures can be replayed later without losing evidence.
+- RDS impact: own canonical operational state and reference data, not raw protocol structures; includes product/fund mappings, wallet/account mappings, chain/network identifiers, finality rules, validator/custodian relationships, and exception state.
+- Step Functions/HITL impact: orchestrate stateful uncertainty such as waiting for finality, retrying a vendor/indexer, routing staking exceptions, or pausing for Ops/Security approval.
+- CloudWatch impact: metrics need chain/source dimensions such as freshness, parse failures, duplicate count, DLQ depth, finality pending, validator downtime, and exception age by product impact.
+- EventBridge/reporting impact: emit business events after canonicalization, such as feed_degraded, finality_pending, staking_reward_discrepancy, validator_status_changed, stale_report_flagged, exception_resolved.
+- No-code impact: show business interpretation: source, chain, freshness, finality, exception reason, owner, SLA, next action, with protocol evidence one click away.
+- Canonical envelope fields: chain, network, source provider, raw payload URI, source event id, event type, asset, amount, account refs, product/fund mapping, block/slot/ledger height, source timestamp, observed timestamp, ingestion timestamp, finality status, plus chain-specific extension fields.
+
+SECURITY/COMPLIANCE DEEP PREP:
+- CISO frame: the stack is defensible if every layer has a clear control job. AWS owns evidence, truth, access boundaries, replay, and monitoring. No-code owns the human workflow surface. AI stays assistive and outside the control path until deterministic state is trusted.
+- 90-second answer: make the control boundary explicit. No-code should not become a shadow database or hidden rules engine; it should present workflow state from RDS, enforce role-based actions, and export audit logs. AWS preserves raw evidence in S3, maintains authoritative state in RDS, routes approvals through Step Functions only where stateful coordination is needed, and monitors freshness/failures/exceptions through CloudWatch/EventBridge.
+- Main CISO concern: the no-code/AWS integration point is where most failures live: webhook retry behavior, duplicate handling, field-level permissions, audit log exports, dev-to-prod change management, and admin override controls.
+- Identity/access: SSO, MFA, RBAC, least privilege, break-glass process, periodic access review, and separation between submitter, reviewer, approver, mapping editor, and admin roles.
+- Data protection: classify sensitive data, encrypt in transit and at rest, protect secrets, limit no-code data exposure, and avoid copying sensitive raw payloads or credentials into AI prompts.
+- Inbound feeds: authenticate webhooks, enforce idempotency, schema validation, row-count anomaly checks, freshness checks, source allowlists, replay paths, and compromised-vendor containment.
+- Compliance evidence: every meaningful event should answer who did what, when, from which source data, under which rule version, with which approval or exception outcome.
+- Data lineage: raw S3 payload URI, transform version, canonical RDS record, no-code workflow item, and downstream report status should be traceable end to end.
+- Control evidence: validation results, records checked/skipped, freshness status, reconciliation result, exception category, owner, SLA, approval decision, and remediation notes.
+- Change management: version schemas, transforms, mapping tables, workflow rules, permissions, and no-code configuration changes. Require review before production state can be affected.
+- Segregation of duties: separate submission, exception approval, mapping changes, workflow administration, and production logic release. Document any override path.
+- Audit response goal: a reproducible evidence packet with source payloads, control results, approvals, exceptions, incident notes, and downstream impact without asking Ops to reconstruct from memory.
+- Vendor/custody risk: custodians, fund admins, indexers, validators, and no-code vendors are all dependency risks. Track ownership, SLAs, format-change process, escalation paths, and evidence packages.
+- Vendor compromise answer: treat as an integrity incident; identify last trusted source point, freeze or label downstream outputs as data-as-of, compare alternate sources where available, route exceptions by NAV/client/regulatory impact, preserve raw evidence, and escalate through vendor/security runbook.
+- No-code security answer: no-code is acceptable when limited to authenticated workflow, display, and approvals. It becomes risky when it owns authoritative state, hidden rules, or uncontrolled admin override paths.
+- Beyond-the-take-home executive line: the workflow should produce operating evidence that satisfies security, compliance, finance, and audit at the same time: who did what, using which data, under which control version, with what exception path, and what downstream impact.
+- Governance frame: use NIST CSF 2.0 language carefully. Security is not only identify/protect/detect/respond/recover; it also requires governance: roles, accountability, risk appetite, policy, oversight, and third-party ownership.
+- Public-company cyber readiness: connect controls to disclosure discipline, board/executive visibility, materiality assessment, incident timelines, and annual cyber risk-management narrative.
+- Customer information: for sensitive customer or investor information, speak in terms of written incident-response procedures, detection, response, recovery, notification readiness, and minimizing unnecessary data exposure.
+- Third-party risk: ask about SOC 2-style evidence, incident notice SLAs, right-to-audit or evidence rights, subprocessor review, BCP/DR posture, vendor exit plans, and ownership of custodian/fund-admin/indexer/validator dependencies.
+- Secure SDLC: threat modeling, code review, dependency scanning, secrets scanning, IaC review, production approval gates, rollback plans, and versioned change logs for schemas, transforms, mappings, and workflow rules.
+- Resilience: prevention is not enough. Discuss RTO/RPO, backup restore testing, immutable logs, manual fallback, tabletop exercises, post-incident retros, and measurable control improvements.
+- Crypto compliance vocabulary: OFAC sanctions screening, wallet/address risk, blockchain analytics, geofencing, transaction monitoring, custody controls, suspicious activity escalation, and evidence retention. Use as vocabulary, not as legal claims.
+- Access governance: SSO/MFA, privileged access, quarterly reviews, joiner/mover/leaver controls, admin override logging, role design, and segregation of duties across Ops, Finance, Product, Security, and Engineering.
+
+DISCOVERY QUESTIONS:
+- Head of Ops: Walk me through last time something went wrong operationally. Which one workflow in 6 weeks would your team thank us for? What do you wish had happened differently on the last missed project?
+- Finance: Which obligation are you most worried about? Which would be helped by phase 1 audit data? What would make you comfortable with Ops-first sequencing?
+
+INTERVIEW INTEL (from prep call with Mike, ex-Bridgewater host):
+- John has chosen the PPM role over the Head-of role (wants to do the work, strategy, and implement). The Head-of role is being deprioritized; they want strong PPMs first. Even as PPM, John would be the most senior PM — a non-managing leader expected to help grow individuals through influence.
+- John is the FIRST candidate brought in for this newly-scoped role — no prior calibration, room to shape it.
+- Diana Zhang (COO, decisive vote) is gung-ho on AI for this role. She will likely ask John's view on AI AND how he has personally used it, with concrete impact/influence. The reconciliation with "AI thin on purpose": that is discipline for a NAV-sensitive workflow, not low AI conviction. John should pair a first-person AI story with a phase-two AI vision.
+- Max Rosenthal (CPO) will run a pure culture/"therapy session" conversation — likely zero product or tech talk. It's a "what makes you tick" conversation; John should not steer it to architecture.
+- Culture: Bridgewater-style directness is real but "80% true, 20% myth" — direct and figure-it-out-together, not adversarial or backstabby. Good people. Match candor without the edge.
+- If the loop goes well, they move fast to an offer.
+
+INCIDENT MANAGEMENT (1-hour scenario):
+- Establish facts first (which feed? last good run? S3 bronze current? empty/late/malformed?). 
+- Assess impact (NAV-sensitive? client-facing? regulatory?). 
+- Contain (tag reports with "data as of [timestamp]", pause downstream automation).
+- Prep engineer handoff with everything pre-diagnosed.
+- Message: Head of Ops directly, flagging on reports, FYI to Finance if blast radius warrants.
+- Post-incident: Freshness SLA per feed with alerting, "data as of" timestamps always visible, schema validation + row-count anomaly detection at ingest, DLQ, runbooks, escalation tiers by business impact not who's online, 48hr retro.
+`;
+
+// ── MOCK INTERVIEW ────────────────────────────────────────────────
+let chatMode = 'interviewer';
+let conversationHistory = [];
+const CHAT_API_ENDPOINT = '';
+
+const modeDescriptions = {
+  interviewer: 'Ask me a question to start the mock interview. I\'ll respond as a skeptical interviewer.',
+  coach: 'Paste your answer and I\'ll give you coaching feedback — what landed, what to sharpen.',
+  challenge: 'I\'ll actively push back on your take-home and stress-test your reasoning. Stay sharp.'
+};
+
+const modeRoleLabels = {
+  interviewer: 'Interviewer Active',
+  coach: 'Coach Active',
+  challenge: 'Challenge Mode Active'
+};
+
+const systemPrompts = {
+  interviewer: TAKEHOME_CONTEXT + `
+
+YOUR ROLE: You are a sharp, skeptical senior interviewer at Grayscale (a crypto-focused asset manager). You are conducting a live in-person review of John's take-home. Ask probing follow-up questions. Be direct and sometimes press him. Respond as the interviewer — ask one clear question at a time. Keep responses concise (1-3 sentences max). Be genuinely curious but sometimes skeptical. React to what he says naturally.`,
+  
+  coach: TAKEHOME_CONTEXT + `
+
+YOUR ROLE: You are an executive coach helping John prepare. When he shares an answer or asks for help, give him specific, actionable feedback. Point out what's strong, what's vague, what might get pushed back on, and how to sharpen it. Be direct and constructive. Format as: STRONG: ... | SHARPEN: ... | WATCH OUT FOR: ...`,
+
+  challenge: TAKEHOME_CONTEXT + `
+
+YOUR ROLE: You are an adversarial interviewer who challenges John's assumptions directly. Push back on his architectural choices, question his timeline, probe his risk assessments. Examples: "Why not just build this custom if you have an engineer?" / "Isn't no-code just kicking the can on tech debt?" / "Your 6-week promise sounds optimistic — what's the real contingency?" Be tough but fair. One pointed challenge per turn.`
+};
+
+function setMode(mode, btn) {
+  chatMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('mode-desc').textContent = modeDescriptions[mode];
+  document.getElementById('chat-role-label').textContent = modeRoleLabels[mode];
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function escapeHTML(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function formatMsgText(text) {
+  return escapeHTML(text).replace(/\n/g, '<br>');
+}
+
+function appendMsg(role, text, opts = {}) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  const roleLabel = role === 'interviewer' ? 'INT.' : role === 'coach' ? 'COACH' : role === 'you' ? 'YOU' : 'INT.';
+  const bubble = opts.html ? text : formatMsgText(text);
+  div.innerHTML = `<div class="msg-role">${roleLabel}</div><div class="msg-bubble">${bubble}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+const localTopics = [
+  {
+    keys: ['ai', 'artificial intelligence', 'llm', 'claude', 'automation'],
+    interviewer: 'You are saying AI is phase two, but Diana is explicitly bullish on AI. Give me a concrete example of how you have personally used AI to change an outcome, then explain why it still stays out of the NAV-sensitive control path here.',
+    challenge: 'That answer can sound like low AI conviction dressed up as prudence. What would you actually ship in phase two that proves ambition without creating control risk?',
+    coach: 'STRONG: You connected AI to control discipline. | SHARPEN: Add one first-person AI example with measurable impact before the architecture theory. | WATCH OUT FOR: Do not let "assistive only" sound like fear of AI; frame it as sequencing.'
+  },
+  {
+    keys: ['no-code', 'nocode', 'retool', 'appsmith', 'tool', 'workflow layer'],
+    interviewer: 'Why should I trust a no-code layer in a control-sensitive environment instead of seeing it as another shadow system?',
+    challenge: 'No-code sounds like a shortcut that becomes tech debt the moment the workflow matters. Where exactly is the line it is not allowed to cross?',
+    coach: 'STRONG: The AWS/no-code split is the right frame. | SHARPEN: Say plainly that RDS owns truth and no-code owns authenticated human workflow, display, approvals, and queues. | WATCH OUT FOR: Do not name a tool until you have named the validation criteria.'
+  },
+  {
+    keys: ['six', '6 week', '6-week', 'timeline', 'week', 'scope', 'phase'],
+    interviewer: 'Six weeks sounds optimistic. What exactly is live at week six, and what are you explicitly not promising?',
+    challenge: 'Your six-week promise risks sounding like a demo, not an operating control. What evidence would make Ops, Finance, and Security comfortable that this is real?',
+    coach: 'STRONG: Smaller promise kept is a credible executive posture. | SHARPEN: Define week six as one high-risk workflow live with real data, observable controls, audit trail, exception handling, and base metrics. | WATCH OUT FOR: Avoid implying the whole platform is complete.'
+  },
+  {
+    keys: ['custom', 'engineer', 'build', 'bespoke'],
+    interviewer: 'If you have an engineer, why not build this properly as a custom internal tool from the start?',
+    challenge: 'A hybrid stack can become the worst of both worlds: custom maintenance plus no-code constraints. Why is this actually the risk-adjusted choice?',
+    coach: 'STRONG: You are matching architecture to resource reality. | SHARPEN: Contrast full custom with a small AWS control layer plus documented runbooks and reusable integration patterns. | WATCH OUT FOR: Do not make it sound like engineering is optional; it owns the control layer.'
+  },
+  {
+    keys: ['security', 'ciso', 'compliance', 'audit', 'control', 'permissions', 'rbac'],
+    interviewer: 'Walk me through the control boundary. What lives in AWS, what lives in no-code, and what evidence would Norah expect to see?',
+    challenge: 'You keep saying audit trail. Be specific: what fields or events would let someone reconstruct a bad decision without asking Ops to remember it?',
+    coach: 'STRONG: Security/compliance is one of the strongest angles here. | SHARPEN: Name the evidence packet: raw S3 payload, transform version, RDS record, workflow item, validation results, owner, SLA, approval outcome, and downstream impact. | WATCH OUT FOR: Avoid generic security language without concrete control evidence.'
+  },
+  {
+    keys: ['staking', 'validator', 'reward', 'unstaking', 'lockup', 'slashing'],
+    interviewer: 'How does staking change the operational risk surface compared with a basic asset-transfer workflow?',
+    challenge: 'Staking is not just another feed. Where could uncertainty hit NAV, liquidity, or client-facing reporting?',
+    coach: 'STRONG: Staking is a useful way to show crypto-native operations judgment. | SHARPEN: Name rewards, validator status, custody state, lockups, unstaking windows, downtime, slashing, and NAV impact. | WATCH OUT FOR: Do not drift into protocol trivia; keep it operational.'
+  },
+  {
+    keys: ['web3', 'chain', 'finality', 'reorg', 'solana', 'ethereum', 'bitcoin', 'xrp', 'indexer'],
+    interviewer: 'You flagged web3-specific risk. Explain it operationally without sounding like you are trying to be a protocol engineer.',
+    challenge: 'A workflow can look green while chain, indexer, custodian, or validator state is still uncertain. How do you keep that uncertainty visible?',
+    coach: 'STRONG: The right frame is operational uncertainty, not protocol expertise. | SHARPEN: Use source timestamp, observed timestamp, ingestion timestamp, finality status, raw S3 evidence, and canonical RDS state. | WATCH OUT FOR: If you do not know a protocol detail, say so and route back to dependency, owner, evidence, and exception path.'
+  },
+  {
+    keys: ['incident', 'vendor', 'feed', 'malformed', 'late', 'empty', 'outage', 'compromised'],
+    interviewer: 'A vendor feed is late or possibly wrong one hour before reporting. What do you do first, and who do you notify?',
+    challenge: 'Your instinct may be to fix the feed. I want the operating response: how do you contain downstream damage before the engineer touches anything?',
+    coach: 'STRONG: Incident sequencing is a good way to show judgment. | SHARPEN: Go facts, blast radius, containment, engineer handoff, targeted comms, then prevention. | WATCH OUT FOR: Do not promise "never again"; promise better detection, evidence, and response.'
+  },
+  {
+    keys: ['metric', 'measure', 'success', 'kpi'],
+    interviewer: 'What are the two metrics you would put in front of the COO after launch, and why are those the right ones?',
+    challenge: 'Manual time saved is not enough. How do you prove the system is reducing operational risk, not just moving work around?',
+    coach: 'STRONG: Metrics keep the answer executive-level. | SHARPEN: Use manual touch-time reduction rate and median exception age, then add freshness, records checked/skipped, and exception aging where relevant. | WATCH OUT FOR: Do not over-index on vanity throughput.'
+  },
+  {
+    keys: ['failed', 'prior', 'previous', 'inherited', 'blame'],
+    interviewer: 'This effort has missed before. How do you enter without alienating the people who lived through that failure?',
+    challenge: 'If you cannot diagnose the prior failure from the outside, how do you avoid repeating it?',
+    coach: 'STRONG: No-blame discovery is the right stance. | SHARPEN: Ask when it went sideways, who felt the pain, what signals were missed, and what the team would do differently. | WATCH OUT FOR: Do not imply you know the answer before discovery.'
+  }
+];
+
+const defaultLocalReplies = {
+  interviewer: [
+    'Let me press on the executive story. What is the real operating-model problem underneath the manual workflow, and why should the C-suite care now?',
+    'Take that one level deeper: what would make this design trustworthy under public-company-level scrutiny?',
+    'What is the strongest objection Vanessa or Norah could raise against your architecture, and how would you answer it in one minute?'
+  ],
+  challenge: [
+    'That is directionally right, but it still sounds high level. Name the specific control, owner, failure mode, and evidence trail.',
+    'I am not yet convinced this is more than a tidy architecture diagram. What breaks first in production, and how would the system reveal it?',
+    'You are making the hybrid approach sound easy. Where does responsibility sit when no-code, AWS, Ops, and Engineering all touch the same workflow?'
+  ],
+  coach: [
+    'STRONG: You are staying close to the operating problem. | SHARPEN: Add one concrete failure mode and one piece of audit evidence. | WATCH OUT FOR: Avoid architecture labels without explaining the business risk they reduce.',
+    'STRONG: The answer has the right direction. | SHARPEN: Lead with the C-suite sentence first, then use AWS/no-code/AI as proof. | WATCH OUT FOR: Do not let the response become too technical for Max or Diana.'
+  ]
+};
+
+function pickLocalReply(text) {
+  const lower = text.toLowerCase();
+  const topic = localTopics.find(t => t.keys.some(k => lower.includes(k)));
+  if (topic) return topic[chatMode] || topic.interviewer;
+
+  const turns = conversationHistory.filter(m => m.role === 'user').length;
+  const options = defaultLocalReplies[chatMode] || defaultLocalReplies.interviewer;
+  return options[(turns - 1) % options.length];
+}
+
+function getLocalReply(text) {
+  const reply = pickLocalReply(text);
+  if (chatMode === 'coach') return reply;
+  return reply + '\n\nAnswer it crisply, then I will push on the weakest part.';
+}
+
+async function getRemoteReply() {
+  if (!CHAT_API_ENDPOINT) return null;
+
+  const res = await fetch(CHAT_API_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      mode: chatMode,
+      system: systemPrompts[chatMode],
+      messages: conversationHistory
+    })
+  });
+
+  if (!res.ok) throw new Error(`Chat endpoint returned ${res.status}`);
+  const data = await res.json();
+  return data.reply || data.content?.find?.(b => b.type === 'text')?.text || null;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+
+  appendMsg('you', text);
+  conversationHistory.push({ role: 'user', content: text });
+
+  const responseRole = chatMode === 'coach' ? 'coach' : 'interviewer';
+  const thinkingDiv = appendMsg(responseRole, '<span class="loading-dots">Thinking</span>', { html: true });
+
+  try {
+    const reply = await getRemoteReply() || getLocalReply(text);
+    thinkingDiv.querySelector('.msg-bubble').innerHTML = formatMsgText(reply);
+    conversationHistory.push({ role: 'assistant', content: reply });
+  } catch(e) {
+    const reply = getLocalReply(text);
+    thinkingDiv.querySelector('.msg-bubble').innerHTML = formatMsgText(reply);
+    conversationHistory.push({ role: 'assistant', content: reply });
+  }
+
+  btn.disabled = false;
+  input.focus();
+}
+
+// ── FLASHCARDS ────────────────────────────────────────────────────
+const cards = [
+  {
+    cat: 'Executive Story',
+    q: 'What is the C-suite version of your take-home?',
+    a: 'This is not just a workflow build. It is a <strong>repeatable operating pattern</strong> that helps Grayscale scale product velocity without losing control: ingest, validate, reconcile, route exceptions, audit every step, then reuse that pattern as the product suite expands.'
+  },
+  {
+    cat: 'Architecture',
+    q: 'Why does raw data land in S3 before anything else?',
+    a: 'S3 is your <strong>bronze layer — immutable and append-only</strong>. This lets you replay state changes when vendors change formats or bugs arise in transforms. Without it, you can\'t reconstruct what happened. Replay ability is fundamental to auditability in fund ops.'
+  },
+  {
+    cat: 'Architecture',
+    q: 'Why does RDS own the source of truth, not the no-code tool?',
+    a: 'This is the <strong>main guardrail against shadow databases</strong>. If no-code could write authoritative state, you\'d end up with fragmented truth across tools — exactly the problem you\'re solving. No-code is a display and workflow layer only.'
+  },
+  {
+    cat: 'Architecture',
+    q: 'When would you use Step Functions vs. not?',
+    a: '<strong>Use them for:</strong> multistep recon, retries, HITL pauses, anything running over 15 minutes. <strong>Skip them for:</strong> single Lambda ingest, webhook receivers, simple event-to-action flows. The key signal is: does this need human approval, retry logic, or multi-step coordination?'
+  },
+  {
+    cat: 'Architecture',
+    q: 'What is "Recon Hubris" and why does it matter?',
+    a: '"No exceptions" only counts if records were <strong>actually checked</strong>. A recon run that silently skips or fails validation could report clean when it isn\'t. Mitigation: log per-run inspection counts, show records checked vs. skipped in reporting alongside pass/fail status.'
+  },
+  {
+    cat: 'Web3 Risk',
+    q: 'Name three Web3-specific risks your architecture needs to account for.',
+    a: '<strong>1. On-chain finality/reorg handling</strong> — a transaction that looks confirmed may get reorganized out. <strong>2. Off-chain/on-chain timing skews</strong> — your internal timestamps and chain timestamps may diverge. <strong>3. Non-standard event parsing</strong> — smart contract events don\'t follow a consistent schema across protocols.'
+  },
+  {
+    cat: 'Phase 1 Scope',
+    q: 'Why one workflow in 6 weeks instead of addressing the full platform?',
+    a: 'Scope rigor is a risk mitigation strategy. <strong>The prior effort failed</strong> — repeating that by over-promising is the biggest reputational risk. One narrow workflow with real data, a visible audit trail, exception handling, and documented patterns is a repeatable playbook. That\'s what earns the right to expand.'
+  },
+  {
+    cat: 'Incident Management',
+    q: 'Walk through your 1-hour incident response sequence.',
+    a: '<strong>1. Establish facts</strong> (which feed? last good run? S3 current? empty/late/malformed?) <strong>2. Assess blast radius</strong> (NAV-sensitive? client-facing? regulatory?) <strong>3. Contain</strong> (tag reports "data as of [X]", pause downstream automation) <strong>4. Prep engineer handoff</strong> with everything pre-diagnosed. Triage first, diagnose second.'
+  },
+  {
+    cat: 'Stakeholder Alignment',
+    q: 'How do you handle Finance pushing for their deliverables in phase 1?',
+    a: 'The clean foundation you\'re building for Ops in phase 1 <strong>helps Finance inherit a better source of truth</strong> — it\'s work you\'d want to do anyway to serve them. Many of Finance\'s systems are downstream. You need to clean up before you serve the next course. Offer: which Finance needs would be satisfied by the audit data you\'re capturing in phase 1 even if their full ask ships in phase 2?'
+  },
+  {
+    cat: 'Architecture',
+    q: 'Why not just build this custom if you have an eng resource?',
+    a: 'With <strong>one eng resource, building and maintaining a full custom stack is unreasonable</strong> given the critical nature and timeline. Custom build also has a higher failure mode — the prior effort already failed once. The hybrid approach (no-code for human surfaces, AWS for truth) gets you durability and auditability without betting everything on bespoke infrastructure.'
+  },
+  {
+    cat: 'Architecture',
+    q: 'What\'s the risk of No-Code overreach and how do you control it?',
+    a: 'Logic and code creep into the no-code layer over time — rules, transforms, conditional logic that should live in Lambda or RDS instead. This degrades observability and makes the system hard to debug or rewind. Mitigation: <strong>written rules for what lives where and why</strong>, periodic reviews, and tagging to flag anything that\'s drifting.'
+  },
+  {
+    cat: 'Discovery',
+    q: 'Why did you ask the Head of Ops about the LAST failed project?',
+    a: 'This reveals how the team operates and where their comfort zone is in terms of workflow change. It also surfaces <strong>early warning signals</strong>: when did they realize it was going sideways? What do they wish had happened differently? That tells you whether the failure was technical, communication, or process — and helps you avoid repeating it.'
+  },
+  {
+    cat: 'Success Metrics',
+    q: 'What are your two success metrics and why those specifically?',
+    a: '<strong>Manual touch time per item reduction rate</strong> — measures direct efficiency gains for Ops. <strong>Median exception age</strong> — measures whether exceptions are getting resolved faster, which is a proxy for data quality and throughput. Both are lagging indicators tied to real outcomes, not vanity metrics like "number of workflows automated."'
+  },
+  {
+    cat: 'C-Suite Frame',
+    q: 'How do you frame the 6-week plan for Diana or another executive?',
+    a: 'Six weeks does not mean the whole platform is done. It means <strong>one high-risk workflow is live</strong> with real data, observable controls, an audit trail, and a reusable operating pattern. The deliverable is both the workflow and the control model.'
+  },
+  {
+    cat: 'IPO Readiness',
+    q: 'How does public-company readiness change your answer?',
+    a: 'It raises the bar from "did we automate it?" to <strong>can we prove what happened, who owned it, what controls fired, and what metrics changed?</strong> Your architecture creates operating evidence: audit trails, documented dependencies, observable controls, and repeatable metrics.'
+  },
+  {
+    cat: 'Staking Ops',
+    q: 'How would staking products change the operational risk surface?',
+    a: 'Staking adds risks around <strong>reward calculation, validator and custodian status, lockups, unstaking windows, network downtime, smart-contract exposure, custody reporting, and NAV impact</strong>. Your recon pattern should surface these as monitored inputs with exception routing and audit history.'
+  },
+  {
+    cat: 'Weak Spot',
+    q: 'Why did you not name a specific no-code tool?',
+    a: 'That was intentional. The tool choice is downstream of <strong>webhook retries, duplicate handling, field-level permissions, audit log exports, and dev-to-prod change management</strong>. Naming a tool before validating those failure modes would be false precision.'
+  },
+  {
+    cat: 'Security / Compliance',
+    q: 'What is the 90-second CISO answer for guarding the stack?',
+    a: 'Make the control boundary explicit. <strong>AWS owns evidence, truth, replay, access boundaries, and monitoring.</strong> No-code owns authenticated human workflow, display, and approvals. AI stays assistive until deterministic state is trusted. The goal is to prove what happened, who touched it, which controls fired, and whether NAV, reporting, or client-facing outputs were affected.'
+  },
+  {
+    cat: 'Security / Compliance',
+    q: 'Where will the CISO see the highest-risk failure point?',
+    a: 'The <strong>no-code/AWS integration point</strong>: webhook retries, duplicate handling, field-level permissions, audit-log exports, environment separation, dev-to-prod change management, and admin override controls. This is why tool choice comes after security and audit validation.'
+  },
+  {
+    cat: 'Security / Compliance',
+    q: 'What compliance evidence should the workflow produce?',
+    a: 'A reproducible evidence packet: <strong>raw S3 payload, transform version, RDS canonical record, no-code workflow item, records checked/skipped, freshness status, approval/exception outcome, owner, SLA, remediation notes, and downstream impact.</strong>'
+  },
+  {
+    cat: 'Security / Compliance',
+    q: 'How do you answer "is no-code a security risk?"',
+    a: 'It can be if it becomes the source of truth or a hidden rules engine. Your design limits no-code to <strong>authenticated workflow, display, and approvals</strong>. RDS/S3 own the record; no-code must prove SSO, RBAC, field permissions, audit exports, environment separation, and admin controls.'
+  },
+  {
+    cat: 'Security / Compliance',
+    q: 'What do you do if a vendor feed may be compromised?',
+    a: 'Treat it as an <strong>integrity incident</strong>: identify the last trusted source point, label or freeze downstream outputs as data-as-of, compare alternate sources where available, route by NAV/client/regulatory impact, preserve raw evidence, and escalate through vendor/security runbooks.'
+  },
+  {
+    cat: 'Security / Compliance',
+    q: 'What is the broader executive security line outside the take-home?',
+    a: 'The workflow should produce <strong>operating evidence that satisfies security, compliance, finance, and audit at the same time</strong>: who did what, using which data, under which control version, with what exception path, and what downstream impact.'
+  },
+  {
+    cat: 'Security / Compliance',
+    q: 'How do you use the NIST CSF 2.0 governance frame in conversation?',
+    a: 'Say security is not only identify, protect, detect, respond, and recover. It also needs <strong>governance</strong>: roles, accountability, risk appetite, policy, oversight, and third-party ownership. This keeps the conversation executive-level.'
+  },
+  {
+    cat: 'Security / Compliance',
+    q: 'How do you talk about third-party risk with a CISO?',
+    a: 'Name the dependency chain: custodians, fund admins, indexers, validators, no-code, cloud, and AI vendors. Ask about <strong>SOC 2-style evidence, incident notice SLAs, subprocessor review, BCP/DR posture, exit plans, and clear ownership</strong>.'
+  },
+  {
+    cat: 'Security / Compliance',
+    q: 'What secure SDLC and resilience practices are worth mentioning?',
+    a: '<strong>Secure SDLC:</strong> threat modeling, code review, dependency/secrets scanning, IaC review, approval gates, rollback plans. <strong>Resilience:</strong> RTO/RPO, backup restore testing, immutable logs, manual fallback, tabletops, and post-incident retros.'
+  },
+  {
+    cat: 'Crypto Compliance',
+    q: 'What crypto compliance vocabulary can you use without overclaiming?',
+    a: 'Use carefully: <strong>OFAC sanctions screening, wallet/address risk, blockchain analytics, geofencing, transaction monitoring, custody controls, suspicious activity escalation, and evidence retention</strong>. Make clear you would partner with Legal/Compliance on obligations.'
+  },
+  {
+    cat: 'Weak Spot',
+    q: 'How do you answer the "AI section is thin" challenge?',
+    a: 'Say: <strong>I kept AI thin on purpose.</strong> AI is valuable only after deterministic state, audit history, and exception taxonomy exist. Then it can support exception summaries, incident drafts, ops-history search, root-cause clustering, and runbook suggestions.'
+  },
+  {
+    cat: 'AI / Diana',
+    q: 'Diana asks your view on AI and how you\'ve personally used it. How do you answer?',
+    a: 'Lead with conviction + a <strong>concrete first-person example</strong> of AI you shipped or used to change an outcome, then the impact/influence it had. Close the loop with your thesis: <strong>"I\'m bullish on AI and use it daily — which is exactly why I\'m disciplined about where it belongs in a NAV-sensitive workflow."</strong> Then paint the phase-two vision: exception summaries, incident drafts, ops-history search, root-cause clustering, runbook suggestions. Frame assistive-only as discipline, not low ambition.'
+  },
+  {
+    cat: 'C-Suite Loop',
+    q: 'What should you say if Max asks about inheriting the prior failed project?',
+    a: 'Do not blame or diagnose from the outside. Say: <strong>my first job is to understand when it went sideways, what signals were missed, who felt the pain, and what the team wishes had happened differently.</strong> Then make a smaller promise the team can trust.'
+  },
+  {
+    cat: 'Web3 Depth',
+    q: 'What is the 90-second Web3 depth answer?',
+    a: 'Crypto ops can look clean in the workflow layer while the underlying <strong>chain, indexer, custodian, or validator state</strong> is still uncertain. First identify which chain events the workflow actually touches, then build controls around finality assumptions, timing, source reconciliation, custody/vendor data, and stale data visibility.'
+  },
+  {
+    cat: 'Web3 Depth',
+    q: 'How do you explain finality and reorg risk operationally?',
+    a: 'A transaction can appear confirmed before it is economically final. The control question is: <strong>what confirmation depth or finality signal is sufficient for this workflow?</strong> If later chain state conflicts with earlier reporting, the system needs ownership, exception routing, and replayable evidence.'
+  },
+  {
+    cat: 'Web3 Depth',
+    q: 'How do you handle off-chain/on-chain timing skew?',
+    a: 'Custodian, vendor, fund admin, and chain data can update on different clocks. Every record should carry <strong>source timestamp, observed timestamp, ingestion timestamp, and visible data-as-of status</strong> so stale or partial data is not treated as current.'
+  },
+  {
+    cat: 'Staking Ops',
+    q: 'What are the core staking reward questions?',
+    a: 'When are rewards <strong>earned, recognized, sold, accrued, or distributed</strong>? What source calculates them? What happens when validator, custodian, and indexer data disagree? Late or conflicting reward data should create an exception, not silently flow into reporting.'
+  },
+  {
+    cat: 'Staking Ops',
+    q: 'What validator and custody state do you need to monitor?',
+    a: 'Validator status, commission, slashing exposure, missed attestations or blocks, downtime, delegation changes, custodian account state, staking status, transfer restrictions, and vendor escalation paths. The question is: <strong>what changed, when, and what product exposure depends on it?</strong>'
+  },
+  {
+    cat: 'Staking Ops',
+    q: 'Why do lockups and unstaking windows matter operationally?',
+    a: 'Staked assets may not be immediately transferable. Ops needs visibility into <strong>locked amount, available amount, pending unstake, expected availability</strong>, and whether liquidity constraints affect creations, redemptions, NAV, or reporting.'
+  },
+  {
+    cat: 'Web3 Depth',
+    q: 'What should you say if Vanessa or Norah asks a protocol-specific question you do not know?',
+    a: 'Say: <strong>I would not want to guess at the protocol-specific answer.</strong> The operating answer is that I would identify the dependency, define the control owner, preserve raw evidence, and route uncertainty before downstream reports treat it as clean.'
+  },
+  {
+    cat: 'Chain Architecture',
+    q: 'How do you build one system that accommodates very different chains?',
+    a: 'Use a two-layer pattern: <strong>preserve chain-specific raw data in S3, then normalize through explicit adapter Lambdas into a canonical event model</strong>. RDS and no-code consume canonical workflow state, while chain-specific details remain available as extension fields and replayable evidence.'
+  },
+  {
+    cat: 'Chain Architecture',
+    q: 'How do Bitcoin-like UTXO chains differ from Ethereum/EVM chains for recon?',
+    a: 'UTXO chains are inputs, outputs, confirmations, fees, and change-output oriented. EVM chains are account and smart-contract-event oriented, where one transaction can emit many logs/internal calls. <strong>The parser and recon logic differ, but the downstream canonical event envelope should be stable.</strong>'
+  },
+  {
+    cat: 'Architecture',
+    q: 'How do chain differences affect API Gateway, SQS, and Lambda?',
+    a: '<strong>API Gateway</strong> receives source-specific payloads with chain/network/provider/version/idempotency metadata. <strong>SQS</strong> isolates backpressure and retries by chain/source/workflow with source-specific DLQs. <strong>Lambda</strong> handles chain-specific parsing and emits canonical events.'
+  },
+  {
+    cat: 'Architecture',
+    q: 'How do chain differences affect S3 and RDS?',
+    a: '<strong>S3 preserves native raw evidence</strong>: UTXOs, EVM logs, Solana instructions, XRP ledger entries, custodian reports, validator files. <strong>RDS owns canonical operational state</strong>: product/fund mappings, wallet/account mappings, chain/network ids, finality rules, validator/custodian relationships, and exception state.'
+  },
+  {
+    cat: 'Architecture',
+    q: 'How do chain differences affect Step Functions and observability?',
+    a: '<strong>Step Functions</strong> handles stateful uncertainty: finality waits, vendor/indexer retries, staking exceptions, Ops/Security approvals. <strong>CloudWatch/EventBridge</strong> should report chain/source-aware metrics and business events like feed_degraded, finality_pending, validator_status_changed, and staking_reward_discrepancy.'
+  },
+  {
+    cat: 'Architecture',
+    q: 'How should no-code handle chain-specific complexity?',
+    a: 'No-code should show the <strong>business interpretation</strong>, not raw protocol complexity: source, chain, freshness, finality, exception reason, owner, SLA, and next action. Keep protocol-specific evidence one click away, but do not make Ops parse raw chain data.'
+  },
+  {
+    cat: 'Chain Architecture',
+    q: 'What belongs in the canonical event envelope?',
+    a: 'chain, network, source provider, raw payload URI, source event id, event type, asset, amount, account refs, product/fund mapping, block/slot/ledger height, source timestamp, observed timestamp, ingestion timestamp, finality status, plus chain-specific extension fields.'
+  }
+];
+
+let currentCard = 0;
+let cardOrder = [...Array(cards.length).keys()];
+let isFlipped = false;
+
+function updateCard() {
+  const c = cards[cardOrder[currentCard]];
+  document.getElementById('fc-category').textContent = c.cat;
+  document.getElementById('fc-question').textContent = c.q;
+  document.getElementById('fc-answer').innerHTML = c.a;
+  document.getElementById('fc-progress').textContent = `${currentCard + 1} / ${cards.length}`;
+  if (isFlipped) { document.getElementById('flashcard').classList.remove('flipped'); isFlipped = false; }
+}
+
+function flipCard() {
+  isFlipped = !isFlipped;
+  document.getElementById('flashcard').classList.toggle('flipped', isFlipped);
+}
+
+function nextCard() {
+  currentCard = (currentCard + 1) % cards.length;
+  updateCard();
+}
+
+function prevCard() {
+  currentCard = (currentCard - 1 + cards.length) % cards.length;
+  updateCard();
+}
+
+function shuffleCards() {
+  cardOrder = cardOrder.sort(() => Math.random() - 0.5);
+  currentCard = 0;
+  updateCard();
+}
+
+function resetCards() {
+  cardOrder = [...Array(cards.length).keys()];
+  currentCard = 0;
+  updateCard();
+}
+
+updateCard();
+
+// ── CHECKLIST ─────────────────────────────────────────────────────
+const checkItems = [
+  { text: 'Can state the C-suite story cold, in one sentence', sub: 'Repeatable operating pattern that helps Grayscale scale product velocity without losing control.' },
+  { text: 'Can state your technical thesis cold, in one sentence', sub: '"Deterministic before intelligent. No-code for human surfaces, AWS for truth, AI assistive only."' },
+  { text: 'Know your bronze/S3 rationale inside out', sub: 'Immutable, append-only, enables replay — not just storage.' },
+  { text: 'Know exactly when Step Functions apply vs. don\'t', sub: 'Use for: HITL, retries, >15min flows. Skip for: single Lambda, webhooks, simple events.' },
+  { text: 'Can explain Recon Hubris without looking at notes', sub: '"No exceptions" only counts if records were actually checked.' },
+  { text: 'Can explain why the prior effort failed (your angle)', sub: 'Discovery question first — you don\'t know yet, and claiming you do would be wrong.' },
+  { text: 'Ready to defend 6-week scope as a feature, not a limitation', sub: 'Smaller promise, kept. Repeatable pattern. Phase 1 earns phase 2.' },
+  { text: 'Can walk through incident response sequence from memory', sub: 'Facts → blast radius → containment → engineer handoff.' },
+  { text: 'Have an answer for "why not fully custom build?"', sub: '1 eng + critical nature + timeline = hybrid is correct risk-adjusted choice.' },
+  { text: 'Know your 2 success metrics and why', sub: 'Manual touch time reduction rate + median exception age.' },
+  { text: 'Ready to address Finance sequencing pushback', sub: 'Phase 1 foundation helps Finance inherit better source of truth. Audit data in phase 1 addresses some Finance needs early.' },
+  { text: 'Know the 3 web3-specific risks you flagged', sub: 'On-chain finality/reorg, off-chain timing skew, non-standard event parsing.' },
+  { text: 'Prepared for "isn\'t no-code just tech debt?" challenge', sub: 'No-code is display + routing only. RDS owns truth. Logic lives in AWS. Written rules + reviews prevent creep.' },
+  { text: 'Can explain IPO/public-company readiness impact', sub: 'Controls, documentation, audit trails, dependency ownership, and operating metrics.' },
+  { text: 'Can explain staking operational risk', sub: 'Rewards, validators, custody, lockups, unstaking, downtime, smart-contract risk, NAV impact.' },
+  { text: 'Can give the executive 6-week answer', sub: 'One high-risk workflow live with real data, observable controls, audit trail, and reusable operating pattern.' },
+  { text: 'Can defend why no specific no-code tool was named', sub: 'Tool choice follows webhook retry, duplicate handling, permissions, audit exports, and change-management validation.' },
+  { text: 'Can give the 90-second CISO/security answer', sub: 'AWS owns evidence/truth/replay/monitoring; no-code owns human workflow; AI stays assistive.' },
+  { text: 'Can name the no-code/AWS security failure points', sub: 'Webhook retries, duplicates, field permissions, audit exports, env separation, admin overrides.' },
+  { text: 'Can explain the compliance evidence packet', sub: 'Raw S3 payload, transform version, RDS record, workflow item, controls, approvals, exceptions, downstream impact.' },
+  { text: 'Can answer "is no-code a security risk?"', sub: 'Only if it becomes truth or hidden logic. Limit it to authenticated workflow, display, and approvals.' },
+  { text: 'Can walk through compromised vendor-feed response', sub: 'Integrity incident: last trusted point, data-as-of labels, alternate source check, impact routing, evidence, escalation.' },
+  { text: 'Can give the broader executive security line', sub: 'Operating evidence for security, compliance, finance, and audit: who, what data, control version, exception path, impact.' },
+  { text: 'Can use the NIST governance frame', sub: 'Governance means roles, accountability, risk appetite, policy, oversight, and third-party ownership.' },
+  { text: 'Can speak to public-company cyber readiness', sub: 'Disclosure discipline, materiality assessment, executive visibility, incident timelines, and cyber risk-management narrative.' },
+  { text: 'Can discuss third-party risk like a CISO', sub: 'SOC 2-style evidence, incident notice SLAs, subprocessors, BCP/DR, vendor exit plans, and dependency ownership.' },
+  { text: 'Can name secure SDLC and resilience practices', sub: 'Threat modeling, scans, approvals, rollback, RTO/RPO, restore testing, manual fallback, tabletops, retros.' },
+  { text: 'Can use crypto compliance vocabulary carefully', sub: 'OFAC, wallet/address risk, blockchain analytics, geofencing, transaction monitoring, custody controls, suspicious activity escalation.' },
+  { text: 'Can defend the intentionally thin AI section', sub: 'AI comes after deterministic state, audit history, and exception taxonomy exist.' },
+  { text: 'Have a first-person AI story ready for Diana', sub: 'She is gung-ho on AI: your POV + how YOU used it + the impact/influence. Frame assistive-only as discipline, not low conviction.' },
+  { text: 'Can lead through influence without managing', sub: 'You chose PPM; most-senior PM = a non-managing leader expected to help grow others. Show mentorship, not titles. (Head-of role is deprioritized.)' },
+  { text: 'Can handle prior-failed-project questions without blame', sub: 'Discovery first: when did it go sideways, what signals were missed, and what would the team do differently?' },
+  { text: 'Can give the 90-second Web3 depth answer', sub: 'Chain/indexer/custodian/validator state can be uncertain even when workflow status looks clean.' },
+  { text: 'Can explain finality and reorgs operationally', sub: 'Define finality assumptions, ownership, exception routing, and replayable evidence.' },
+  { text: 'Can explain off-chain/on-chain timing skew', sub: 'Source timestamp, observed timestamp, ingestion timestamp, data-as-of status.' },
+  { text: 'Can explain staking rewards controls', sub: 'Earned, recognized, sold, accrued, distributed, source-of-calculation, disagreement handling.' },
+  { text: 'Can explain validator/custody monitoring', sub: 'Validator state, slashing/downtime, delegation, custodian account state, transfer restrictions.' },
+  { text: 'Can explain lockups and unstaking windows', sub: 'Locked amount, available amount, pending unstake, expected availability, NAV/reporting impact.' },
+  { text: 'Can handle protocol-specific unknowns cleanly', sub: 'Do not guess; identify dependency, owner, evidence, and exception path.' },
+  { text: 'Can explain representative chain architecture differences', sub: 'UTXO, EVM, Solana account/program model, XRP/Stellar payment ledgers, Avalanche/Sui alt L1s, Chainlink oracle feeds.' },
+  { text: 'Can explain API Gateway / SQS / Lambda impact', sub: 'Source-specific ingress, queue isolation/backpressure/DLQs, adapter Lambdas to canonical events.' },
+  { text: 'Can explain S3 / RDS impact', sub: 'Raw native evidence in S3; canonical operational state and reference mappings in RDS.' },
+  { text: 'Can explain Step Functions / observability impact', sub: 'Stateful uncertainty, chain/source-aware metrics, and post-canonicalization business events.' },
+  { text: 'Can explain no-code impact', sub: 'Business interpretation, not raw protocol parsing; evidence available one click away.' },
+  { text: 'Can explain canonical event pattern', sub: 'Raw S3 payloads plus normalized RDS workflow state with chain-specific extension fields.' },
+  { text: 'Logistics locked: arrive ~1:30, text Mike, 4th floor', sub: 'Park anywhere, register, one room all day while interviewers rotate to you. Mike tours you + catches up before 2:00.' },
+  { text: 'Dress: blazer, no suit, no tie', sub: 'Business casual — a notch above a zip-up. The team is casual but go slightly more formal than them.' },
+  { text: 'Ready for a fast close', sub: 'If it goes well they move quickly to an offer. Know your bar and be ready to talk specifics same-day/soon after.' },
+];
+
+function buildChecklist() {
+  const list = document.getElementById('checklist');
+  checkItems.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'check-item';
+    div.onclick = () => div.classList.toggle('done');
+    div.innerHTML = `
+      <div class="check-box"><span class="check-box-icon">✓</span></div>
+      <div>
+        <div class="check-text">${item.text}</div>
+        <div class="check-sub">${item.sub}</div>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+buildChecklist();
+</script>
+</body>
+</html>

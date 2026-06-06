@@ -10,6 +10,7 @@ cold-starts stay fast — no heavy vendor SDKs. Add a provider by adding one fun
 one entry to PROVIDERS.
 
 Providers:
+  - gateway    (Vercel AI Gateway — unified model routing)
   - gemini     (Google AI Studio — generous free tier)   default
   - groq       (Groq — fast free tier, OpenAI-compatible)
   - grok       (xAI Grok — OpenAI-compatible)
@@ -18,11 +19,15 @@ Providers:
 """
 
 import json
+import logging
 import os
 import re
 from pathlib import Path
 
 import httpx
+
+
+log = logging.getLogger(__name__)
 
 
 class GenerationError(Exception):
@@ -97,13 +102,18 @@ def fetch_url_text(url: str, max_chars: int = 40000) -> str:
 SYSTEM_PROMPT = """You are a course generator. You convert study material into a single JSON object that drives an interactive study app. Output ONLY valid JSON — no markdown, no prose, no code fences.
 
 The JSON must match this schema exactly:
-{ "meta": {"title","subtitle","learner"}, "modules": [ {"type","id","label","data"} ] }
+{ "meta": {"title","subtitle","learner","learningStyle"}, "modules": [ {"type","id","label","data"} ] }
 
 Allowed module types and their data shapes:
 - overview: {kicker, headline, body, cards:[{tag,title,text}], stepsTitle, steps:[...]}
 - concept_cards: {intro, cards:[{badge, name, fields:[{label,text,tone}], highlight:{label,q,a}}]}
   tone is one of: neutral, good, info, bad, warn
 - flashcards: {cards:[{q,a}]}
+- visual_map: {title, intro, nodes:[{id,label,tag,summary}], links:[{from,to,label}]}
+- drag_sort: {title, intro, buckets:[{id,label,hint}], items:[{id,label,detail,bucket}]}
+- teach_back: {title, intro, prompts:[{q,keyPoints:[...],sample}]}
+- notes: {title, intro, sections:[{heading,summary,bullets:[...],check}]}
+- audio_script: {title, intro, segments:[{label,text}]}
 - glossary: {intro, terms:[{t,d}]}
 - cheatsheet: {title, intro, blocks:[{title, wide(optional bool), text(optional), items(optional array)}]}
 - sequence: {title, intro, modes:[{key, label, items:[{id,label,why}], correct:[ids in correct order]}]}
@@ -115,10 +125,16 @@ Requirements:
   one overview, one concept_cards, one flashcards, one challenge with kind "quiz",
   one glossary, one cheatsheet. Add a challenge with kind "rounds" (a build/apply game),
   a challenge with kind "timed" (a speed round, timer 20), and a sequence when the material supports them.
+- Add multimodal support when the material supports it: one visual_map, one drag_sort,
+  one teach_back, and one notes module. Add audio_script when the learner preference is audio.
+- If learningStyle is visual, put visual_map before concept_cards. If practice, put drag_sort,
+  sequence, and challenge modules earlier. If read, put notes and cheatsheet earlier. If audio,
+  put audio_script near the top. If mixed, balance the order naturally.
 - Every module id must be unique and lowercase. Tab labels should be short and numbered (e.g. "1. Big Idea").
 - Ground every fact in the provided material. Do NOT invent facts. If something is ambiguous, leave it out.
 - On each concept card, write a "highlight" box (label starts with an emoji like ⚠) calling out the single most common mistake or test trap for that concept.
 - Match the requested audience. If the instruction names a grade level or says "kid", set meta.learner="kid", keep language simple, friendly and encouraging, use concrete examples. Otherwise set meta.learner="adult".
+- Set meta.learningStyle to one of: mixed, visual, practice, read, audio.
 - 8 to 12 flashcards. 6 to 10 quiz questions. Questions test understanding, not trivia.
 - "correct" is a 0-based index into "opts". For rounds/classify, "wrongFeedback" is parallel to "opts" (use null for the correct slot). Use "exp" OR rightFeedback+wrongFeedback, not both.
 
@@ -126,16 +142,22 @@ Return the JSON object and nothing else."""
 
 
 def _user_message(instruction: str, learner: str, material: str,
-                  context: str = "", max_chars: int = 24000) -> str:
+                  context: str = "", learning_style: str = "mixed",
+                  max_chars: int = 24000) -> str:
     learner_hint = ("Audience: a child / the specified grade level. Use meta.learner=\"kid\"."
                     if learner == "kid" else
                     "Audience: an adult learner. Use meta.learner=\"adult\".")
+    style_hint = (
+        "Study preference: "
+        f"{learning_style if learning_style in {'mixed', 'visual', 'practice', 'read', 'audio'} else 'mixed'}. "
+        "Use this as a starting preference, but keep the course multimodal."
+    )
     trimmed = material[:max_chars]
     if len(material) > max_chars:
         trimmed += "\n\n[material truncated for length]"
     context_block = f"\nADDITIONAL CONTEXT (goals, constraints, focus areas):\n{context.strip()}\n" \
         if context and context.strip() else ""
-    return f"INSTRUCTION: {instruction}\n{learner_hint}\n{context_block}\nMATERIAL:\n{trimmed}"
+    return f"INSTRUCTION: {instruction}\n{learner_hint}\n{style_hint}\n{context_block}\nMATERIAL:\n{trimmed}"
 
 
 # ----------------------------------------------------------------------------
@@ -143,19 +165,23 @@ def _user_message(instruction: str, learner: str, material: str,
 # ----------------------------------------------------------------------------
 # Default model per provider. Override with PREP_MODEL or a per-request `model`.
 DEFAULT_MODELS = {
+    "gateway": "openai/gpt-5.4",
     "gemini": "gemini-2.0-flash",
     "groq": "llama-3.3-70b-versatile",
     "grok": "grok-3-mini",
     "openai": "gpt-4o-mini",
+    "openrouter": "openai/gpt-4o-mini",
     "anthropic": "claude-sonnet-4-20250514",
 }
 
 # Which env var holds each provider's key.
 ENV_KEYS = {
+    "gateway": "AI_GATEWAY_API_KEY",
     "gemini": "GEMINI_API_KEY",
     "groq": "GROQ_API_KEY",
     "grok": "XAI_API_KEY",
     "openai": "OPENAI_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
 }
 
@@ -164,14 +190,14 @@ _HTTP_TIMEOUT = httpx.Timeout(120.0, connect=15.0)
 
 def _call_gemini(system: str, user: str, api_key: str, model: str) -> str:
     url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
-           f"{model}:generateContent?key={api_key}")
+           f"{model}:generateContent")
     payload = {
         "system_instruction": {"parts": [{"text": system}]},
         "contents": [{"role": "user", "parts": [{"text": user}]}],
         "generationConfig": {"temperature": 0.3, "response_mime_type": "application/json"},
     }
     with httpx.Client(timeout=_HTTP_TIMEOUT) as c:
-        r = c.post(url, json=payload)
+        r = c.post(url, headers={"x-goog-api-key": api_key}, json=payload)
     _raise_for_provider(r, "Gemini")
     data = r.json()
     try:
@@ -181,7 +207,8 @@ def _call_gemini(system: str, user: str, api_key: str, model: str) -> str:
 
 
 def _call_openai_compatible(system: str, user: str, api_key: str, model: str,
-                            base_url: str, label: str) -> str:
+                            base_url: str, label: str,
+                            extra_headers: dict[str, str] | None = None) -> str:
     payload = {
         "model": model,
         "temperature": 0.3,
@@ -189,15 +216,22 @@ def _call_openai_compatible(system: str, user: str, api_key: str, model: str,
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": user}],
     }
+    headers = {"Authorization": f"Bearer {api_key}"}
+    if extra_headers:
+        headers.update(extra_headers)
     with httpx.Client(timeout=_HTTP_TIMEOUT) as c:
-        r = c.post(f"{base_url}/chat/completions",
-                   headers={"Authorization": f"Bearer {api_key}"}, json=payload)
+        r = c.post(f"{base_url}/chat/completions", headers=headers, json=payload)
     _raise_for_provider(r, label)
     data = r.json()
     try:
         return data["choices"][0]["message"]["content"]
     except (KeyError, IndexError):
         raise GenerationError(f"{label} returned no content: {json.dumps(data)[:300]}")
+
+
+def _call_gateway(system: str, user: str, api_key: str, model: str) -> str:
+    return _call_openai_compatible(system, user, api_key, model,
+                                   "https://ai-gateway.vercel.sh/v1", "AI Gateway")
 
 
 def _call_groq(system: str, user: str, api_key: str, model: str) -> str:
@@ -213,6 +247,19 @@ def _call_grok(system: str, user: str, api_key: str, model: str) -> str:
 def _call_openai(system: str, user: str, api_key: str, model: str) -> str:
     return _call_openai_compatible(system, user, api_key, model,
                                    "https://api.openai.com/v1", "OpenAI")
+
+
+def _call_openrouter(system: str, user: str, api_key: str, model: str) -> str:
+    headers = {}
+    site_url = os.environ.get("OPENROUTER_SITE_URL", "").strip()
+    app_name = os.environ.get("OPENROUTER_APP_NAME", "").strip()
+    if site_url:
+        headers["HTTP-Referer"] = site_url
+    if app_name:
+        headers["X-Title"] = app_name
+    return _call_openai_compatible(system, user, api_key, model,
+                                   "https://openrouter.ai/api/v1", "OpenRouter",
+                                   extra_headers=headers)
 
 
 def _call_anthropic(system: str, user: str, api_key: str, model: str) -> str:
@@ -235,10 +282,12 @@ def _call_anthropic(system: str, user: str, api_key: str, model: str) -> str:
 
 
 PROVIDERS = {
+    "gateway": _call_gateway,
     "gemini": _call_gemini,
     "groq": _call_groq,
     "grok": _call_grok,
     "openai": _call_openai,
+    "openrouter": _call_openrouter,
     "anthropic": _call_anthropic,
 }
 
@@ -247,13 +296,15 @@ def _raise_for_provider(r: httpx.Response, label: str) -> None:
     if r.status_code == 200:
         return
     detail = r.text[:300]
+    log.warning("%s provider error HTTP %s: %s", label, r.status_code, detail)
     if r.status_code in (401, 403):
         raise GenerationError(f"{label} rejected the API key (HTTP {r.status_code}). "
                               "Check the key and that the API is enabled.")
     if r.status_code == 429:
         raise GenerationError(f"{label} rate limit / quota hit (HTTP 429). "
                               "Wait a moment or switch providers / add a paid key.")
-    raise GenerationError(f"{label} error HTTP {r.status_code}: {detail}")
+    raise GenerationError(f"{label} could not complete the request (HTTP {r.status_code}). "
+                          "Try again or switch providers.")
 
 
 def resolve_provider(requested: str | None) -> str:
@@ -297,9 +348,11 @@ def _extract_json(raw: str) -> dict:
             raise GenerationError(f"Model returned invalid JSON: {e}")
 
 
-VALID_TYPES = {"overview", "concept_cards", "flashcards", "glossary",
-               "cheatsheet", "sequence", "challenge"}
+VALID_TYPES = {"overview", "concept_cards", "flashcards", "visual_map",
+               "drag_sort", "teach_back", "notes", "audio_script",
+               "glossary", "cheatsheet", "sequence", "challenge"}
 VALID_KINDS = {"quiz", "rounds", "timed", "classify"}
+VALID_STYLES = {"mixed", "visual", "practice", "read", "audio"}
 
 
 def validate(course: dict) -> list[str]:
@@ -313,6 +366,8 @@ def validate(course: dict) -> list[str]:
         errs.append("meta.title is required.")
     if meta and meta.get("learner") not in (None, "kid", "adult"):
         errs.append("meta.learner must be 'kid' or 'adult'.")
+    if meta and meta.get("learningStyle") not in (None, *VALID_STYLES):
+        errs.append("meta.learningStyle must be one of mixed, visual, practice, read, audio.")
 
     modules = course.get("modules")
     if not isinstance(modules, list) or not modules:
@@ -352,6 +407,46 @@ def validate(course: dict) -> list[str]:
         elif mtype == "concept_cards":
             if not isinstance(data.get("cards"), list) or not data["cards"]:
                 errs.append(f"{where} concept_cards needs a cards array.")
+        elif mtype == "visual_map":
+            nodes = data.get("nodes")
+            links = data.get("links")
+            if not isinstance(nodes, list) or not nodes:
+                errs.append(f"{where} visual_map needs a nodes array.")
+            elif not isinstance(links, list):
+                errs.append(f"{where} visual_map needs a links array.")
+            else:
+                ids = {n.get("id") for n in nodes if isinstance(n, dict)}
+                for j, link in enumerate(links):
+                    if link.get("from") not in ids or link.get("to") not in ids:
+                        errs.append(f"{where} link[{j}] must reference node ids.")
+        elif mtype == "drag_sort":
+            buckets = data.get("buckets")
+            items = data.get("items")
+            if not isinstance(buckets, list) or len(buckets) < 2:
+                errs.append(f"{where} drag_sort needs at least two buckets.")
+            elif not isinstance(items, list) or not items:
+                errs.append(f"{where} drag_sort needs an items array.")
+            else:
+                bucket_ids = {b.get("id") for b in buckets if isinstance(b, dict)}
+                for j, item in enumerate(items):
+                    if item.get("bucket") not in bucket_ids:
+                        errs.append(f"{where} item[{j}] bucket must reference a bucket id.")
+        elif mtype == "teach_back":
+            prompts = data.get("prompts")
+            if not isinstance(prompts, list) or not prompts:
+                errs.append(f"{where} teach_back needs a prompts array.")
+            else:
+                for j, prompt in enumerate(prompts):
+                    if not prompt.get("q") or not isinstance(prompt.get("keyPoints"), list):
+                        errs.append(f"{where} prompt[{j}] needs q and keyPoints.")
+        elif mtype == "notes":
+            sections = data.get("sections")
+            if not isinstance(sections, list) or not sections:
+                errs.append(f"{where} notes needs a sections array.")
+        elif mtype == "audio_script":
+            segments = data.get("segments")
+            if not isinstance(segments, list) or not segments:
+                errs.append(f"{where} audio_script needs a segments array.")
         elif mtype == "sequence":
             modes = data.get("modes")
             if not isinstance(modes, list) or not modes:
@@ -408,10 +503,13 @@ def inject(course: dict, template: str) -> str:
 def build_course(instruction: str, material: str, learner: str,
                  template_path: Path, provider: str | None = None,
                  api_key: str | None = None, model: str | None = None,
-                 context: str = "", retries: int = 1) -> tuple[dict, str]:
+                 context: str = "", learning_style: str = "mixed",
+                 retries: int = 1) -> tuple[dict, str]:
     """Returns (course_dict, finished_html). Raises GenerationError on failure."""
     template = Path(template_path).read_text(encoding="utf-8")
-    user = _user_message(instruction, learner, material, context=context)
+    learning_style = learning_style if learning_style in VALID_STYLES else "mixed"
+    user = _user_message(instruction, learner, material,
+                         context=context, learning_style=learning_style)
 
     prov = resolve_provider(provider)
     key = resolve_key(prov, api_key)
@@ -425,7 +523,9 @@ def build_course(instruction: str, material: str, learner: str,
                            "return corrected JSON only:\n- " + "\n- ".join(last_errs))
         raw = _generate_json(sys_prompt, user, prov, key, mdl)
         course = _extract_json(raw)
-        course.setdefault("meta", {}).setdefault("learner", learner)
+        meta = course.setdefault("meta", {})
+        meta.setdefault("learner", learner)
+        meta.setdefault("learningStyle", learning_style)
         last_errs = validate(course)
         if not last_errs:
             return course, inject(course, template)

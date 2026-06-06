@@ -1,6 +1,8 @@
 fastapi
 httpx
 python-multipart
+# optional persisted/shareable generated courses
+vercel
 # document parsers
 pypdf
 python-docx

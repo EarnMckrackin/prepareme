@@ -1,0 +1,23 @@
+name: QA
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile-check all modules
+        run: python -m py_compile api/index.py api/_generator.py tests/run_qa.py
+
+      - name: Run offline QA suite
+        run: python tests/run_qa.py
