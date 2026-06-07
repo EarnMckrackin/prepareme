@@ -44,6 +44,91 @@ def expect_raises(name, fn, exc):
         check(name, False, f"wrong exception {type(e).__name__}: {e}")
 
 
+def make_rich_course():
+    def rounds(prefix, n):
+        return [
+            {
+                "title": f"{prefix} {i}",
+                "scenario": f"Scenario {i}",
+                "question": f"What should happen in {prefix} {i}?",
+                "opts": ["first", "second", "third"],
+                "correct": i % 3,
+                "exp": "Because this option matches the source concept.",
+            }
+            for i in range(1, n + 1)
+        ]
+
+    seq_items = [{"id": f"s{i}", "label": f"Step {i}", "why": f"Reason {i}"}
+                 for i in range(1, 6)]
+    return {
+        "meta": {"title": "Rich Course", "subtitle": "QA", "learner": "adult",
+                 "learningStyle": "mixed"},
+        "modules": [
+            {"type": "overview", "id": "overview", "label": "1. Overview",
+             "data": {"kicker": "Start", "headline": "A complete course",
+                      "body": "Body", "cards": [
+                          {"tag": f"T{i}", "title": f"Card {i}", "text": "Text"}
+                          for i in range(1, 4)
+                      ], "stepsTitle": "Path", "steps": ["A", "B", "C"]}},
+            {"type": "visual_map", "id": "map", "label": "2. Map",
+             "data": {"title": "Map", "intro": "Intro",
+                      "nodes": [{"id": f"n{i}", "label": f"Node {i}", "tag": "tag",
+                                 "summary": "Summary"} for i in range(1, 6)],
+                      "links": [{"from": "n1", "to": "n2", "label": "to"}]}},
+            {"type": "concept_cards", "id": "concepts", "label": "3. Concepts",
+             "data": {"intro": "Intro", "cards": [
+                 {"badge": "B", "name": f"Concept {i}",
+                  "fields": [{"label": "Idea", "text": "Text", "tone": "info"},
+                             {"label": "Use", "text": "Text", "tone": "good"}],
+                  "highlight": {"label": "Trap", "q": "Mistake?", "a": "Avoid it."}}
+                 for i in range(1, 6)
+             ]}},
+            {"type": "drag_sort", "id": "sort", "label": "4. Sort",
+             "data": {"title": "Sort", "intro": "Intro",
+                      "buckets": [{"id": "a", "label": "A", "hint": "A"},
+                                  {"id": "b", "label": "B", "hint": "B"}],
+                      "items": [{"id": f"it{i}", "label": f"Item {i}",
+                                 "detail": "Detail", "bucket": "a" if i % 2 else "b"}
+                                for i in range(1, 9)]}},
+            {"type": "flashcards", "id": "cards", "label": "5. Cards",
+             "data": {"cards": [{"q": f"Q{i}", "a": f"A{i}"} for i in range(1, 11)]}},
+            {"type": "challenge", "id": "quiz", "label": "6. Quiz",
+             "data": {"kind": "quiz", "title": "Quiz", "intro": "Intro",
+                      "startLabel": "Start", "rounds": rounds("Quiz", 8)}},
+            {"type": "teach_back", "id": "teach", "label": "7. Teach",
+             "data": {"title": "Teach", "intro": "Intro", "prompts": [
+                 {"q": f"Explain {i}", "keyPoints": ["A", "B"], "sample": "Sample"}
+                 for i in range(1, 5)
+             ]}},
+            {"type": "challenge", "id": "rounds", "label": "8. Apply",
+             "data": {"kind": "rounds", "title": "Apply", "intro": "Intro",
+                      "startLabel": "Start", "rounds": rounds("Apply", 4)}},
+            {"type": "challenge", "id": "timed", "label": "9. Speed",
+             "data": {"kind": "timed", "title": "Speed", "intro": "Intro",
+                      "startLabel": "Start", "timer": 20, "rounds": rounds("Speed", 6)}},
+            {"type": "glossary", "id": "glossary", "label": "10. Terms",
+             "data": {"intro": "Intro",
+                      "terms": [{"t": f"Term {i}", "d": "Definition"}
+                                for i in range(1, 11)]}},
+            {"type": "notes", "id": "notes", "label": "11. Notes",
+             "data": {"title": "Notes", "intro": "Intro", "sections": [
+                 {"heading": f"Section {i}", "summary": "Summary",
+                  "bullets": ["One", "Two"], "check": "Check"}
+                 for i in range(1, 5)
+             ]}},
+            {"type": "cheatsheet", "id": "sheet", "label": "12. Sheet",
+             "data": {"title": "Sheet", "intro": "Intro",
+                      "blocks": [{"title": f"Block {i}", "text": "Text"}
+                                 for i in range(1, 6)]}},
+            {"type": "sequence", "id": "sequence", "label": "13. Order",
+             "data": {"title": "Order", "intro": "Intro",
+                      "modes": [{"key": "main", "label": "Main",
+                                 "items": seq_items,
+                                 "correct": [item["id"] for item in seq_items]}]}},
+        ],
+    }
+
+
 # ---------------------------------------------------------------------------
 # dependency stubs
 # ---------------------------------------------------------------------------
@@ -205,6 +290,8 @@ def main():
                                 style_select.group(0) if style_select else ""))
     check("learning styles: UI includes all preferences",
           style_opts == {"mixed", "visual", "practice", "read", "audio"}, str(sorted(style_opts)))
+    check("ui: generated courses saved locally",
+          "prepareme_generated_courses_v1" in ui and "storeGeneratedCourse" in ui)
 
     env_example = (ROOT / ".env.example").read_text()
     missing_env = [v for v in gen.ENV_KEYS.values() if v not in env_example]
@@ -263,6 +350,12 @@ def main():
             {"key": "m", "label": "m", "items": [{"id": "i1", "label": "a", "why": "w"}],
              "correct": ["i1", "i2"]}]}}]}
     check("validate: sequence id mismatch", any("ids must match" in e for e in gen.validate(badseq)))
+    rich = make_rich_course()
+    check("validate_generation_design: rich course passes",
+          gen.validate_generation_design(rich) == [])
+    check("validate_generation_design: thin course rejected",
+          any("at least" in e or "missing required" in e
+              for e in gen.validate_generation_design(good)))
 
     # --- 5. inject into the real template --------------------------------
     template = (API / "_course_template.html").read_text()
@@ -281,6 +374,9 @@ def main():
     check("user_message: omits empty context", "ADDITIONAL CONTEXT" not in um2)
     um3 = gen._user_message("do it", "kid", "MAT")
     check("user_message: kid hint", 'meta.learner="kid"' in um3)
+    um4 = gen._user_message("Jazz theory course", "adult", "ii V I chord substitutions")
+    check("user_message: jazz adaptation hint",
+          "creative musical practice path" in um4 and "Avoid interview" in um4)
 
     # --- 7. resolve_provider / resolve_key -------------------------------
     check("resolve_provider: default gemini", gen.resolve_provider(None) == "gemini")
@@ -293,20 +389,20 @@ def main():
 
     # --- 8. build_course retry loop (mock provider) ----------------------
     tpl_path = API / "_course_template.html"
-    valid_json = json.dumps(good)
+    valid_json = json.dumps(rich)
     invalid_json = json.dumps({"meta": {}, "modules": []})
 
     # 8a: succeeds first try
     gen.PROVIDERS["gemini"] = lambda s, u, k, m: valid_json
     course, html = gen.build_course("i", "mat", "adult", tpl_path, provider="gemini", api_key="x")
     check("build_course: success returns injected html",
-          course == good and '"title": "T"' in html)
+          course == rich and '"title": "Rich Course"' in html)
 
     # 8b: invalid then valid -> retry recovers
     seq = iter([invalid_json, valid_json])
     gen.PROVIDERS["gemini"] = lambda s, u, k, m: next(seq)
     course2, _ = gen.build_course("i", "mat", "adult", tpl_path, provider="gemini", api_key="x")
-    check("build_course: recovers on retry", course2 == good)
+    check("build_course: recovers on retry", course2 == rich)
 
     # 8c: always invalid -> raises after retry
     gen.PROVIDERS["gemini"] = lambda s, u, k, m: invalid_json
@@ -318,6 +414,13 @@ def main():
     # --- 9. index.py: rate limit, SSRF guard, upload, extract_text -------
     idx = importlib.import_module("index")
     HttpxResponse = sys.modules["httpx"].Response
+
+    class DummyRequest:
+        def __init__(self, query=None, headers=None, cookies=None):
+            self.query_params = query or {}
+            self.headers = headers or {}
+            self.cookies = cookies or {}
+            self.client = types.SimpleNamespace(host="127.0.0.1")
 
     # rate limit
     idx._rate_window.clear()
@@ -441,13 +544,101 @@ def main():
                   lambda: idx.extract_text("slides.pptx", b"PK\x03\x04binary"),
                   gen.GenerationError)
 
-    # --- 10. config endpoint sanity --------------------------------------
-    cfg = idx.config()
+    # --- 10. access gates + OpenRouter policy ----------------------------
+    saved_env = {k: os.environ.get(k) for k in [
+        "PREP_LIBRARY_PUBLIC_IDS",
+        "PREP_AUTH_USERS",
+        "PREP_AUTH_SECRET",
+        "PREP_ACCESS_CODES",
+        "PREP_ADMIN_ACCESS_CODE",
+        "PREP_OPENROUTER_FREE_MODELS",
+        "PREP_OPENROUTER_PAID_MODELS",
+        "PREP_OPENROUTER_PAID_MODEL",
+        "PREP_MODEL",
+    ]}
+    try:
+        os.environ["PREP_LIBRARY_PUBLIC_IDS"] = "gen-ai-learning-lab"
+        os.environ["PREP_ACCESS_CODES"] = json.dumps({
+            "alice-code": {
+                "user": "alice",
+                "library": ["grayscale-interview-prep"],
+                "openrouter_paid": True,
+            }
+        })
+        os.environ["PREP_AUTH_USERS"] = json.dumps({
+            "devin": {
+                "passcode": "prepareme",
+                "library": ["*"],
+                "openrouter_paid": True,
+            }
+        })
+        os.environ["PREP_AUTH_SECRET"] = "test-session-secret"
+        os.environ.pop("PREP_ADMIN_ACCESS_CODE", None)
+        os.environ["PREP_OPENROUTER_FREE_MODELS"] = "openrouter/free,meta/test:free"
+        os.environ["PREP_OPENROUTER_PAID_MODELS"] = "openai/gpt-4o-mini"
+        public_req = DummyRequest()
+        alice_req = DummyRequest(query={"access_code": "alice-code"})
+        devin_req = DummyRequest(cookies={
+            idx.SESSION_COOKIE: idx._session_cookie("devin"),
+        })
+
+        public_ids = {c["id"] for c in idx._filter_library_for_request(public_req)}
+        alice_ids = {c["id"] for c in idx._filter_library_for_request(alice_req)}
+        check("access: public library filtered", public_ids == {"gen-ai-learning-lab"}, str(public_ids))
+        check("access: code unlocks course",
+              alice_ids == {"gen-ai-learning-lab", "grayscale-interview-prep"}, str(alice_ids))
+        devin_ids = {c["id"] for c in idx._filter_library_for_request(devin_req)}
+        check("auth: signed session unlocks all courses",
+              devin_ids == {"gen-ai-learning-lab", "grayscale-interview-prep", "grayscale-ppm-mastery"},
+              str(devin_ids))
+        check("auth: tampered session ignored",
+              idx._access_for_request(DummyRequest(cookies={idx.SESSION_COOKIE: "bad.token"}))["user"]
+              == "public")
+        expect_raises("access: public course route denied",
+                      lambda: idx._ensure_course_access(public_req, "grayscale-interview-prep"),
+                      idx.HTTPException)
+        try:
+            idx._ensure_course_access(alice_req, "grayscale-interview-prep")
+            check("access: unlocked course route allowed", True)
+        except Exception as e:  # noqa: BLE001
+            check("access: unlocked course route allowed", False, str(e))
+
+        check("openrouter: public default is free router",
+              idx._authorize_model(public_req, "openrouter", "", "") == "openrouter/free")
+        check("openrouter: public explicit free model allowed",
+              idx._authorize_model(public_req, "openrouter", "meta/test:free", "") == "meta/test:free")
+        expect_raises("openrouter: public paid model denied",
+                      lambda: idx._authorize_model(public_req, "openrouter", "openai/gpt-4o-mini", ""),
+                      idx.HTTPException)
+        check("openrouter: BYOK can request paid model",
+              idx._authorize_model(public_req, "openrouter", "openai/gpt-4o-mini", "user-key")
+              == "openai/gpt-4o-mini")
+        check("openrouter: paid code can request paid model",
+              idx._authorize_model(alice_req, "openrouter", "openai/gpt-4o-mini", "")
+              == "openai/gpt-4o-mini")
+        check("openrouter: signed-in user can request paid model",
+              idx._authorize_model(devin_req, "openrouter", "openai/gpt-4o-mini", "")
+              == "openai/gpt-4o-mini")
+
+        generated_ok = all(not gen.validate(item["course"])
+                           for item in idx.GENERATED_COURSES.values())
+        check("generated courses: schemas validate", generated_ok)
+    finally:
+        for key, val in saved_env.items():
+            if val is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = val
+
+    # --- 11. config endpoint sanity --------------------------------------
+    cfg = idx.config(DummyRequest())
     check("config: default provider valid", cfg["default"] in gen.PROVIDERS)
     check("config: configured keys cover providers",
           set(cfg["configured"]) == set(gen.PROVIDERS))
     check("config: source flags include tavily",
           "sources" in cfg and "tavily" in cfg["sources"])
+    check("config: access and openrouter included",
+          "access" in cfg and "openrouter" in cfg)
 
     # ---------------------------------------------------------------------
     print("\n" + "=" * 60)

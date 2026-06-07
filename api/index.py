@@ -20,6 +20,9 @@ Local dev:
 import asyncio
 import base64
 import functools
+import hashlib
+import hmac
+import json
 import ipaddress
 import logging
 import os
@@ -38,9 +41,10 @@ from fastapi.responses import FileResponse, HTMLResponse
 import sys
 sys.path.insert(0, str(Path(__file__).parent))
 from _generator import (  # noqa: E402
-    build_course, extract_main_text, normalize_url,
+    build_course, extract_main_text, inject, normalize_url, validate,
     GenerationError, resolve_provider, ENV_KEYS,
 )
+from _generated_courses import GENERATED_COURSES  # noqa: E402
 
 
 log = logging.getLogger(__name__)
@@ -111,7 +115,10 @@ _MAX_TEXT_FIELDS = {
     "pasted": 120_000,
     "urls": 4_000,
     "web_search": 2_000,
+    "model": 200,
     "api_key": 8_000,
+    "username": 120,
+    "passcode": 400,
 }
 _MAX_URLS = 10
 _MAX_TAVILY_QUERIES = 5
@@ -327,28 +334,275 @@ LIBRARY_COURSES = [
         "title": "Grayscale Interview Prep",
         "subtitle": "Principal PM interview room",
         "description": (
-            "Focused interview practice for Grayscale PPM conversations, with "
-            "company thesis, risk language, chat-style drills, and answer patterns."
+            "Generated course for Grayscale PPM interview practice, with "
+            "company thesis, risk language, drills, flashcards, and answer patterns."
         ),
         "tags": ["Interview", "Grayscale", "PPM", "Fintech"],
-        "level": "Prep",
-        "modules": "Interactive HTML",
-        "href": "/courses/grayscale-interview-prep.html",
+        "level": "Generated",
+        "modules": "8 modules",
+        "href": "/courses/grayscale-interview-prep-generated.html",
+        "gated": True,
     },
     {
         "id": "grayscale-ppm-mastery",
         "title": "Grayscale PPM Mastery",
         "subtitle": "Product, fintech, Web3, architecture",
         "description": (
-            "A complete mastery course covering asset management, digital assets, "
-            "system architecture, strategic frameworks, mentoring, quizzes, and drills."
+            "Generated mastery course covering asset management, digital assets, "
+            "operating architecture, strategy, mentoring, quizzes, and scenario drills."
         ),
         "tags": ["PPM", "Web3", "Architecture", "Quiz"],
-        "level": "Mastery",
-        "modules": "13 tabs",
-        "href": "/courses/grayscale-ppm-mastery.html",
+        "level": "Generated",
+        "modules": "9 modules",
+        "href": "/courses/grayscale-ppm-mastery-generated.html",
+        "gated": True,
     },
 ]
+
+COURSE_ID_BY_FILENAME = {
+    "gen-ai-learning-lab.html": "gen-ai-learning-lab",
+    "grayscale-interview-prep.html": "grayscale-interview-prep",
+    "grayscale-interview-prep-generated.html": "grayscale-interview-prep",
+    "grayscale-ppm-mastery.html": "grayscale-ppm-mastery",
+    "grayscale-ppm-mastery-generated.html": "grayscale-ppm-mastery",
+}
+
+ACCESS_COOKIE = "prep_access_code"
+SESSION_COOKIE = "prep_session"
+OPENROUTER_PUBLIC_MODEL = "openrouter/free"
+
+
+def _split_csv(value: str | None) -> list[str]:
+    return [v.strip() for v in (value or "").split(",") if v.strip()]
+
+
+def _truthy(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _all_course_ids() -> set[str]:
+    return {c["id"] for c in LIBRARY_COURSES}
+
+
+def _public_library_ids() -> set[str]:
+    raw = os.environ.get("PREP_LIBRARY_PUBLIC_IDS")
+    if raw is None:
+        return {"gen-ai-learning-lab"}
+    ids = set(_split_csv(raw))
+    return _all_course_ids() if "*" in ids else ids
+
+
+def _access_code_from_request(request: Request) -> str:
+    query = getattr(request, "query_params", {}) or {}
+    headers = getattr(request, "headers", {}) or {}
+    cookies = getattr(request, "cookies", {}) or {}
+    return (
+        str(query.get("access_code") or "").strip()
+        or str(headers.get("x-prep-access-code") or "").strip()
+        or str(cookies.get(ACCESS_COOKIE) or "").strip()
+    )
+
+
+def _auth_users() -> dict[str, dict]:
+    raw = os.environ.get("PREP_AUTH_USERS", "").strip()
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        log.warning("PREP_AUTH_USERS is not valid JSON.")
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+    users: dict[str, dict] = {}
+    for username, spec in parsed.items():
+        if isinstance(spec, dict):
+            users[str(username)] = spec
+        elif isinstance(spec, str):
+            users[str(username)] = {"passcode": spec, "library": ["*"], "openrouter_paid": True}
+    return users
+
+
+def _session_secret() -> str:
+    return (
+        os.environ.get("PREP_AUTH_SECRET", "").strip()
+        or os.environ.get("PREP_ADMIN_ACCESS_CODE", "").strip()
+        or os.environ.get("OPENROUTER_API_KEY", "").strip()
+        or "prep-dev-session-secret"
+    )
+
+
+def _b64url_encode(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def _b64url_decode(value: str) -> bytes:
+    padding = "=" * (-len(value) % 4)
+    return base64.urlsafe_b64decode((value + padding).encode("ascii"))
+
+
+def _sign_session(payload: str) -> str:
+    sig = hmac.new(_session_secret().encode("utf-8"), payload.encode("ascii"),
+                   hashlib.sha256).digest()
+    return _b64url_encode(sig)
+
+
+def _session_cookie(username: str) -> str:
+    payload = _b64url_encode(json.dumps({"u": username}, separators=(",", ":")).encode("utf-8"))
+    return f"{payload}.{_sign_session(payload)}"
+
+
+def _session_user(request: Request) -> str:
+    cookies = getattr(request, "cookies", {}) or {}
+    token = str(cookies.get(SESSION_COOKIE) or "").strip()
+    if "." not in token:
+        return ""
+    payload, sig = token.rsplit(".", 1)
+    if not hmac.compare_digest(sig, _sign_session(payload)):
+        return ""
+    try:
+        data = json.loads(_b64url_decode(payload).decode("utf-8"))
+    except (ValueError, json.JSONDecodeError):
+        return ""
+    username = str(data.get("u") or "").strip()
+    return username if username in _auth_users() else ""
+
+
+def _access_from_spec(username: str, spec: dict, public_ids: set[str]) -> dict:
+    granted_ids = set(_split_csv(os.environ.get("PREP_LIBRARY_GRANTED_IDS")))
+    raw_library = spec.get("library", spec.get("courses", [])) if isinstance(spec, dict) else []
+    if isinstance(raw_library, str):
+        granted_ids.update(_split_csv(raw_library))
+    elif isinstance(raw_library, list):
+        granted_ids.update(str(v).strip() for v in raw_library if str(v).strip())
+    if "*" in granted_ids:
+        allowed_ids = _all_course_ids()
+    else:
+        allowed_ids = public_ids | granted_ids
+    return {
+        "user": username or spec.get("user") or spec.get("email") or "public",
+        "library": allowed_ids,
+        "openrouter_paid": _truthy(spec.get("openrouter_paid") if isinstance(spec, dict) else False),
+        "authenticated": bool(username),
+    }
+
+
+def _access_records() -> dict[str, dict]:
+    records: dict[str, dict] = {}
+    raw = os.environ.get("PREP_ACCESS_CODES", "").strip()
+    if raw:
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            log.warning("PREP_ACCESS_CODES is not valid JSON.")
+            parsed = {}
+        if isinstance(parsed, dict):
+            for code, spec in parsed.items():
+                if isinstance(spec, dict):
+                    records[str(code)] = spec
+                elif isinstance(spec, list):
+                    records[str(code)] = {"library": spec}
+                elif isinstance(spec, str):
+                    records[str(code)] = {"user": spec, "library": []}
+
+    admin_code = os.environ.get("PREP_ADMIN_ACCESS_CODE", "").strip()
+    if admin_code:
+        records.setdefault(admin_code, {
+            "user": "admin",
+            "library": ["*"],
+            "openrouter_paid": True,
+        })
+    return records
+
+
+def _access_for_request(request: Request) -> dict:
+    public_ids = _public_library_ids()
+    users = _auth_users()
+    username = _session_user(request)
+    if username and username in users:
+        auth_access = _access_from_spec(username, users[username], public_ids)
+        return {
+            "code": "",
+            "user": auth_access["user"],
+            "library": auth_access["library"],
+            "openrouter_paid": auth_access["openrouter_paid"],
+            "has_access_code": False,
+            "authenticated": True,
+        }
+
+    code = _access_code_from_request(request)
+    spec = _access_records().get(code, {}) if code else {}
+    access = _access_from_spec("", spec, public_ids) if spec else {
+        "user": "public",
+        "library": public_ids,
+        "openrouter_paid": False,
+    }
+    return {
+        "code": code,
+        "user": access["user"],
+        "library": access["library"],
+        "openrouter_paid": access["openrouter_paid"],
+        "has_access_code": bool(code and spec),
+        "authenticated": False,
+    }
+
+
+def _filter_library_for_request(request: Request) -> list[dict]:
+    access = _access_for_request(request)
+    courses = []
+    for course in LIBRARY_COURSES:
+        if course["id"] not in access["library"]:
+            continue
+        item = dict(course)
+        item.pop("gated", None)
+        courses.append(item)
+    return courses
+
+
+def _ensure_course_access(request: Request, course_id: str) -> None:
+    if course_id not in _access_for_request(request)["library"]:
+        raise HTTPException(403, "You do not have access to this course.")
+
+
+def _openrouter_free_models() -> list[str]:
+    models = _split_csv(os.environ.get("PREP_OPENROUTER_FREE_MODELS"))
+    if not models:
+        models = [os.environ.get("PREP_OPENROUTER_FREE_MODEL", OPENROUTER_PUBLIC_MODEL).strip()
+                  or OPENROUTER_PUBLIC_MODEL]
+    return models
+
+
+def _openrouter_paid_models() -> list[str]:
+    return _split_csv(os.environ.get("PREP_OPENROUTER_PAID_MODELS"))
+
+
+def _is_openrouter_free_model(model: str) -> bool:
+    model = (model or "").strip()
+    return model == OPENROUTER_PUBLIC_MODEL or model.endswith(":free") or model in _openrouter_free_models()
+
+
+def _authorize_model(request: Request, provider: str, requested_model: str,
+                     requested_key: str) -> str:
+    if provider != "openrouter":
+        return requested_model.strip()
+    model = requested_model.strip()
+    if requested_key.strip():
+        return model
+
+    access = _access_for_request(request)
+    free_default = _openrouter_free_models()[0]
+    paid_default = (
+        os.environ.get("PREP_OPENROUTER_PAID_MODEL", "").strip()
+        or os.environ.get("PREP_MODEL", "").strip()
+        or "openai/gpt-4o-mini"
+    )
+    if access["openrouter_paid"]:
+        return model or paid_default
+    if model and not _is_openrouter_free_model(model):
+        raise HTTPException(403, "That OpenRouter model requires paid API access.")
+    return model or free_default
 
 # Default provider when the form doesn't specify one. Prefer AI Gateway when configured,
 # otherwise keep the existing free-tier Gemini path.
@@ -413,22 +667,75 @@ def extract_text(filename: str, raw: bytes) -> str:
 
 # ---------- routes ----------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
-def home():
-    return UPLOAD_PAGE
+def home(request: Request):
+    headers = {}
+    code = _access_code_from_request(request)
+    if code:
+        headers["Set-Cookie"] = f"{ACCESS_COOKIE}={code}; Path=/; Max-Age=2592000; SameSite=Lax"
+    return HTMLResponse(UPLOAD_PAGE, headers=headers)
 
 
 @app.get("/library", response_class=HTMLResponse)
-def library():
-    return UPLOAD_PAGE
+def library(request: Request):
+    headers = {}
+    code = _access_code_from_request(request)
+    if code:
+        headers["Set-Cookie"] = f"{ACCESS_COOKIE}={code}; Path=/; Max-Age=2592000; SameSite=Lax"
+    return HTMLResponse(UPLOAD_PAGE, headers=headers)
 
 
 @app.get("/api/library")
-def library_api():
-    return {"courses": LIBRARY_COURSES}
+def library_api(request: Request):
+    access = _access_for_request(request)
+    return {
+        "courses": _filter_library_for_request(request),
+        "access": {
+            "user": access["user"],
+            "has_access_code": access["has_access_code"],
+            "authenticated": access["authenticated"],
+            "openrouter_paid": access["openrouter_paid"],
+        },
+    }
+
+
+@app.post("/api/login")
+async def login(username: str = Form(""), passcode: str = Form("")):
+    username = _check_text_field("username", username).strip()
+    passcode = _check_text_field("passcode", passcode).strip()
+    users = _auth_users()
+    spec = users.get(username)
+    expected = str(spec.get("passcode") or "") if isinstance(spec, dict) else ""
+    if not username or not expected or not hmac.compare_digest(passcode, expected):
+        raise HTTPException(401, "Invalid username or passcode.")
+    cookie = (
+        f"{SESSION_COOKIE}={_session_cookie(username)}; Path=/; "
+        "Max-Age=2592000; SameSite=Lax; HttpOnly"
+    )
+    return HTMLResponse('{"ok":true}', media_type="application/json", headers={"Set-Cookie": cookie})
+
+
+@app.post("/api/logout")
+async def logout():
+    cookie = f"{SESSION_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly"
+    return HTMLResponse('{"ok":true}', media_type="application/json", headers={"Set-Cookie": cookie})
 
 
 @app.get("/courses/{filename:path}")
-def course_asset(filename: str):
+def course_asset(request: Request, filename: str):
+    if filename in GENERATED_COURSES:
+        course_id = GENERATED_COURSES[filename]["id"]
+        _ensure_course_access(request, course_id)
+        course = GENERATED_COURSES[filename]["course"]
+        errs = validate(course)
+        if errs:
+            raise HTTPException(500, "Generated course is invalid: " + "; ".join(errs[:3]))
+        html = inject(course, TEMPLATE_PATH.read_text(encoding="utf-8"))
+        return HTMLResponse(html)
+
+    course_id = COURSE_ID_BY_FILENAME.get(filename)
+    if course_id:
+        _ensure_course_access(request, course_id)
+
     target = (COURSES_DIR / filename).resolve()
     try:
         target.relative_to(COURSES_DIR.resolve())
@@ -443,14 +750,26 @@ def course_asset(filename: str):
 
 
 @app.get("/api/config")
-def config():
+def config(request: Request):
     """Tell the UI which providers already have a server-side key configured."""
+    access = _access_for_request(request)
     return {
         "default": resolve_provider(DEFAULT_BACKEND),
         "configured": {p: bool(os.environ.get(env, "").strip())
                        for p, env in ENV_KEYS.items()},
         "sources": {
             "tavily": bool(os.environ.get("TAVILY_API_KEY", "").strip()),
+        },
+        "access": {
+            "user": access["user"],
+            "has_access_code": access["has_access_code"],
+            "authenticated": access["authenticated"],
+            "openrouter_paid": access["openrouter_paid"],
+        },
+        "openrouter": {
+            "free_models": _openrouter_free_models(),
+            "paid_models": _openrouter_paid_models(),
+            "free_default": _openrouter_free_models()[0],
         },
     }
 
@@ -467,6 +786,7 @@ async def generate(
     urls: str = Form(""),
     web_search: str = Form(""),
     provider: str = Form(""),
+    model: str = Form(""),
     api_key: str = Form(""),
     file: UploadFile | None = File(None),
 ):
@@ -487,6 +807,7 @@ async def generate(
     pasted = _check_text_field("pasted", pasted)
     urls = _check_text_field("urls", urls)
     web_search = _check_text_field("web_search", web_search)
+    model = _check_text_field("model", model)
     api_key = _check_text_field("api_key", api_key)
 
     # Rate limit: 10 requests/minute per IP (x-forwarded-for on Vercel)
@@ -548,6 +869,8 @@ async def generate(
         instruction_full += f" (school grade level: {grade.strip()})"
 
     try:
+        selected_provider = resolve_provider(provider or DEFAULT_BACKEND)
+        selected_model = _authorize_model(request, selected_provider, model, api_key)
         course, html = await asyncio.to_thread(
             functools.partial(
                 build_course,
@@ -557,8 +880,9 @@ async def generate(
                 learning_style=learning_style,
                 context=context.strip(),
                 template_path=TEMPLATE_PATH,
-                provider=provider or DEFAULT_BACKEND,
+                provider=selected_provider,
                 api_key=api_key,
+                model=selected_model,
             )
         )
     except GenerationError as e:

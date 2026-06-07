@@ -99,7 +99,7 @@ def fetch_url_text(url: str, max_chars: int = 40000) -> str:
 # ----------------------------------------------------------------------------
 # 1. The generation prompt (kept in sync with the COURSE schema)
 # ----------------------------------------------------------------------------
-SYSTEM_PROMPT = """You are a course generator. You convert study material into a single JSON object that drives an interactive study app. Output ONLY valid JSON — no markdown, no prose, no code fences.
+SYSTEM_PROMPT = """You are a course architect and generator. You convert study material into a single JSON object that drives an interactive study app. Output ONLY valid JSON — no markdown, no prose, no code fences.
 
 The JSON must match this schema exactly:
 { "meta": {"title","subtitle","learner","learningStyle"}, "modules": [ {"type","id","label","data"} ] }
@@ -120,13 +120,31 @@ Allowed module types and their data shapes:
 - challenge: {kind, title, intro, startLabel, timer(optional int), rounds:[{title(optional), scenario(optional), constraints(optional array), question, opts:[string OR {label,detail}], correct (0-based index into opts), exp(optional) OR (rightFeedback AND wrongFeedback array parallel to opts with null in the correct slot)}]}
   kind is one of: quiz, rounds, timed, classify
 
-Requirements:
-- Build a coherent course from the material. Always include, in this order:
-  one overview, one concept_cards, one flashcards, one challenge with kind "quiz",
-  one glossary, one cheatsheet. Add a challenge with kind "rounds" (a build/apply game),
-  a challenge with kind "timed" (a speed round, timer 20), and a sequence when the material supports them.
-- Add multimodal support when the material supports it: one visual_map, one drag_sort,
-  one teach_back, and one notes module. Add audio_script when the learner preference is audio.
+Course design requirements:
+- First infer the learning domain from the instruction and material. Do NOT reuse a job-prep,
+  interview, business, or software framing unless the user explicitly asks for that. A music,
+  arts, language, fitness, craft, or hobby topic should become a guided skill-practice journey,
+  not a career-prep course.
+- Build a complete, domain-specific course from the material. Always include these modules:
+  one overview, one visual_map, one concept_cards, one drag_sort, one flashcards,
+  one challenge with kind "quiz", one teach_back, one challenge with kind "rounds",
+  one challenge with kind "timed" and timer 20, one glossary, one notes, one cheatsheet,
+  and one sequence. Add audio_script when the learner preference is audio.
+- Domain adaptation examples:
+  * Jazz/music: use listening, ear training, harmonic movement, instrument/repertoire practice,
+    improvisation choices, chord-scale relationships, voice-leading, transcription, and practice
+    routine language. Rounds should feel like musical decisions, not workplace cases.
+  * Programming/AI/web: use build steps, debugging, architecture decisions, and implementation drills.
+  * Academic/test prep: use misconceptions, worked examples, retrieval practice, and exam traps.
+  * Professional/interview prep: use role pressure, executive framing, decision judgment, and answer drills.
+- Make the course as rich as the curated examples: each module should teach or practice a distinct
+  skill, not repeat the same summary in different formats.
+- Quantity targets:
+  overview cards 3-5; concept cards 5-8 with 2-4 fields each; flashcards 10-12;
+  quiz questions 8-10; glossary terms 10-16; notes sections 4-8; cheatsheet blocks 5-8;
+  visual map nodes 5-9; drag_sort items 8-12; teach_back prompts 4-6;
+  sequence modes 1-3 with 5-8 items each; rounds challenge 4-7 rounds;
+  timed challenge 6-10 rounds.
 - If learningStyle is visual, put visual_map before concept_cards. If practice, put drag_sort,
   sequence, and challenge modules earlier. If read, put notes and cheatsheet earlier. If audio,
   put audio_script near the top. If mixed, balance the order naturally.
@@ -139,6 +157,39 @@ Requirements:
 - "correct" is a 0-based index into "opts". For rounds/classify, "wrongFeedback" is parallel to "opts" (use null for the correct slot). Use "exp" OR rightFeedback+wrongFeedback, not both.
 
 Return the JSON object and nothing else."""
+
+
+def _course_design_hint(instruction: str, material: str) -> str:
+    haystack = f"{instruction}\n{material[:4000]}".lower()
+    if re.search(r"\b(jazz|music|musical|chord|scale|harmony|harmonic|melody|improv|improvis|piano|guitar|sax|trumpet|bass|drum|ear training|voice[- ]?leading)\b", haystack):
+        return (
+            "Course archetype: creative musical practice path. Structure the experience as a "
+            "guided progression from hearing/recognizing ideas to applying them on an instrument "
+            "or in improvisation. Use drills such as ear-training choices, chord/scale fit, "
+            "voice-leading order, listening analysis, repertoire study, and practice routines. "
+            "Avoid interview, employer, resume, product, or job-prep framing unless the instruction "
+            "explicitly requests it."
+        )
+    if re.search(r"\b(interview|job|career|resume|onsite|hiring|role|stakeholder|executive)\b", haystack):
+        return (
+            "Course archetype: professional readiness path. Emphasize role-specific judgment, "
+            "answer practice, decision pressure, narrative clarity, and scenario drills."
+        )
+    if re.search(r"\b(code|programming|javascript|html|css|python|react|api|gen ai|llm|rag|model|software|web app)\b", haystack):
+        return (
+            "Course archetype: technical build lab. Emphasize concepts, implementation sequence, "
+            "debugging choices, architecture tradeoffs, and hands-on build/apply challenges."
+        )
+    if re.search(r"\b(test|exam|grade|school|quiz|homework|class|biology|history|math|science)\b", haystack):
+        return (
+            "Course archetype: academic mastery path. Emphasize misconception repair, worked "
+            "examples, retrieval practice, and exam-style understanding checks."
+        )
+    return (
+        "Course archetype: guided learning path. Adapt the module names, examples, drills, "
+        "sequence, and challenge scenarios to the actual subject instead of using a generic "
+        "job-prep or software-project frame."
+    )
 
 
 def _user_message(instruction: str, learner: str, material: str,
@@ -157,7 +208,10 @@ def _user_message(instruction: str, learner: str, material: str,
         trimmed += "\n\n[material truncated for length]"
     context_block = f"\nADDITIONAL CONTEXT (goals, constraints, focus areas):\n{context.strip()}\n" \
         if context and context.strip() else ""
-    return f"INSTRUCTION: {instruction}\n{learner_hint}\n{style_hint}\n{context_block}\nMATERIAL:\n{trimmed}"
+    design_hint = _course_design_hint(instruction, material)
+    return (f"INSTRUCTION: {instruction}\n{learner_hint}\n{style_hint}\n"
+            f"COURSE DESIGN ADAPTATION:\n{design_hint}\n"
+            f"{context_block}\nMATERIAL:\n{trimmed}")
 
 
 # ----------------------------------------------------------------------------
@@ -170,7 +224,7 @@ DEFAULT_MODELS = {
     "groq": "llama-3.3-70b-versatile",
     "grok": "grok-3-mini",
     "openai": "gpt-4o-mini",
-    "openrouter": "openai/gpt-4o-mini",
+    "openrouter": "openrouter/free",
     "anthropic": "claude-sonnet-4-20250514",
 }
 
@@ -353,6 +407,11 @@ VALID_TYPES = {"overview", "concept_cards", "flashcards", "visual_map",
                "glossary", "cheatsheet", "sequence", "challenge"}
 VALID_KINDS = {"quiz", "rounds", "timed", "classify"}
 VALID_STYLES = {"mixed", "visual", "practice", "read", "audio"}
+REQUIRED_GENERATED_TYPES = {"overview", "concept_cards", "flashcards", "visual_map",
+                            "drag_sort", "teach_back", "notes", "glossary",
+                            "cheatsheet", "sequence"}
+REQUIRED_GENERATED_CHALLENGES = {"quiz", "rounds", "timed"}
+MIN_GENERATED_MODULES = 12
 
 
 def validate(course: dict) -> list[str]:
@@ -483,6 +542,80 @@ def validate(course: dict) -> list[str]:
     return errs
 
 
+def _module_by_type(course: dict, mtype: str) -> list[dict]:
+    return [m for m in course.get("modules", []) if isinstance(m, dict) and m.get("type") == mtype]
+
+
+def _challenge_by_kind(course: dict, kind: str) -> list[dict]:
+    return [
+        m for m in _module_by_type(course, "challenge")
+        if isinstance(m.get("data"), dict) and m["data"].get("kind") == kind
+    ]
+
+
+def _count_first(course: dict, mtype: str, field: str) -> int:
+    modules = _module_by_type(course, mtype)
+    if not modules or not isinstance(modules[0].get("data"), dict):
+        return 0
+    value = modules[0]["data"].get(field)
+    return len(value) if isinstance(value, list) else 0
+
+
+def validate_generation_design(course: dict) -> list[str]:
+    """Quality gate for newly generated courses. Stricter than renderer validation."""
+    errs = validate(course)
+    if errs:
+        return errs
+    modules = course.get("modules", [])
+    if len(modules) < MIN_GENERATED_MODULES:
+        errs.append(f"generated course must include at least {MIN_GENERATED_MODULES} modules.")
+
+    present_types = {m.get("type") for m in modules if isinstance(m, dict)}
+    for mtype in sorted(REQUIRED_GENERATED_TYPES - present_types):
+        errs.append(f"generated course missing required {mtype} module.")
+
+    present_challenges = {
+        m.get("data", {}).get("kind") for m in _module_by_type(course, "challenge")
+        if isinstance(m.get("data"), dict)
+    }
+    for kind in sorted(REQUIRED_GENERATED_CHALLENGES - present_challenges):
+        errs.append(f"generated course missing required challenge kind '{kind}'.")
+
+    minimums = [
+        ("overview", "cards", 3),
+        ("concept_cards", "cards", 5),
+        ("flashcards", "cards", 10),
+        ("glossary", "terms", 10),
+        ("notes", "sections", 4),
+        ("cheatsheet", "blocks", 5),
+        ("visual_map", "nodes", 5),
+        ("drag_sort", "items", 8),
+        ("teach_back", "prompts", 4),
+    ]
+    for mtype, field, minimum in minimums:
+        count = _count_first(course, mtype, field)
+        if count and count < minimum:
+            errs.append(f"{mtype}.{field} should include at least {minimum} items.")
+
+    sequences = _module_by_type(course, "sequence")
+    if sequences:
+        modes = sequences[0].get("data", {}).get("modes", [])
+        if isinstance(modes, list) and modes:
+            first_items = modes[0].get("items", [])
+            if isinstance(first_items, list) and len(first_items) < 5:
+                errs.append("sequence modes should include at least 5 items.")
+
+    challenge_minimums = {"quiz": 8, "rounds": 4, "timed": 6}
+    for kind, minimum in challenge_minimums.items():
+        challenges = _challenge_by_kind(course, kind)
+        if challenges:
+            rounds = challenges[0].get("data", {}).get("rounds", [])
+            if isinstance(rounds, list) and len(rounds) < minimum:
+                errs.append(f"challenge kind '{kind}' should include at least {minimum} rounds.")
+
+    return errs
+
+
 # ----------------------------------------------------------------------------
 # 4. Injection into the template
 # ----------------------------------------------------------------------------
@@ -526,7 +659,7 @@ def build_course(instruction: str, material: str, learner: str,
         meta = course.setdefault("meta", {})
         meta.setdefault("learner", learner)
         meta.setdefault("learningStyle", learning_style)
-        last_errs = validate(course)
+        last_errs = validate_generation_design(course)
         if not last_errs:
             return course, inject(course, template)
 

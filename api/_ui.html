@@ -99,8 +99,11 @@ h1{margin:10px 0 14px;font-family:"Source Serif 4",Georgia,serif;font-size:clamp
 .tag{border:1px solid var(--border);border-radius:var(--r-pill);padding:4px 8px;color:var(--text-3);font-size:11px}
 .card-foot{margin-top:auto;padding-top:18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
 .card-foot span{color:var(--text-3);font-size:12px}
+.card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .open-link{display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r-pill);background:var(--accent);color:white;font-weight:800;font-size:13px;padding:9px 14px}
 .open-link:hover{background:var(--accent-hover)}
+.remove-link{border:1px solid var(--border);border-radius:var(--r-pill);background:transparent;color:var(--text-3);font-weight:800;font-size:12px;padding:8px 12px;cursor:pointer}
+.remove-link:hover{border-color:var(--error);color:var(--error)}
 .workspace{display:grid;grid-template-columns:minmax(0,.86fr) minmax(0,1.14fr);gap:16px;align-items:start}
 .panel{border:1px solid var(--border);border-radius:var(--r-lg);background:rgba(17,19,24,.88);overflow:hidden}
 .panel-pad{padding:22px}
@@ -196,7 +199,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3)}
         <p class="lead">Open a curated course, or turn your own source material into a structured study experience with overview, concept cards, visual maps, recall, quizzes, drills, glossary, and cheat-sheet.</p>
       </div>
       <div class="stats">
-        <div class="stat mono"><strong>3</strong><span>curated courses</span></div>
+        <div class="stat mono"><strong id="courseCount">1</strong><span>available courses</span></div>
         <div class="stat mono"><strong>Web</strong><span>Tavily search</span></div>
         <div class="stat mono"><strong>BYOK</strong><span>provider support</span></div>
         <div class="stat mono"><strong>HTML</strong><span>portable output</span></div>
@@ -212,37 +215,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3)}
         <p>Curated courses use richer progression, drills, and interview practice patterns.</p>
       </div>
     </div>
-    <div class="course-grid">
-      <article class="course-card">
-        <div class="card-top">
-          <span class="module-pill mono">Level 2</span>
-          <span class="ring" aria-hidden="true"></span>
-        </div>
-        <h3>Gen AI Learning Lab</h3>
-        <p>Master fine-tuning decisions, LoRA, quantization, evaluation, and deployment tradeoffs through gated concept drills.</p>
-        <div class="tags"><span class="tag mono">Gen AI</span><span class="tag mono">RAG</span><span class="tag mono">LoRA</span><span class="tag mono">Evaluation</span></div>
-        <div class="card-foot"><span class="mono">5 stages</span><a class="open-link" href="/courses/gen-ai-learning-lab.html" target="_blank">Open</a></div>
-      </article>
-      <article class="course-card">
-        <div class="card-top">
-          <span class="module-pill mono">Prep</span>
-          <span class="ring" aria-hidden="true"></span>
-        </div>
-        <h3>Grayscale Interview Prep</h3>
-        <p>Company thesis, risks, interview prompts, and answer patterns for Principal PM conversations.</p>
-        <div class="tags"><span class="tag mono">Interview</span><span class="tag mono">Grayscale</span><span class="tag mono">PPM</span><span class="tag mono">Fintech</span></div>
-        <div class="card-foot"><span class="mono">interactive HTML</span><a class="open-link" href="/courses/grayscale-interview-prep.html" target="_blank">Open</a></div>
-      </article>
-      <article class="course-card">
-        <div class="card-top">
-          <span class="module-pill mono">Mastery</span>
-          <span class="ring" aria-hidden="true"></span>
-        </div>
-        <h3>Grayscale PPM Mastery</h3>
-        <p>Asset management, Web3, architecture, strategy, mentoring, active recall, quizzes, and scenario drills.</p>
-        <div class="tags"><span class="tag mono">PPM</span><span class="tag mono">Web3</span><span class="tag mono">Architecture</span><span class="tag mono">Quiz</span></div>
-        <div class="card-foot"><span class="mono">13 tabs</span><a class="open-link" href="/courses/grayscale-ppm-mastery.html" target="_blank">Open</a></div>
-      </article>
+    <div class="course-grid" id="courseGrid">
     </div>
   </section>
 
@@ -323,8 +296,20 @@ input::placeholder,textarea::placeholder{color:var(--text-3)}
                 <option value="openrouter">OpenRouter</option>
                 <option value="anthropic">Anthropic (paid)</option>
               </select>
-              <input type="password" name="api_key" id="api_key" placeholder="Optional: paste your own API key">
+              <select name="model" id="model" class="mono hidden"></select>
+              <input type="password" name="api_key" id="api_key" autocomplete="off" placeholder="Optional: paste your own API key">
               <p id="keyHint" class="hint"></p>
+            </div>
+
+            <div class="step">
+              <label for="authUser">7. Account</label>
+              <input type="text" id="authUser" autocomplete="username" placeholder="Username">
+              <input type="password" id="authPasscode" autocomplete="current-password" placeholder="Passcode">
+              <div class="result-actions">
+                <button type="button" id="loginBtn" class="secondary-link">Sign in</button>
+                <button type="button" id="logoutBtn" class="secondary-link hidden">Sign out</button>
+              </div>
+              <p id="accessHint" class="hint"></p>
             </div>
 
             <button type="submit" id="go" class="submit mono">Generate course</button>
@@ -360,8 +345,12 @@ const segs=document.querySelectorAll('.seg'), learner=document.getElementById('l
 segs.forEach(b=>b.onclick=()=>{segs.forEach(x=>x.classList.remove('active'));b.classList.add('active');learner.value=b.dataset.v;gradeWrap.classList.toggle('hidden', b.dataset.v!=='kid');});
 const f=document.getElementById('f'),go=document.getElementById('go');
 const elStatus=document.getElementById('status'),elResult=document.getElementById('result'),elErr=document.getElementById('error');
-const provider=document.getElementById('provider'),keyHint=document.getElementById('keyHint'),searchHint=document.getElementById('searchHint');
-let CONFIG={configured:{},sources:{},default:'gemini'};
+const provider=document.getElementById('provider'),model=document.getElementById('model'),keyHint=document.getElementById('keyHint'),searchHint=document.getElementById('searchHint');
+const authUser=document.getElementById('authUser'),authPasscode=document.getElementById('authPasscode'),loginBtn=document.getElementById('loginBtn'),logoutBtn=document.getElementById('logoutBtn'),accessHint=document.getElementById('accessHint'),courseGrid=document.getElementById('courseGrid'),courseCount=document.getElementById('courseCount');
+let CONFIG={configured:{},sources:{},default:'gemini',access:{},openrouter:{free_models:['openrouter/free'],paid_models:[]}};
+const GENERATED_STORE_KEY='prepareme_generated_courses_v1';
+let SERVER_COURSES=[];
+let generatedObjectUrls=[];
 let statusTimer=null;
 const statusSteps=[
   'Reading your document and building the course...',
@@ -371,16 +360,210 @@ const statusSteps=[
   'Packaging the interactive HTML...'
 ];
 
+async function loadConfig(){
+  try{
+    CONFIG=await fetch('/api/config').then(r=>r.json());
+    if(CONFIG.default){provider.value=CONFIG.default;}
+  }catch(_){}
+  refreshHint();
+}
+
+async function loadLibrary(){
+  try{
+    const j=await fetch('/api/library').then(r=>r.json());
+    SERVER_COURSES=j.courses||[];
+  }catch(_){SERVER_COURSES=[];}
+  renderLibrary();
+}
+
+async function signIn(){
+  const data=new FormData();
+  data.set('username',authUser.value.trim());
+  data.set('passcode',authPasscode.value.trim());
+  const r=await fetch('/api/login',{method:'POST',body:data});
+  if(!r.ok){
+    const j=await r.json().catch(()=>({detail:'Sign in failed'}));
+    accessHint.textContent=j.detail||'Sign in failed';
+    return;
+  }
+  authPasscode.value='';
+  await loadConfig();
+  await loadLibrary();
+}
+
+async function signOut(){
+  await fetch('/api/logout',{method:'POST'});
+  authPasscode.value='';
+  await loadConfig();
+  await loadLibrary();
+}
+
+loginBtn.onclick=signIn;
+logoutBtn.onclick=signOut;
+authPasscode.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();signIn();}});
+
+function loadGeneratedCourses(){
+  try{
+    const raw=localStorage.getItem(GENERATED_STORE_KEY);
+    const items=raw ? JSON.parse(raw) : [];
+    return Array.isArray(items) ? items.filter(c=>c && c.title && (c.href || c.html_b64)) : [];
+  }catch(_){return [];}
+}
+
+function saveGeneratedCourses(courses){
+  try{
+    localStorage.setItem(GENERATED_STORE_KEY,JSON.stringify(courses.slice(0,8)));
+    return true;
+  }catch(_){return false;}
+}
+
+function removeGeneratedCourse(id){
+  saveGeneratedCourses(loadGeneratedCourses().filter(c=>c.id!==id));
+  renderLibrary();
+}
+
+function objectUrlFromB64(html_b64){
+  const html=atob(html_b64);
+  const blob=new Blob([Uint8Array.from(html, c=>c.charCodeAt(0))],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  generatedObjectUrls.push(url);
+  return url;
+}
+
+function storeGeneratedCourse(result,safe){
+  const saved=loadGeneratedCourses().filter(c=>c.title!==result.title);
+  saved.unshift({
+    id:'generated-'+Date.now(),
+    title:result.title||'Untitled course',
+    description:'Generated from your source material. Saved in this browser.',
+    level:'Generated',
+    modules:(result.modules||0)+' modules',
+    tags:['Generated'],
+    href:result.url||null,
+    download_url:result.download_url||result.url||null,
+    html_b64:result.url ? null : result.html_b64,
+    download:safe+'.html',
+    createdAt:Date.now()
+  });
+  return saveGeneratedCourses(saved);
+}
+
+function renderLibrary(){
+  generatedObjectUrls.forEach(u=>URL.revokeObjectURL(u));
+  generatedObjectUrls=[];
+  const generated=loadGeneratedCourses().map(c=>({
+    ...c,
+    href:c.href||objectUrlFromB64(c.html_b64),
+    generatedLocal:true
+  }));
+  const courses=[...SERVER_COURSES,...generated];
+  courseGrid.innerHTML='';
+  courseCount.textContent=String(courses.length);
+  if(!courses.length){
+    const empty=document.createElement('div');
+    empty.className='callout';
+    empty.textContent='No courses are available for this access code.';
+    courseGrid.appendChild(empty);
+    return;
+  }
+  courses.forEach(c=>{
+    const article=document.createElement('article');
+    article.className='course-card';
+
+    const top=document.createElement('div');
+    top.className='card-top';
+    const pill=document.createElement('span');
+    pill.className='module-pill mono';
+    pill.textContent=c.level||'Course';
+    const ring=document.createElement('span');
+    ring.className='ring';
+    ring.setAttribute('aria-hidden','true');
+    top.append(pill,ring);
+
+    const title=document.createElement('h3');
+    title.textContent=c.title||'Untitled course';
+    const desc=document.createElement('p');
+    desc.textContent=c.description||'';
+    const tags=document.createElement('div');
+    tags.className='tags';
+    (c.tags||[]).forEach(t=>{
+      const tag=document.createElement('span');
+      tag.className='tag mono';
+      tag.textContent=t;
+      tags.appendChild(tag);
+    });
+
+    const foot=document.createElement('div');
+    foot.className='card-foot';
+    const modules=document.createElement('span');
+    modules.className='mono';
+    modules.textContent=c.modules||'course';
+    const link=document.createElement('a');
+    link.className='open-link';
+    link.href=c.href;
+    link.target='_blank';
+    link.rel='noopener';
+    link.textContent='Open';
+    const actions=document.createElement('div');
+    actions.className='card-actions';
+    actions.appendChild(link);
+    if(c.generatedLocal){
+      const remove=document.createElement('button');
+      remove.type='button';
+      remove.className='remove-link';
+      remove.textContent='Remove';
+      remove.onclick=()=>removeGeneratedCourse(c.id);
+      actions.appendChild(remove);
+    }
+    foot.append(modules,actions);
+    article.append(top,title,desc,tags,foot);
+    courseGrid.appendChild(article);
+  });
+}
+
+function refreshModelOptions(){
+  const isOpenRouter=provider.value==='openrouter';
+  model.classList.toggle('hidden',!isOpenRouter);
+  if(!isOpenRouter){
+    model.innerHTML='';
+    return;
+  }
+  const free=CONFIG.openrouter?.free_models||['openrouter/free'];
+  const paid=CONFIG.access?.openrouter_paid ? (CONFIG.openrouter?.paid_models||[]) : [];
+  const options=[...free,...paid.filter(x=>!free.includes(x))];
+  model.innerHTML='';
+  options.forEach(m=>{
+    const opt=document.createElement('option');
+    opt.value=m;
+    opt.textContent=m.endsWith(':free') || m==='openrouter/free' ? `${m} (free)` : `${m} (paid)`;
+    model.appendChild(opt);
+  });
+}
+
 function refreshHint(){
   const p=provider.value, hasServer=CONFIG.configured[p];
+  refreshModelOptions();
   keyHint.textContent = hasServer
     ? 'A server key is configured for '+p+'. Leave blank to use it, or paste your own to override.'
     : 'No server key for '+p+'. Paste your own API key above to use it.';
+  if(p==='openrouter' && !CONFIG.access?.openrouter_paid){
+    keyHint.textContent += ' Server-side OpenRouter access is limited to free models for this visitor.';
+  }
+  accessHint.textContent = CONFIG.access?.has_access_code
+    ? 'Access granted for '+(CONFIG.access.user||'this visitor')+'.'
+    : CONFIG.access?.authenticated
+      ? 'Signed in as '+(CONFIG.access.user||'this visitor')+'.'
+      : 'Public access only. Sign in to unlock private courses or paid OpenRouter models.';
+  logoutBtn.classList.toggle('hidden',!CONFIG.access?.authenticated);
+  loginBtn.classList.toggle('hidden',!!CONFIG.access?.authenticated);
+  authUser.classList.toggle('hidden',!!CONFIG.access?.authenticated);
+  authPasscode.classList.toggle('hidden',!!CONFIG.access?.authenticated);
   searchHint.textContent = CONFIG.sources && CONFIG.sources.tavily
     ? 'Tavily search is configured. Mix and match files, URLs, search queries, and pasted text.'
     : 'Tavily search needs TAVILY_API_KEY on the server. Files, URLs, and pasted text still work.';
 }
-fetch('/api/config').then(r=>r.json()).then(c=>{CONFIG=c; if(c.default){provider.value=c.default;} refreshHint();}).catch(()=>refreshHint());
+loadConfig();
+loadLibrary();
 provider.onchange=refreshHint;
 
 let lastUrl=null;
@@ -412,6 +595,8 @@ f.onsubmit=async(e)=>{
     }
     document.getElementById('rView').href=href;
     const dl=document.getElementById('rDownload'); dl.href=downloadHref; dl.download=safe+'.html';
+    storeGeneratedCourse(j,safe);
+    renderLibrary();
     elResult.classList.remove('hidden');
   }catch(err){
     document.getElementById('errText').textContent=err.message;

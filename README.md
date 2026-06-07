@@ -41,6 +41,29 @@ There are two ways to supply a key:
 The form's **Model** dropdown picks the provider; leave the key field blank to use the
 server key, or paste one to override.
 
+### Library and OpenRouter gates
+
+The app includes a lightweight username/passcode gate for small deployments without
+adding a database or auth provider.
+
+- `PREP_LIBRARY_PUBLIC_IDS` controls which course IDs public visitors can see. It defaults
+  to `gen-ai-learning-lab`; use `*` to make the full library public.
+- `PREP_AUTH_USERS` grants username/passcode access. Example:
+  `{"devin":{"passcode":"change-me","library":["grayscale-interview-prep","grayscale-ppm-mastery"],"openrouter_paid":true}}`
+- `PREP_AUTH_SECRET` signs auth cookies. If omitted, the app falls back to
+  `PREP_ADMIN_ACCESS_CODE`, then `OPENROUTER_API_KEY`.
+- `PREP_ADMIN_ACCESS_CODE` and `PREP_ACCESS_CODES` still work as fallback URL/header/cookie
+  access-code gates, but the UI uses username/passcode login.
+- Public server-side OpenRouter traffic is forced to free models only. The default is
+  `openrouter/free`, OpenRouter's free-model router. Add paid model IDs to
+  `PREP_OPENROUTER_PAID_MODELS`; they are only shown and accepted for access-code users
+  or signed-in users with `"openrouter_paid": true`.
+
+Visitors sign in with username/passcode in the form. The server sets an HttpOnly,
+same-site signed cookie and filters `/api/library`, course routes, `/api/config`, and
+`/api/generate` accordingly. BYOK requests are not restricted because the visitor is using
+their own provider key.
+
 ## Learning preferences
 
 The generator supports a **Study preference** dropdown:
@@ -75,6 +98,9 @@ The generator can combine multiple source types in one request:
      `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`
    - (optional) OpenRouter attribution headers: `OPENROUTER_SITE_URL` and
      `OPENROUTER_APP_NAME`
+   - (optional) access gates: `PREP_LIBRARY_PUBLIC_IDS`, `PREP_AUTH_USERS`,
+     `PREP_AUTH_SECRET`, `PREP_ACCESS_CODES`, `PREP_ADMIN_ACCESS_CODE`,
+     `PREP_OPENROUTER_FREE_MODELS`, `PREP_OPENROUTER_PAID_MODELS`
    - (optional) web search source: `TAVILY_API_KEY`
    - (optional) shared rate limit: `UPSTASH_REDIS_REST_URL` and
      `UPSTASH_REDIS_REST_TOKEN` (or Vercel KV REST equivalents)
