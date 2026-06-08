@@ -292,6 +292,8 @@ def main():
           style_opts == {"mixed", "visual", "practice", "read", "audio"}, str(sorted(style_opts)))
     check("ui: generated courses saved locally",
           "prepareme_generated_courses_v1" in ui and "storeGeneratedCourse" in ui)
+    check("ui: BYOK exposes OpenRouter paid models",
+          "const byok=!!document.getElementById('api_key').value.trim();" in ui)
 
     env_example = (ROOT / ".env.example").read_text()
     missing_env = [v for v in gen.ENV_KEYS.values() if v not in env_example]
@@ -404,7 +406,28 @@ def main():
     course2, _ = gen.build_course("i", "mat", "adult", tpl_path, provider="gemini", api_key="x")
     check("build_course: recovers on retry", course2 == rich)
 
-    # 8c: always invalid -> raises after retry
+    # 8c: schema-valid but thin output falls back unless strict mode is enabled
+    gen.PROVIDERS["gemini"] = lambda s, u, k, m: valid_json.replace('"Rich Course"', '"Unused"')
+    gen.PROVIDERS["openai"] = lambda s, u, k, m: json.dumps(good)
+    old_log_disabled = gen.log.disabled
+    gen.log.disabled = True
+    try:
+        fallback_course, _ = gen.build_course("i", "mat", "adult", tpl_path,
+                                              provider="openai", api_key="x")
+        check("build_course: design-short schema-valid fallback returns",
+              fallback_course["meta"].get("qualityWarning") and fallback_course["meta"]["title"] == "T")
+    finally:
+        gen.log.disabled = old_log_disabled
+    os.environ["PREP_STRICT_GENERATION"] = "1"
+    try:
+        expect_raises("build_course: strict mode rejects design-short output",
+                      lambda: gen.build_course("i", "mat", "adult", tpl_path,
+                                               provider="openai", api_key="x"),
+                      gen.GenerationError)
+    finally:
+        os.environ.pop("PREP_STRICT_GENERATION", None)
+
+    # 8d: always invalid -> raises after retry
     gen.PROVIDERS["gemini"] = lambda s, u, k, m: invalid_json
     expect_raises("build_course: fails after retries",
                   lambda: gen.build_course("i", "mat", "adult", tpl_path,
@@ -589,7 +612,8 @@ def main():
               alice_ids == {"gen-ai-learning-lab", "grayscale-interview-prep"}, str(alice_ids))
         devin_ids = {c["id"] for c in idx._filter_library_for_request(devin_req)}
         check("auth: signed session unlocks all courses",
-              devin_ids == {"gen-ai-learning-lab", "grayscale-interview-prep", "grayscale-ppm-mastery"},
+              devin_ids == {"gen-ai-learning-lab", "grayscale-interview-prep",
+                            "grayscale-ppm-mastery", "web3-security-foundation"},
               str(devin_ids))
         check("auth: tampered session ignored",
               idx._access_for_request(DummyRequest(cookies={idx.SESSION_COOKIE: "bad.token"}))["user"]

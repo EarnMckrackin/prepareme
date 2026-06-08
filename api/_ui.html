@@ -529,7 +529,8 @@ function refreshModelOptions(){
     return;
   }
   const free=CONFIG.openrouter?.free_models||['openrouter/free'];
-  const paid=CONFIG.access?.openrouter_paid ? (CONFIG.openrouter?.paid_models||[]) : [];
+  const byok=!!document.getElementById('api_key').value.trim();
+  const paid=(CONFIG.access?.openrouter_paid || byok) ? (CONFIG.openrouter?.paid_models||[]) : [];
   const options=[...free,...paid.filter(x=>!free.includes(x))];
   model.innerHTML='';
   options.forEach(m=>{
@@ -565,6 +566,7 @@ function refreshHint(){
 loadConfig();
 loadLibrary();
 provider.onchange=refreshHint;
+document.getElementById('api_key').addEventListener('input',refreshHint);
 
 let lastUrl=null;
 f.onsubmit=async(e)=>{

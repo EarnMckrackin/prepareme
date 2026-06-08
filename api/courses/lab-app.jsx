@@ -3,8 +3,10 @@
    ============================================================ */
 
 function App() {
-  const [view, setView] = React.useState('dashboard'); // 'dashboard' | 'course'
-  const [activeCourseId, setActiveCourseId] = React.useState(null);
+  const defaultCourse = window.DEFAULT_COURSE_ID || null;
+  const hasDefaultCourse = !!(defaultCourse && (window.LIBRARY_COURSES || []).find(c => c.id === defaultCourse));
+  const [view, setView] = React.useState(hasDefaultCourse ? 'course' : 'dashboard'); // 'dashboard' | 'course'
+  const [activeCourseId, setActiveCourseId] = React.useState(hasDefaultCourse ? defaultCourse : null);
   const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
 
   React.useEffect(() => {

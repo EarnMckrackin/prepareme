@@ -334,13 +334,13 @@ LIBRARY_COURSES = [
         "title": "Grayscale Interview Prep",
         "subtitle": "Principal PM interview room",
         "description": (
-            "Generated course for Grayscale PPM interview practice, with "
-            "company thesis, risk language, drills, flashcards, and answer patterns."
+            "Lab-style interview practice for the Principal PM loop: executive story, "
+            "Diana/AI, architecture defense, risk controls, pushback, and 90-day plan."
         ),
-        "tags": ["Interview", "Grayscale", "PPM", "Fintech"],
-        "level": "Generated",
-        "modules": "8 modules",
-        "href": "/courses/grayscale-interview-prep-generated.html",
+        "tags": ["Interview", "Grayscale", "AI", "Risk"],
+        "level": "Lab",
+        "modules": "6 stages",
+        "href": "/courses/grayscale-interview-prep.html",
         "gated": True,
     },
     {
@@ -348,13 +348,27 @@ LIBRARY_COURSES = [
         "title": "Grayscale PPM Mastery",
         "subtitle": "Product, fintech, Web3, architecture",
         "description": (
-            "Generated mastery course covering asset management, digital assets, "
-            "operating architecture, strategy, mentoring, quizzes, and scenario drills."
+            "Lab-style mastery course covering fund economics, digital asset mechanics, "
+            "operating architecture, product strategy, and Principal PM leadership."
         ),
         "tags": ["PPM", "Web3", "Architecture", "Quiz"],
-        "level": "Generated",
-        "modules": "9 modules",
-        "href": "/courses/grayscale-ppm-mastery-generated.html",
+        "level": "Lab",
+        "modules": "5 stages",
+        "href": "/courses/grayscale-ppm-mastery.html",
+        "gated": True,
+    },
+    {
+        "id": "web3-security-foundation",
+        "title": "Web3 + Security Foundation",
+        "subtitle": "Custody, chain mechanics, threat modeling",
+        "description": (
+            "Interview-focused foundation for Web3 and security best practices: chain data, "
+            "custody, key controls, threat modeling, secure SDLC, vendors, and incidents."
+        ),
+        "tags": ["Web3", "Security", "Custody", "SDLC"],
+        "level": "Foundation",
+        "modules": "4 stages",
+        "href": "/courses/web3-security-foundation.html",
         "gated": True,
     },
 ]
@@ -365,6 +379,7 @@ COURSE_ID_BY_FILENAME = {
     "grayscale-interview-prep-generated.html": "grayscale-interview-prep",
     "grayscale-ppm-mastery.html": "grayscale-ppm-mastery",
     "grayscale-ppm-mastery-generated.html": "grayscale-ppm-mastery",
+    "web3-security-foundation.html": "web3-security-foundation",
 }
 
 ACCESS_COOKIE = "prep_access_code"

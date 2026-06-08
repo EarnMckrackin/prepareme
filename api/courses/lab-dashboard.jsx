@@ -3,6 +3,17 @@
    ============================================================ */
 
 function Dashboard({ courses, onOpenCourse, allState }) {
+  const config = window.LAB_CONFIG || {
+    brand: 'Learning Lab',
+    title: 'Your courses',
+    description: 'Master Gen AI concepts through doing. Each module builds on the last — learn the concept, see it in action, then prove you understand.',
+    eyebrow: 'Advanced RAG & Agentic Systems — Level 2',
+    nextEyebrow: "What's next",
+    nextTitle: 'Start with Fine-Tuning',
+    nextBody: 'Module A is the foundation — it teaches you when to improve the model itself vs. improving what you feed it. Complete it to unlock personalized recommendations for your next module.',
+    nextCourseId: 'fine-tuning',
+    nextCta: 'Begin Module A →',
+  };
   const completedIds = [];
   courses.forEach(course => {
     if (course.stages && course.stages.length > 0) {
@@ -29,17 +40,17 @@ function Dashboard({ courses, onOpenCourse, allState }) {
             fontSize: 18, fontWeight: 700, color: '#fff',
           }}>L</div>
           <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', letterSpacing: '-.01em' }}>
-            Learning Lab
+            {config.brand}
           </span>
         </div>
         <h1 style={{
           fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 700,
           color: 'var(--text-1)', lineHeight: 1.2, marginBottom: 8,
         }}>
-          Your courses
+          {config.title}
         </h1>
         <p style={{ fontSize: 15, color: 'var(--text-2)', maxWidth: 520 }}>
-          Master Gen AI concepts through doing. Each module builds on the last — learn the concept, see it in action, then prove you understand.
+          {config.description}
         </p>
       </header>
 
@@ -50,7 +61,7 @@ function Dashboard({ courses, onOpenCourse, allState }) {
         {/* Course grid */}
         <section style={{ marginTop: 40 }}>
           <div className="eyebrow" style={{ marginBottom: 16, color: 'var(--text-3)' }}>
-            Advanced RAG & Agentic Systems — Level 2
+            {config.eyebrow}
           </div>
           <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
@@ -86,15 +97,15 @@ function Dashboard({ courses, onOpenCourse, allState }) {
               padding: 28, borderRadius: 'var(--r-lg)',
               background: 'var(--bg-surface)', border: '1px solid var(--border)',
             }}>
-              <div className="eyebrow" style={{ color: 'var(--warm)', marginBottom: 8 }}>What's next</div>
+              <div className="eyebrow" style={{ color: 'var(--warm)', marginBottom: 8 }}>{config.nextEyebrow}</div>
               <h3 style={{ fontSize: 18, color: 'var(--text-1)', marginBottom: 8 }}>
-                Start with Fine-Tuning
+                {config.nextTitle}
               </h3>
               <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.7, marginBottom: 16 }}>
-                Module A is the foundation — it teaches you when to improve the model itself vs. improving what you feed it. Complete it to unlock personalized recommendations for your next module.
+                {config.nextBody}
               </p>
-              <button className="pill-btn primary" onClick={() => onOpenCourse('fine-tuning')}>
-                Begin Module A →
+              <button className="pill-btn primary" onClick={() => onOpenCourse(config.nextCourseId)}>
+                {config.nextCta}
               </button>
             </div>
           </section>

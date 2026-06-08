@@ -3,1078 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grayscale PPM — Mastery Course</title>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4/dist/index.global.js"></script>
+    <title>Grayscale Lab — PPM Mastery</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #030712; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        .tab-active { border-color: #a855f7; color: #c084fc; background: rgba(168, 85, 247, 0.08); }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        [x-cloak] { display: none !important; }
-        .animate-fade { animation: fadeIn 0.25s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        details > summary { list-style: none; cursor: pointer; }
-        details > summary::-webkit-details-marker { display: none; }
-        @media print {
-            body { background: #fff !important; color: #000 !important; }
-            header, .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            .cheat-card { break-inside: avoid; border: 1px solid #ccc !important; background: #fff !important; }
-            .cheat-card * { color: #000 !important; }
-            .cheat-accent { color: #6b21a8 !important; }
-        }
+    :root {
+        --bg-deep: #0b0d13;
+        --bg-base: #111318;
+        --bg-surface: #191c24;
+        --bg-elevated: #21252f;
+        --bg-hover: #282d3a;
+        --border: #272b38;
+        --border-active: #3a4055;
+
+        --text-1: #e6eaf3;
+        --text-2: #8b92a8;
+        --text-3: #5a6178;
+        --text-inv: #111318;
+
+        --accent: #7b6cf6;
+        --accent-hover: #9589ff;
+        --accent-soft: rgba(123,108,246,.10);
+        --accent-muted: rgba(123,108,246,.25);
+        --warm: #f0a030;
+        --warm-soft: rgba(240,160,48,.10);
+        --warm-muted: rgba(240,160,48,.30);
+        --success: #34d399;
+        --success-soft: rgba(52,211,153,.10);
+        --error: #f87171;
+        --error-soft: rgba(248,113,113,.10);
+        --info: #60a5fa;
+        --info-soft: rgba(96,165,250,.10);
+
+        --font-display: 'Source Serif 4', Georgia, serif;
+        --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+        --font-mono: 'JetBrains Mono', monospace;
+
+        --r-sm: 8px;
+        --r-md: 12px;
+        --r-lg: 16px;
+        --r-xl: 22px;
+        --r-pill: 100px;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: var(--font-body);
+        background: var(--bg-deep);
+        color: var(--text-1);
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-active); border-radius: 6px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+    /* Typography */
+    h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.25; }
+    code, pre { font-family: var(--font-mono); }
+
+    /* Utility */
+    .mono { font-family: var(--font-mono); }
+    .serif { font-family: var(--font-display); }
+
+    /* Focus */
+    :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-radius: 4px;
+    }
+
+    /* Transitions */
+    .t-all { transition: all 180ms ease-out; }
+    .t-colors { transition: color 150ms, background 150ms, border-color 150ms, box-shadow 150ms; }
+
+    /* Code blocks */
+    .code-block {
+        background: var(--bg-deep);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        padding: 16px 20px;
+        font-size: 13px;
+        line-height: 1.7;
+        overflow-x: auto;
+        color: var(--text-2);
+        white-space: pre;
+        tab-size: 4;
+    }
+    .code-block .kw { color: #c792ea; }
+    .code-block .fn { color: #82aaff; }
+    .code-block .str { color: #c3e88d; }
+    .code-block .num { color: #f78c6c; }
+    .code-block .cm { color: #546e7a; font-style: italic; }
+    .code-block .op { color: #89ddff; }
+    .code-block .var { color: #e6eaf3; }
+    .code-block .dec { color: #ffcb6b; }
+    .code-block .param { color: #f07178; }
+    .code-block .cls { color: #ffcb6b; }
+
+    /* Fade in animation */
+    .fade-up, .fade-in { opacity: 1; }
+
+    /* Progress ring */
+    .progress-ring { transform: rotate(-90deg); }
+    .progress-ring__bg { stroke: var(--border); }
+    .progress-ring__fill { stroke: var(--accent); transition: stroke-dashoffset 600ms ease-out; stroke-linecap: round; }
+
+    /* Pill button */
+    .pill-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 8px 18px;
+        border-radius: var(--r-pill);
+        border: 1px solid var(--border);
+        background: var(--bg-surface);
+        color: var(--text-1);
+        font-family: var(--font-body);
+        font-size: 13px; font-weight: 600;
+        cursor: pointer;
+        transition: all 150ms;
+    }
+    .pill-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .pill-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .pill-btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    .pill-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .pill-btn.sm { padding: 5px 12px; font-size: 12px; }
+    .pill-btn.success { background: var(--success); border-color: var(--success); color: var(--text-inv); }
+
+    /* Mastery dot */
+    .mastery-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        flex-shrink: 0;
+        transition: background 300ms, box-shadow 300ms;
+    }
+    .mastery-dot.unknown { background: var(--border); }
+    .mastery-dot.learning { background: var(--warm); box-shadow: 0 0 6px var(--warm-muted); }
+    .mastery-dot.mastered { background: var(--success); box-shadow: 0 0 6px rgba(52,211,153,.3); }
+
+    /* Eyebrow */
+    .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--text-3);
+    }
+
+    /* Select none for interactive elements */
+    button, [role="button"] { user-select: none; }
+
+    /* Print */
+    @media print { body { background: #fff; color: #000; } }
     </style>
 </head>
-<body class="text-gray-100 min-h-screen selection:bg-purple-500 selection:text-white bg-gray-950" x-data="course">
+<body>
+    <div id="root"></div>
 
-    <!-- HEADER -->
-    <header class="border-b border-gray-800 bg-gray-900/40 backdrop-blur sticky top-0 z-50 px-4 py-3">
-        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="h-3 w-3 rounded-full bg-purple-500 animate-pulse"></div>
-                <h1 class="text-base font-bold tracking-wider text-gray-100 font-mono uppercase">Grayscale PPM — Mastery Course</h1>
-            </div>
-            <div class="font-mono text-xs text-gray-500">John Canneto &nbsp;//&nbsp; Principal Product Manager track</div>
-        </div>
-    </header>
+    <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-    <main class="max-w-7xl mx-auto px-4 py-8">
-        <!-- TABS -->
-        <div class="flex border-b border-gray-800 overflow-x-auto scrollbar-hide mb-8 gap-1 font-mono text-xs">
-            <button @click="tab='plan'" :class="tab==='plan'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">0. 7-Day Plan</button>
-            <button @click="tab='company'" :class="tab==='company'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">★ The Company</button>
-            <button @click="tab='fintech'" :class="tab==='fintech'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">1. Fintech Core</button>
-            <button @click="tab='web3'" :class="tab==='web3'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">2. Web3 &amp; Digital Assets</button>
-            <button @click="tab='arch'" :class="tab==='arch'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">3. System Architecture</button>
-            <button @click="tab='frameworks'" :class="tab==='frameworks'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">4. Strategic Frameworks</button>
-            <button @click="tab='mentoring'" :class="tab==='mentoring'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">5. PM Mentoring</button>
-            <button @click="tab='recall'" :class="tab==='recall'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">6. Active Recall</button>
-            <button @click="tab='quiz'" :class="tab==='quiz'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">7. Mastery Quiz ✦</button>
-            <button @click="tab='seq'" :class="tab==='seq'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">8. Arch Sequencing ⟳</button>
-            <button @click="tab='tradeoff'" :class="tab==='tradeoff'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">9. Trade-off Drills ⚖</button>
-            <button @click="tab='conflict'" :class="tab==='conflict'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">10. Conflict Scenarios 🎯</button>
-            <button @click="tab='cheat'" :class="tab==='cheat'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">11. Cheat-Sheet ⎙</button>
-            <button @click="tab='glossary'" :class="tab==='glossary'?'tab-active':'border-transparent text-gray-400 hover:text-gray-200'" class="px-4 py-3 border-b-2 transition-all whitespace-nowrap">12. Glossary</button>
-        </div>
-
-        <!-- ============ TAB: THE COMPANY ============ -->
-        <div x-show="tab==='company'" class="space-y-6 animate-fade" x-cloak>
-            <div class="bg-gradient-to-r from-purple-950/30 to-gray-900/60 border border-purple-900/40 p-6 rounded-xl">
-                <h3 class="text-xs font-bold tracking-widest text-purple-400 uppercase font-mono mb-2">// Know the house before you walk in</h3>
-                <h2 class="text-xl font-black text-white mb-3 tracking-tight">Grayscale: the firm that forced the Bitcoin ETF open.</h2>
-                <p class="text-gray-300 leading-relaxed text-sm max-w-4xl">
-                    Founded in 2013, Grayscale is the largest crypto-focused asset manager in the world, roughly $35B AUM as of late 2025, with 40+ products and one of the longest track records in the space. Its identity is built on a single defining act: it sued the SEC, won unanimously, and converted GBTC into a spot Bitcoin ETF in January 2024 — opening the entire US market. Everything below is current as of early 2026; verify any specific number live before you cite it, since AUM and product details move.
-                </p>
-                <p class="text-[11px] text-gray-500 mt-3 font-mono">Note: figures are point-in-time from public filings/press. Treat them as directional context, not talking-point precision. Don't lead with a number you haven't re-checked the week of the onsite.</p>
-            </div>
-
-            <div class="grid md:grid-cols-3 gap-4 text-sm">
-                <div class="bg-gray-900/60 border border-gray-800 p-5 rounded-xl space-y-1">
-                    <div class="text-emerald-400 font-mono font-bold text-[11px]">POSITION</div>
-                    <h4 class="font-bold text-white">Pioneer, now challenged</h4>
-                    <p class="text-gray-400 leading-relaxed text-xs">First mover and brand leader, but now competing with giants like BlackRock whose spot ETFs undercut it on fee. The strategic tension: defend the franchise while out-innovating on breadth.</p>
-                </div>
-                <div class="bg-gray-900/60 border border-gray-800 p-5 rounded-xl space-y-1">
-                    <div class="text-blue-400 font-mono font-bold text-[11px]">BUSINESS MODEL</div>
-                    <h4 class="font-bold text-white">Management fees on AUM</h4>
-                    <p class="text-gray-400 leading-relaxed text-xs">Revenue is fee-based on assets, not transaction-based — steadier than an exchange, but it rises and falls with crypto prices and flows. Revenue dipped ~20% in the first nine months of 2025.</p>
-                </div>
-                <div class="bg-gray-900/60 border border-gray-800 p-5 rounded-xl space-y-1">
-                    <div class="text-amber-400 font-mono font-bold text-[11px]">OWNERSHIP</div>
-                    <h4 class="font-bold text-white">DCG-controlled, eyeing public</h4>
-                    <p class="text-gray-400 leading-relaxed text-xs">Subsidiary of Barry Silbert's Digital Currency Group. Filed an S-1 to list on NYSE as "GRAY" (Up-C, dual-class; DCG keeps control). The listing has been paced against market conditions.</p>
-                </div>
-            </div>
-
-            <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
-                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">The product suite (what they actually sell)</h3>
-                <div class="grid md:grid-cols-2 gap-3 text-xs">
-                    <template x-for="p in gsProducts" :key="p.name">
-                        <div class="bg-gray-950 border border-gray-800 rounded-lg p-4 space-y-1">
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-purple-300 mono" x-text="p.name"></span>
-                                <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-gray-900 border border-gray-700 text-gray-400" x-text="p.tag"></span>
-                            </div>
-                            <p class="text-gray-400 leading-relaxed" x-text="p.desc"></p>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-3">
-                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">Leadership & culture signals</h3>
-                <div class="space-y-2 text-xs">
-                    <div class="border-l-2 border-purple-500/50 pl-3 text-gray-300 leading-relaxed"><strong class="text-white">CEO Peter Mintzberg</strong> (since Aug 2024) came from Goldman Sachs (Global Head of Strategy, AWM), with prior strategy/M&A roles at BlackRock, Apollo, Invesco, and a McKinsey start. He's a TradFi-strategy operator deliberately bringing institutional discipline to a crypto-native firm — the same bridge you'd be hired to build on the product side.</div>
-                    <div class="border-l-2 border-purple-500/50 pl-3 text-gray-300 leading-relaxed"><strong class="text-white">Founder/chairman Barry Silbert</strong> runs parent DCG. Founders-with-conviction culture: the SEC lawsuit was a bet-the-reputation move that defined the brand.</div>
-                    <div class="border-l-2 border-purple-500/50 pl-3 text-gray-300 leading-relaxed"><strong class="text-white">Research-forward identity.</strong> Grayscale publishes serious market research (e.g. the "~5% allocation" thesis) and frames itself as institutional-grade access, not a retail trading venue. Stamford, CT HQ; deep TradFi pedigree on the leadership bench.</div>
-                    <div class="border-l-2 border-purple-500/50 pl-3 text-gray-300 leading-relaxed"><strong class="text-white">The moment you're joining.</strong> Maturing from "the GBTC company" into a diversified, multi-product, soon-to-be-public asset manager — exactly why an AI-workflow/operating-discipline Principal PM mandate exists right now.</div>
-                </div>
-            </div>
-
-            <div class="bg-gradient-to-br from-purple-950/40 to-gray-900 border border-purple-900/50 rounded-xl p-6 space-y-3">
-                <h3 class="text-sm font-bold text-purple-300 font-mono uppercase tracking-wide">How to use this in the room</h3>
-                <div class="space-y-2 text-xs text-gray-300 leading-relaxed">
-                    <p><strong class="text-white">Connect your pitch to their inflection.</strong> They're scaling product breadth and heading toward public-company operating rigor. Your founder + Stellar data-platform background maps directly onto "establish product operating discipline and AI-driven workflows."</p>
-                    <p><strong class="text-white">Show you respect the regulated posture.</strong> The deterministic-foundation, audit-first instinct from your other prep is exactly the maturity a soon-to-be-public, SEC-registered asset manager needs.</p>
-                    <p><strong class="text-white">Don't overclaim crypto-nativeness.</strong> Mintzberg himself is a TradFi operator who took time to learn the space. Your honest "I bring product and platform discipline and I'm deep on the architecture" is the right register — it mirrors how their own CEO is positioned.</p>
-                    <p><strong class="text-white">Ask sharp company questions.</strong> How does the public-listing timeline change product operating requirements? Where does the org sit today on project-execution vs product-ownership? Which workflow is the most painful to run manually right now?</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============ TAB 0: 7-DAY PLAN ============ -->
-        <div x-show="tab==='plan'" class="space-y-6 animate-fade" x-cloak>
-            <div class="bg-gradient-to-r from-purple-950/30 to-gray-900/60 border border-purple-900/40 p-6 rounded-xl">
-                <h3 class="text-xs font-bold tracking-widest text-purple-400 uppercase font-mono mb-2">// How to use this week</h3>
-                <h2 class="text-xl font-black text-white mb-3 tracking-tight">Learn the domain, then drill until it's reflex.</h2>
-                <p class="text-gray-300 leading-relaxed text-sm max-w-4xl">
-                    Tabs 1–5 are the knowledge layer: read them like a textbook, expand every panel. Tabs 6–10 are the reinforcement layer: flashcards, a scored quiz with a streak, sequencing puzzles, trade-off drills, and conflict scenarios. The pattern that works: read a domain in the morning, drill it the same evening, then re-drill cold the next day. Active recall beats re-reading every time. Aim to get the Mastery Quiz to 18+/22 by Friday and to clear every conflict scenario without peeking.
-                </p>
-            </div>
-
-            <div class="grid md:grid-cols-2 gap-4 text-sm">
-                <template x-for="d in plan" :key="d.day">
-                    <div class="bg-gray-900/60 border border-gray-800 p-5 rounded-xl space-y-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-purple-400 font-mono font-bold text-[11px]" x-text="d.day"></span>
-                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-950 border border-gray-700 text-gray-400" x-text="d.focus"></span>
-                        </div>
-                        <h4 class="font-bold text-white" x-text="d.title"></h4>
-                        <p class="text-gray-400 leading-relaxed text-xs" x-text="d.detail"></p>
-                    </div>
-                </template>
-            </div>
-
-            <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-3">
-                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">The five things to be able to do cold by Friday</h3>
-                <div class="grid md:grid-cols-1 gap-2 text-xs">
-                    <div class="border-l-2 border-purple-500/50 pl-3 text-gray-300 leading-relaxed">Explain NAV, creation/redemption, custody, and why a digital-asset fund's operational risk differs from a traditional one — in plain language, to a non-technical exec.</div>
-                    <div class="border-l-2 border-purple-500/50 pl-3 text-gray-300 leading-relaxed">Whiteboard an event-driven ingest-to-ledger pipeline and defend every component, every failure mode, and every build-vs-buy call.</div>
-                    <div class="border-l-2 border-purple-500/50 pl-3 text-gray-300 leading-relaxed">Pick and apply the right prioritization framework on the spot, and articulate the difference between sequencing and priority.</div>
-                    <div class="border-l-2 border-purple-500/50 pl-3 text-gray-300 leading-relaxed">Describe how you'd move a team from project execution to product ownership in 90 days, with concrete operating mechanics.</div>
-                    <div class="border-l-2 border-purple-500/50 pl-3 text-gray-300 leading-relaxed">Navigate a stakeholder or direct-report conflict toward an outcome without either steamrolling or caving.</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============ TAB 1: FINTECH CORE ============ -->
-        <div x-show="tab==='fintech'" class="space-y-4 animate-fade" x-cloak>
-            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">Asset management & fund operations — the language of the business</h3>
-                <p class="text-xs text-gray-400 mt-1">Grayscale is an asset manager first. Expand each concept. The <span class="text-amber-400 font-semibold">PM angle</span> is why this matters to product, not just what it is.</p>
-            </div>
-            <template x-for="c in fintech" :key="c.key">
-                <details class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden" :open="c.open">
-                    <summary class="flex items-center justify-between p-5 hover:bg-gray-900/60">
-                        <div class="flex items-center gap-3">
-                            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded" :class="c.badgeClass" x-text="c.tag"></span>
-                            <h4 class="font-bold text-white text-sm" x-text="c.name"></h4>
-                        </div>
-                        <span class="text-gray-600 text-xs font-mono">expand</span>
-                    </summary>
-                    <div class="px-5 pb-5 space-y-3 text-xs border-t border-gray-800 pt-4">
-                        <div><span class="text-emerald-400 font-mono uppercase text-[10px] tracking-wider block mb-0.5">What it is</span><p class="text-gray-300 leading-relaxed" x-text="c.what"></p></div>
-                        <div><span class="text-blue-400 font-mono uppercase text-[10px] tracking-wider block mb-0.5">Why it matters to product</span><p class="text-gray-300 leading-relaxed" x-text="c.pm"></p></div>
-                        <div class="bg-gray-950 border border-gray-800 rounded-lg p-3"><span class="text-amber-400 uppercase tracking-wider text-[10px] font-mono block mb-0.5">Sharp follow-up</span><p class="text-gray-300 leading-relaxed" x-text="c.trap"></p></div>
-                    </div>
-                </details>
-            </template>
-        </div>
-
-        <!-- ============ TAB 2: WEB3 ============ -->
-        <div x-show="tab==='web3'" class="space-y-4 animate-fade" x-cloak>
-            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">Digital assets — where crypto changes the operational physics</h3>
-                <p class="text-xs text-gray-400 mt-1">The fintech concepts still apply, but the settlement, custody, and finality models are different. This is the layer where most traditional-finance PMs are weakest — your edge.</p>
-            </div>
-            <template x-for="c in web3" :key="c.key">
-                <details class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden" :open="c.open">
-                    <summary class="flex items-center justify-between p-5 hover:bg-gray-900/60">
-                        <div class="flex items-center gap-3">
-                            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded" :class="c.badgeClass" x-text="c.tag"></span>
-                            <h4 class="font-bold text-white text-sm" x-text="c.name"></h4>
-                        </div>
-                        <span class="text-gray-600 text-xs font-mono">expand</span>
-                    </summary>
-                    <div class="px-5 pb-5 space-y-3 text-xs border-t border-gray-800 pt-4">
-                        <div><span class="text-emerald-400 font-mono uppercase text-[10px] tracking-wider block mb-0.5">What it is</span><p class="text-gray-300 leading-relaxed" x-text="c.what"></p></div>
-                        <div><span class="text-blue-400 font-mono uppercase text-[10px] tracking-wider block mb-0.5">Why it matters to product</span><p class="text-gray-300 leading-relaxed" x-text="c.pm"></p></div>
-                        <div class="bg-gray-950 border border-gray-800 rounded-lg p-3"><span class="text-amber-400 uppercase tracking-wider text-[10px] font-mono block mb-0.5">Sharp follow-up</span><p class="text-gray-300 leading-relaxed" x-text="c.trap"></p></div>
-                    </div>
-                </details>
-            </template>
-        </div>
-
-        <!-- ============ TAB 3: SYSTEM ARCHITECTURE ============ -->
-        <div x-show="tab==='arch'" class="space-y-4 animate-fade" x-cloak>
-            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">The patterns a technical PM defends without an engineer in the room</h3>
-                <p class="text-xs text-gray-400 mt-1">You don't write the code, but you own the call. Each pattern: what problem it solves, when it's wrong, and the trap that exposes whether you actually understand it.</p>
-            </div>
-            <template x-for="c in archConcepts" :key="c.key">
-                <details class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden" :open="c.open">
-                    <summary class="flex items-center justify-between p-5 hover:bg-gray-900/60">
-                        <div class="flex items-center gap-3">
-                            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded" :class="c.badgeClass" x-text="c.tag"></span>
-                            <h4 class="font-bold text-white text-sm" x-text="c.name"></h4>
-                        </div>
-                        <span class="text-gray-600 text-xs font-mono">expand</span>
-                    </summary>
-                    <div class="px-5 pb-5 space-y-3 text-xs border-t border-gray-800 pt-4">
-                        <div><span class="text-emerald-400 font-mono uppercase text-[10px] tracking-wider block mb-0.5">Solves</span><p class="text-gray-300 leading-relaxed" x-text="c.solves"></p></div>
-                        <div><span class="text-red-400 font-mono uppercase text-[10px] tracking-wider block mb-0.5">When it's the wrong tool</span><p class="text-gray-300 leading-relaxed" x-text="c.wrong"></p></div>
-                        <div class="bg-gray-950 border border-gray-800 rounded-lg p-3"><span class="text-amber-400 uppercase tracking-wider text-[10px] font-mono block mb-0.5">The trap</span><p class="text-gray-300 leading-relaxed" x-text="c.trap"></p></div>
-                    </div>
-                </details>
-            </template>
-        </div>
-
-        <!-- ============ TAB 4: STRATEGIC FRAMEWORKS ============ -->
-        <div x-show="tab==='frameworks'" class="space-y-4 animate-fade" x-cloak>
-            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">Frameworks — and, more importantly, when each one is the wrong choice</h3>
-                <p class="text-xs text-gray-400 mt-1">Senior PMs aren't graded on naming frameworks. They're graded on picking the right one for the situation and knowing its failure mode.</p>
-            </div>
-            <div class="grid md:grid-cols-2 gap-4">
-                <template x-for="f in frameworks" :key="f.key">
-                    <div class="bg-gray-900/60 border border-gray-800 p-5 rounded-xl space-y-2 text-xs">
-                        <div class="flex items-center justify-between">
-                            <h4 class="font-bold text-white text-sm" x-text="f.name"></h4>
-                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300" x-text="f.use"></span>
-                        </div>
-                        <p class="text-gray-300 leading-relaxed"><span class="text-emerald-400 font-mono">Core:</span> <span x-text="f.core"></span></p>
-                        <p class="text-gray-400 leading-relaxed"><span class="text-red-400 font-mono">Fails when:</span> <span x-text="f.fails"></span></p>
-                    </div>
-                </template>
-            </div>
-        </div>
-
-        <!-- ============ TAB 5: PM MENTORING ============ -->
-        <div x-show="tab==='mentoring'" class="space-y-4 animate-fade" x-cloak>
-            <div class="bg-gradient-to-r from-purple-950/30 to-gray-900/60 border border-purple-900/40 p-6 rounded-xl">
-                <h3 class="text-xs font-bold tracking-widest text-purple-400 uppercase font-mono mb-2">// The Principal mandate hiding in the JD</h3>
-                <h2 class="text-lg font-black text-white mb-2 tracking-tight">"Shift the organization from project execution to product ownership."</h2>
-                <p class="text-gray-300 leading-relaxed text-sm max-w-4xl">This is the leadership half of the IC role — coaching PMs and elevating the craft without a management title. Master this and you make the case for the Head role from inside the Principal seat. Below: the maturity model, the coaching mechanics, and how to do it without authority.</p>
-            </div>
-            <template x-for="c in mentoring" :key="c.key">
-                <details class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden" :open="c.open">
-                    <summary class="flex items-center justify-between p-5 hover:bg-gray-900/60">
-                        <div class="flex items-center gap-3">
-                            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded" :class="c.badgeClass" x-text="c.tag"></span>
-                            <h4 class="font-bold text-white text-sm" x-text="c.name"></h4>
-                        </div>
-                        <span class="text-gray-600 text-xs font-mono">expand</span>
-                    </summary>
-                    <div class="px-5 pb-5 space-y-3 text-xs border-t border-gray-800 pt-4">
-                        <div><span class="text-emerald-400 font-mono uppercase text-[10px] tracking-wider block mb-0.5">The idea</span><p class="text-gray-300 leading-relaxed" x-text="c.idea"></p></div>
-                        <div><span class="text-blue-400 font-mono uppercase text-[10px] tracking-wider block mb-0.5">How you'd actually do it</span><p class="text-gray-300 leading-relaxed" x-text="c.how"></p></div>
-                        <div class="bg-gray-950 border border-gray-800 rounded-lg p-3"><span class="text-amber-400 uppercase tracking-wider text-[10px] font-mono block mb-0.5">Say it like this</span><p class="text-gray-300 leading-relaxed italic" x-text="c.say"></p></div>
-                    </div>
-                </details>
-            </template>
-        </div>
-
-        <!-- ============ TAB 6: ACTIVE RECALL ============ -->
-        <div x-show="tab==='recall'" class="space-y-6 animate-fade" x-cloak>
-            <div class="max-w-2xl mx-auto bg-gray-900/50 border border-gray-800 rounded-xl p-4 flex items-center justify-between gap-6 font-mono text-xs">
-                <span class="text-gray-400">Mastered:</span>
-                <div class="flex-1 h-2 bg-gray-950 rounded-full overflow-hidden border border-gray-800">
-                    <div class="h-full bg-gradient-to-r from-purple-600 to-fuchsia-500 transition-all" :style="'width:'+(mastered.length/cards.length*100)+'%'"></div>
-                </div>
-                <span class="text-purple-300 font-bold" x-text="mastered.length+'/'+cards.length"></span>
-            </div>
-            <div class="max-w-2xl mx-auto flex flex-wrap gap-2 justify-center font-mono text-[10px]">
-                <button @click="deck='all'; ci=0; ans=false" :class="deck==='all'?'bg-purple-600 text-white':'bg-gray-900 text-gray-400 border border-gray-800'" class="px-3 py-1.5 rounded">All</button>
-                <button @click="deck='fintech'; ci=0; ans=false" :class="deck==='fintech'?'bg-purple-600 text-white':'bg-gray-900 text-gray-400 border border-gray-800'" class="px-3 py-1.5 rounded">Fintech</button>
-                <button @click="deck='web3'; ci=0; ans=false" :class="deck==='web3'?'bg-purple-600 text-white':'bg-gray-900 text-gray-400 border border-gray-800'" class="px-3 py-1.5 rounded">Web3</button>
-                <button @click="deck='arch'; ci=0; ans=false" :class="deck==='arch'?'bg-purple-600 text-white':'bg-gray-900 text-gray-400 border border-gray-800'" class="px-3 py-1.5 rounded">Architecture</button>
-                <button @click="deck='lead'; ci=0; ans=false" :class="deck==='lead'?'bg-purple-600 text-white':'bg-gray-900 text-gray-400 border border-gray-800'" class="px-3 py-1.5 rounded">Frameworks + Leadership</button>
-                <button @click="deck='company'; ci=0; ans=false" :class="deck==='company'?'bg-purple-600 text-white':'bg-gray-900 text-gray-400 border border-gray-800'" class="px-3 py-1.5 rounded">Grayscale</button>
-            </div>
-            <div class="max-w-2xl mx-auto bg-gray-900 border border-gray-800 rounded-xl p-6 text-center space-y-6">
-                <div class="flex justify-between items-center text-xs font-mono uppercase tracking-widest text-purple-400">
-                    <span x-text="cards[ci].cat"></span>
-                    <span x-text="'Card '+(ci+1)+' of '+cards.length"></span>
-                </div>
-                <div class="min-h-[150px] flex items-center justify-center px-4">
-                    <p class="leading-relaxed text-white transition-all" :class="ans?'text-gray-300 text-xs text-left bg-gray-950 p-4 rounded-lg border border-gray-800 font-sans':'text-base font-medium'" x-text="ans?cards[ci].a:cards[ci].q"></p>
-                </div>
-                <div class="pt-4 border-t border-gray-800 flex justify-between items-center font-mono text-xs">
-                    <button @click="ans=!ans" class="bg-gray-800 hover:bg-gray-700 font-bold px-4 py-2 rounded" x-text="ans?'Show question':'Reveal answer'"></button>
-                    <div class="flex gap-2">
-                        <button @click="toggleMastered(cards[ci].id)" :class="mastered.includes(cards[ci].id)?'bg-emerald-950 border border-emerald-500/40 text-emerald-300':'bg-gray-900 border border-gray-800 text-gray-400'" class="px-3 py-2 rounded font-bold"><span x-text="mastered.includes(cards[ci].id)?'✓ Mastered':'Mark mastered'"></span></button>
-                        <button @click="ans=false; ci=(ci+1)%cards.length" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded font-bold text-white">Next ➔</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============ TAB 7: MASTERY QUIZ ============ -->
-        <div x-show="tab==='quiz'" class="space-y-6 animate-fade" x-cloak>
-            <div class="max-w-2xl mx-auto bg-gray-900/50 border border-gray-800 rounded-xl p-4 font-mono text-xs flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
-                <div class="flex items-center gap-3">
-                    <span class="text-amber-400 font-bold text-sm" x-text="'🔥 ' + streak + '-day streak'"></span>
-                    <span class="text-gray-500">|</span>
-                    <span class="text-gray-400">Last: <span class="text-gray-300" x-text="lastReviewedLabel"></span></span>
-                </div>
-                <span class="text-purple-400 font-bold" x-text="'Best: ' + (bestQuizScore === null ? '—' : bestQuizScore + '/' + quizQuestions.length)"></span>
-            </div>
-
-            <div x-show="quizDone" class="max-w-2xl mx-auto bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-6" x-cloak>
-                <div class="text-4xl font-black font-mono" :class="quizScore>=quizQuestions.length*0.8?'text-emerald-400':quizScore>=quizQuestions.length*0.55?'text-amber-400':'text-red-400'" x-text="quizScore+'/'+quizQuestions.length"></div>
-                <p class="text-white font-semibold" x-text="quizScore>=quizQuestions.length*0.8?'Mastery range. You can hold your own with the leadership panel.':quizScore>=quizQuestions.length*0.55?'Solid foundation — review the misses and retake.':'Go back through the knowledge tabs, then retry.'"></p>
-                <div class="flex flex-wrap gap-1 justify-center pt-2 max-w-xs mx-auto">
-                    <template x-for="(h,i) in quizHistory" :key="i">
-                        <div class="h-2 w-4 rounded-full" :class="h.correct?'bg-emerald-500':'bg-red-500'"></div>
-                    </template>
-                </div>
-                <button @click="resetQuiz()" class="bg-purple-600 hover:bg-purple-500 px-6 py-2 rounded font-mono font-bold text-sm text-white">Retake quiz</button>
-            </div>
-
-            <div x-show="!quizDone" class="max-w-2xl mx-auto space-y-4">
-                <div class="flex items-center gap-3 font-mono text-xs">
-                    <div class="flex-1 h-1.5 bg-gray-900 rounded-full border border-gray-800 overflow-hidden">
-                        <div class="h-full bg-purple-600 transition-all" :style="'width:'+((quizI)/quizQuestions.length*100)+'%'"></div>
-                    </div>
-                    <span class="text-gray-500" x-text="(quizI+1)+' / '+quizQuestions.length"></span>
-                </div>
-                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-5">
-                    <div class="flex items-center gap-2">
-                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-950 border border-gray-700 text-gray-400" x-text="quizQuestions[quizI].cat"></span>
-                    </div>
-                    <p class="text-white font-semibold leading-relaxed" x-text="quizQuestions[quizI].q"></p>
-                    <div class="space-y-2 text-xs font-mono">
-                        <template x-for="(opt, oi) in quizQuestions[quizI].opts" :key="oi">
-                            <button @click="if(!quizAns) quizSel=oi" :disabled="quizAns"
-                                :class="{
-                                    'border-purple-500 bg-purple-950/20': !quizAns && quizSel===oi,
-                                    'border-gray-800 bg-gray-950 hover:bg-gray-900': !quizAns && quizSel!==oi,
-                                    'border-emerald-500 bg-emerald-950/20 text-emerald-300': quizAns && oi===quizQuestions[quizI].c,
-                                    'border-red-600/50 bg-red-950/20 text-red-300': quizAns && quizSel===oi && oi!==quizQuestions[quizI].c,
-                                    'border-gray-800 bg-gray-950 opacity-40': quizAns && oi!==quizQuestions[quizI].c && quizSel!==oi
-                                }"
-                                class="w-full text-left p-3.5 rounded-lg border flex gap-3 items-start transition-all">
-                                <span class="font-bold text-gray-500 shrink-0" x-text="['A','B','C','D'][oi]+'.'"></span>
-                                <span class="leading-normal font-sans text-gray-200" x-text="opt"></span>
-                            </button>
-                        </template>
-                    </div>
-                    <div x-show="quizAns" class="p-4 rounded-lg border text-xs leading-relaxed font-sans" :class="quizSel===quizQuestions[quizI].c?'bg-emerald-950/20 border-emerald-800/50 text-emerald-200':'bg-amber-950/20 border-amber-800/50 text-amber-200'" x-cloak>
-                        <span class="font-bold uppercase tracking-wider text-[10px] font-mono block mb-1" x-text="quizSel===quizQuestions[quizI].c?'✓ Correct':'✗ Not quite'"></span>
-                        <p x-text="quizQuestions[quizI].exp"></p>
-                    </div>
-                    <div class="flex justify-between items-center pt-2 border-t border-gray-800">
-                        <span class="text-xs text-gray-600 font-mono" x-text="'Score: '+quizScore" x-show="quizI>0"></span>
-                        <button @click="nextQuiz()" :disabled="quizSel===null" :class="quizSel===null?'opacity-30 cursor-not-allowed bg-gray-800':'bg-purple-600 hover:bg-purple-500'" class="ml-auto px-5 py-2 rounded font-mono font-bold text-sm text-white transition" x-text="!quizAns?'Check answer':'Next →'"></button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============ TAB 8: ARCH SEQUENCING ============ -->
-        <div x-show="tab==='seq'" class="space-y-6 animate-fade" x-cloak>
-            <div x-show="!seqMode" class="max-w-3xl mx-auto space-y-4">
-                <div class="bg-gradient-to-br from-purple-950/40 to-gray-900 border border-purple-900/50 rounded-xl p-7 text-center space-y-3">
-                    <div class="text-purple-400 font-mono text-xs uppercase tracking-widest">// Sequencing Lab</div>
-                    <h2 class="text-xl font-black text-white">Put the steps in the right order.</h2>
-                    <p class="text-gray-400 text-sm leading-relaxed max-w-md mx-auto">Three modes. Click each step in the order it should happen — then see the correct sequence with the reasoning for each position.</p>
-                </div>
-                <div class="grid sm:grid-cols-3 gap-4">
-                    <template x-for="m in Object.keys(seqModes)" :key="m">
-                        <button @click="startSeq(m)" class="bg-gray-900 border border-purple-900/40 hover:border-purple-500/60 rounded-xl p-6 text-left space-y-2 transition-all group">
-                            <div class="text-purple-400 font-mono text-xs uppercase tracking-widest" x-text="seqModes[m].label"></div>
-                            <h3 class="font-bold text-white group-hover:text-purple-200 transition" x-text="seqModes[m].title"></h3>
-                            <p class="text-gray-400 text-xs leading-relaxed" x-text="seqModes[m].blurb"></p>
-                        </button>
-                    </template>
-                </div>
-            </div>
-            <div x-show="seqMode && !seqDone" class="max-w-2xl mx-auto space-y-4" x-cloak>
-                <div class="flex items-center gap-3">
-                    <button @click="seqMode=null;seqSelected=[];seqDone=false" class="text-gray-500 hover:text-gray-300 font-mono text-xs">← Back</button>
-                    <span class="text-gray-500 font-mono text-xs" x-text="seqSelected.length+' / '+seqItems.length+' placed'"></span>
-                </div>
-                <div class="bg-gray-900/50 border border-gray-800 rounded-xl p-3 min-h-12">
-                    <div class="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-2">Your order so far:</div>
-                    <div class="flex flex-wrap gap-2">
-                        <template x-for="(item,i) in seqSelected" :key="i">
-                            <div class="bg-purple-950/40 border border-purple-800/50 rounded-lg px-3 py-1.5 text-xs flex items-center gap-2">
-                                <span class="text-purple-400 font-bold font-mono" x-text="i+1"></span>
-                                <span class="text-purple-200 font-sans" x-text="item.label"></span>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-                <div class="space-y-2">
-                    <div class="text-xs font-mono text-gray-500 uppercase tracking-widest">Click to place next:</div>
-                    <template x-for="(item,i) in seqItems" :key="item.id">
-                        <button x-show="!seqSelected.find(s=>s.id===item.id)"
-                            @click="seqSelected.push(item); if(seqSelected.length===seqItems.length) checkSeq()"
-                            class="w-full text-left p-4 rounded-lg border border-gray-800 bg-gray-950 hover:bg-gray-900 hover:border-purple-700/50 transition font-sans text-xs text-gray-300">
-                            <span x-text="item.label"></span>
-                        </button>
-                    </template>
-                </div>
-            </div>
-            <div x-show="seqDone" class="max-w-2xl mx-auto space-y-4" x-cloak>
-                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
-                    <div class="font-mono text-xs uppercase tracking-widest font-bold" :class="seqPerfect?'text-emerald-400':'text-amber-400'" x-text="seqPerfect?'✓ Perfect sequence — nailed it':'Review the correct order below'"></div>
-                    <div class="space-y-2">
-                        <template x-for="(item,i) in seqCorrectOrder" :key="i">
-                            <div class="flex items-start gap-3 p-3 rounded-lg border" :class="seqSelected[i]?.id===item.id?'border-emerald-800/40 bg-emerald-950/10':'border-red-800/40 bg-red-950/10'">
-                                <span class="font-mono font-bold text-[10px] mt-0.5 shrink-0 w-4" :class="seqSelected[i]?.id===item.id?'text-emerald-400':'text-red-400'" x-text="i+1"></span>
-                                <div class="flex-1">
-                                    <div class="font-bold text-white text-xs" x-text="item.label"></div>
-                                    <div class="text-gray-500 text-[11px] font-sans mt-0.5 leading-relaxed" x-text="item.why"></div>
-                                </div>
-                                <span x-show="seqSelected[i]?.id!==item.id" class="text-red-400 text-[10px] font-mono shrink-0 text-right max-w-[120px] leading-tight" x-text="'you: '+seqSelected[i]?.label"></span>
-                            </div>
-                        </template>
-                    </div>
-                    <div class="flex gap-3 pt-2">
-                        <button @click="startSeq(seqMode)" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded font-mono font-bold text-xs text-white">Try again</button>
-                        <button @click="seqMode=null;seqSelected=[];seqDone=false" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded font-mono font-bold text-xs text-white">Change mode</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============ TAB 9: TRADE-OFF DRILLS ============ -->
-        <div x-show="tab==='tradeoff'" class="space-y-6 animate-fade" x-cloak>
-            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 max-w-3xl mx-auto">
-                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">Principle-level trade-offs</h3>
-                <p class="text-xs text-gray-400 mt-1">No clean answers — only better-reasoned ones. Pick, then read why the strong call is strong and the tempting one is a trap. These mirror how leadership pressure-tests judgment.</p>
-            </div>
-            <template x-for="(d, di) in tradeoffs" :key="di">
-                <div class="bg-gray-900 border border-gray-800 p-6 rounded-xl max-w-3xl mx-auto space-y-4">
-                    <div class="flex items-center gap-2">
-                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300" x-text="d.cat"></span>
-                        <span class="tracking-wider text-purple-400 font-bold uppercase text-xs font-mono" x-text="'Drill '+(di+1)"></span>
-                    </div>
-                    <h3 class="text-sm font-bold text-white" x-text="d.q"></h3>
-                    <div class="space-y-3 text-xs">
-                        <template x-for="(opt,oi) in d.opts" :key="oi">
-                            <button @click="tradeoffPick[di]=oi"
-                                :class="tradeoffPick[di]===oi ? (oi===d.correct?'border-emerald-500 bg-emerald-950/20':'border-red-500 bg-red-950/20') : 'border-gray-800 bg-gray-950 hover:bg-gray-900'"
-                                class="w-full text-left p-4 rounded-lg border flex gap-3 items-start transition">
-                                <span class="font-bold shrink-0 font-mono" :class="oi===d.correct?'text-emerald-400':'text-gray-500'" x-text="['A','B','C','D'][oi]+'.'"></span>
-                                <span class="text-gray-300 leading-normal font-sans" x-text="opt"></span>
-                            </button>
-                        </template>
-                    </div>
-                    <div x-show="tradeoffPick[di]!==undefined" class="p-4 rounded-lg border text-xs leading-relaxed" :class="tradeoffPick[di]===d.correct?'bg-emerald-950/20 border-emerald-800/50 text-emerald-200':'bg-amber-950/20 border-amber-800/50 text-amber-200'" x-cloak>
-                        <span class="font-bold uppercase tracking-wider text-[10px] font-mono block mb-1" x-text="tradeoffPick[di]===d.correct?'✓ Strong call':'✗ Reconsider'"></span>
-                        <p x-text="tradeoffPick[di]===d.correct ? d.right : d.wrong[tradeoffPick[di]]"></p>
-                        <p x-show="tradeoffPick[di]!==d.correct" class="mt-2 text-gray-400"><span class="text-emerald-400 font-bold">Stronger: </span><span x-text="d.opts[d.correct]"></span></p>
-                    </div>
-                </div>
-            </template>
-        </div>
-
-        <!-- ============ TAB 10: CONFLICT SCENARIOS ============ -->
-        <div x-show="tab==='conflict'" class="space-y-6 animate-fade" x-cloak>
-            <!-- intro -->
-            <div x-show="conflictStage===0" class="max-w-2xl mx-auto space-y-5">
-                <div class="bg-gradient-to-br from-purple-950/40 to-gray-900 border border-purple-900/50 rounded-xl p-7 text-center space-y-4">
-                    <div class="text-purple-400 font-mono text-xs uppercase tracking-widest">// Interpersonal & Conflict Gauntlet</div>
-                    <h2 class="text-xl font-black text-white">Eight situations. No villains.</h2>
-                    <p class="text-gray-400 text-sm leading-relaxed max-w-md mx-auto">Each is a real friction point a Principal PM hits: stakeholders, engineers, direct reports, execs. Pick the response that moves toward an outcome without steamrolling or caving.</p>
-                    <button @click="conflictStage=1" class="bg-purple-600 hover:bg-purple-500 px-8 py-3 rounded font-mono font-bold text-sm text-white transition">Start →</button>
-                </div>
-            </div>
-            <!-- rounds -->
-            <template x-if="conflictStage>=1 && conflictStage<=conflictScenarios.length">
-                <div class="max-w-2xl mx-auto space-y-4">
-                    <div class="flex items-center gap-2 font-mono text-xs">
-                        <template x-for="n in conflictScenarios.length" :key="n">
-                            <div class="h-2 flex-1 rounded-full transition-all" :class="n<conflictStage?'bg-emerald-500':n===conflictStage?'bg-purple-500':'bg-gray-800'"></div>
-                        </template>
-                    </div>
-                    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-                        <div class="bg-gray-950 border-b border-gray-800 px-5 py-3 flex items-center gap-3">
-                            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded" :class="conflictScenarios[conflictStage-1].whoClass" x-text="conflictScenarios[conflictStage-1].who"></span>
-                            <span class="text-gray-500 font-mono text-[10px]" x-text="'Scenario '+conflictStage+' / '+conflictScenarios.length"></span>
-                        </div>
-                        <div class="p-5 space-y-4">
-                            <p class="text-sm text-white leading-relaxed" x-text="conflictScenarios[conflictStage-1].setup"></p>
-                            <div class="space-y-2 text-xs">
-                                <template x-for="(opt,oi) in conflictScenarios[conflictStage-1].opts" :key="oi">
-                                    <button @click="if(!conflictAns) conflictPick=oi" :disabled="conflictAns"
-                                        :class="{
-                                            'border-purple-500 bg-purple-950/20': !conflictAns && conflictPick===oi,
-                                            'border-gray-800 bg-gray-950 hover:bg-gray-900': !conflictAns && conflictPick!==oi,
-                                            'border-emerald-500 bg-emerald-950/20': conflictAns && oi===conflictScenarios[conflictStage-1].correct,
-                                            'border-red-600/50 bg-red-950/20': conflictAns && conflictPick===oi && oi!==conflictScenarios[conflictStage-1].correct,
-                                            'border-gray-800 bg-gray-950 opacity-40': conflictAns && oi!==conflictScenarios[conflictStage-1].correct && conflictPick!==oi
-                                        }"
-                                        class="w-full text-left p-4 rounded-lg border flex gap-3 items-start transition font-sans text-gray-200 leading-normal">
-                                        <span class="font-bold text-gray-500 shrink-0 font-mono" x-text="['A','B','C','D'][oi]+'.'"></span>
-                                        <span x-text="opt"></span>
-                                    </button>
-                                </template>
-                            </div>
-                            <div x-show="conflictAns" class="p-4 rounded-lg border text-xs leading-relaxed" :class="conflictPick===conflictScenarios[conflictStage-1].correct?'bg-emerald-950/20 border-emerald-800/50 text-emerald-200':'bg-red-950/20 border-red-800/50 text-red-200'" x-cloak>
-                                <span class="font-bold font-mono uppercase tracking-wider text-[10px] block mb-1" x-text="conflictPick===conflictScenarios[conflictStage-1].correct?'✓ Right read':'✗ Not the strongest'"></span>
-                                <p x-text="conflictPick===conflictScenarios[conflictStage-1].correct ? conflictScenarios[conflictStage-1].rightFeedback : conflictScenarios[conflictStage-1].wrongFeedback[conflictPick]"></p>
-                                <p x-show="conflictPick!==conflictScenarios[conflictStage-1].correct" class="mt-2 text-gray-400"><span class="text-emerald-400 font-bold">Stronger: </span><span x-text="conflictScenarios[conflictStage-1].opts[conflictScenarios[conflictStage-1].correct]"></span></p>
-                            </div>
-                            <div class="flex justify-end pt-1 border-t border-gray-800">
-                                <button x-show="!conflictAns" @click="confirmConflict()" :disabled="conflictPick===null" :class="conflictPick===null?'opacity-30 cursor-not-allowed bg-gray-800':'bg-purple-600 hover:bg-purple-500'" class="px-5 py-2 rounded font-mono font-bold text-sm text-white transition">Lock in</button>
-                                <button x-show="conflictAns" @click="nextConflict()" class="bg-purple-600 hover:bg-purple-500 px-5 py-2 rounded font-mono font-bold text-sm text-white transition" x-text="conflictStage<conflictScenarios.length?'Next →':'See results →'"></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </template>
-            <!-- results -->
-            <div x-show="conflictStage===conflictScenarios.length+1" class="max-w-2xl mx-auto bg-gray-900 border border-gray-800 rounded-xl p-8 text-center space-y-5" x-cloak>
-                <div class="text-4xl font-black font-mono" :class="conflictScore>=7?'text-emerald-400':conflictScore>=5?'text-amber-400':'text-red-400'" x-text="conflictScore+'/'+conflictScenarios.length"></div>
-                <p class="text-white font-semibold" x-text="conflictScore>=7?'You read people and incentives well. This is your differentiator.':conflictScore>=5?'Good instincts — revisit the ones you missed.':'Re-read the Mentoring tab and run it again.'"></p>
-                <button @click="resetConflict()" class="bg-purple-600 hover:bg-purple-500 px-6 py-2 rounded font-mono font-bold text-sm text-white">Run again</button>
-            </div>
-        </div>
-
-        <!-- ============ TAB 11: CHEAT-SHEET ============ -->
-        <div x-show="tab==='cheat'" class="space-y-4 animate-fade" x-cloak>
-            <div class="flex items-center justify-between no-print">
-                <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide">One-page recall sheet</h3>
-                <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded font-mono text-xs font-bold">⎙ Print / Save PDF</button>
-            </div>
-            <div class="grid md:grid-cols-2 gap-4">
-                <template x-for="card in cheat" :key="card.t">
-                    <div class="cheat-card bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-1.5 text-xs">
-                        <span class="cheat-accent text-purple-400 text-[10px] font-mono uppercase tracking-widest block" x-text="card.t"></span>
-                        <template x-for="line in card.lines" :key="line">
-                            <p class="text-gray-300 leading-relaxed" x-html="line"></p>
-                        </template>
-                    </div>
-                </template>
-            </div>
-        </div>
-
-        <!-- ============ TAB 12: GLOSSARY ============ -->
-        <div x-show="tab==='glossary'" class="space-y-4 animate-fade" x-cloak>
-            <input x-model="glossaryFilter" placeholder="Filter terms..." class="w-full max-w-md mx-auto block bg-gray-900 border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-200 font-mono focus:border-purple-600 focus:outline-none">
-            <div class="grid md:grid-cols-2 gap-3">
-                <template x-for="g in filteredGlossary" :key="g.term">
-                    <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-4 text-xs">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="font-bold text-purple-300 mono" x-text="g.term"></span>
-                            <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-gray-950 border border-gray-700 text-gray-500" x-text="g.cat"></span>
-                        </div>
-                        <p class="text-gray-400 leading-relaxed" x-text="g.def"></p>
-                    </div>
-                </template>
-            </div>
-        </div>
-
-    </main>
-
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('course', () => ({
-                tab: 'plan',
-
-                // ── Grayscale company products ──
-                gsProducts: [
-                    { name:'GBTC', tag:'Flagship', desc:'Grayscale Bitcoin Trust ETF. The original, converted from trust to spot ETF in Jan 2024. Higher legacy fee; saw large outflows post-conversion but remains a cornerstone of the brand.' },
-                    { name:'ETHE', tag:'Flagship', desc:'Grayscale Ethereum Trust ETF. The Ethereum counterpart to GBTC and long the largest ETH investment vehicle by AUM.' },
-                    { name:'BTC / ETH Mini Trusts', tag:'Low-fee', desc:'Launched 2024 at a 0.15% fee — the lowest-cost ETPs in the US market, built for advised wealth platforms. The competitive answer to fee pressure from BlackRock and others.' },
-                    { name:'GDLC', tag:'Multi-token', desc:'Digital Large Cap Fund — first diversified multi-token US digital-asset ETP (beyond just BTC/ETH), launched Sept 2025. A bet that demand broadens past the two majors.' },
-                    { name:'GSOL', tag:'Staking', desc:'Grayscale Solana Staking ETF — first of their staking products to uplist under new SEC generic listing standards (Oct 2025). Made them a top Solana ETP manager by AUM.' },
-                    { name:'GDOG / GLNK', tag:'Single-asset', desc:'First pure spot Dogecoin (GDOG) and Chainlink (GLNK) ETPs in the US, launched late 2025 — the long-tail single-asset expansion.' },
-                    { name:'Private Funds', tag:'Accredited', desc:'Higher-fee (~2.5%) vehicles giving accredited investors exposure to emerging assets not yet available in a public ETF/ETP wrapper. The "incubator" feeding the public lineup.' },
-                    { name:'Research & Capital Solutions', tag:'Differentiator', desc:'Institutional-grade research and a team that structures products around emerging protocols. Part of what lets Grayscale claim expertise, the top factor advisors cite when choosing an issuer.' }
-                ],
-
-                // ── 7-day plan ──
-                plan: [
-                    { day:'DAY 1', focus:'Domain', title:'Fintech Core', detail:'Read tab 1 end to end. Then run the Fintech flashcard deck and the Fintech quiz questions. By tonight you can explain NAV, creation/redemption, and custody to a non-technical exec.' },
-                    { day:'DAY 2', focus:'Domain', title:'Web3 & Digital Assets', detail:'Read tab 2. Focus on where crypto changes the physics: finality, custody, settlement. Drill the Web3 deck. This is your edge over traditional-finance candidates — make it sharp.' },
-                    { day:'DAY 3', focus:'Technical', title:'System Architecture', detail:'Read tab 3, then do both architecture sequencing modes until perfect. The goal: whiteboard an ingest-to-ledger pipeline and defend every component cold.' },
-                    { day:'DAY 4', focus:'Strategy', title:'Frameworks + Trade-offs', detail:'Read tab 4. Then grind the Trade-off Drills. Learn to pick the right framework live and name its failure mode. Internalize sequencing vs priority.' },
-                    { day:'DAY 5', focus:'Leadership', title:'Mentoring + Conflict', detail:'Read tab 5, then run the Conflict Gauntlet twice. This is the leadership half of the role — the project→product-ownership story is your bridge to the Head role.' },
-                    { day:'DAY 6', focus:'Integration', title:'Full Mastery Quiz, cold', detail:'No re-reading first. Take the full 22-question Mastery Quiz cold to find gaps. Patch only what you miss. Re-run any flashcard deck below 80% mastered.' },
-                    { day:'DAY 7', focus:'Polish', title:'Speed + Cheat-sheet', detail:'Re-run every interactive module fast. Print the cheat-sheet and review it on paper. Walk into the onsite having seen every question type at least twice.' }
-                ],
-
-                // ── FINTECH ──
-                fintech: [
-                    { key:'nav', open:true, tag:'VALUATION', badgeClass:'bg-emerald-950 text-emerald-300', name:'Net Asset Value (NAV)',
-                      what:'A fund\'s assets minus liabilities, divided by shares outstanding — the per-share value of what the fund holds. For a digital-asset product it\'s struck on a schedule (typically daily) using a defined pricing source for each underlying coin.',
-                      pm:'NAV is the number everything else is measured against. Any product that touches valuation, reporting, or reconciliation has to treat NAV calculation as a correctness-critical, auditable path — exactly the deterministic-foundation argument. An AI summary can sit next to NAV; it can never decide it.',
-                      trap:'"Where does NAV go wrong operationally?" → Stale or missing pricing feeds, timing skew between when the market price is captured and when the coin balance is confirmed, and corporate-action-style events (forks, airdrops). The PM answer is freshness SLAs on every pricing input and a clear "price as of" timestamp.' },
-                    { key:'cr', open:false, tag:'MECHANICS', badgeClass:'bg-blue-950 text-blue-300', name:'Creation & Redemption',
-                      what:'The process by which an ETP\'s share supply expands or contracts. Authorized Participants (APs) deliver the underlying (or cash) to the fund to create new shares, or hand back shares to redeem. This arbitrage is what keeps the share price tracking NAV.',
-                      pm:'In-kind vs cash creation is a live design constraint with crypto products — cash creation means the fund itself transacts in the asset, which changes custody, settlement-timing, and operational risk. A product owner here is designing around AP workflows, settlement windows, and reconciliation between on-chain movement and share issuance.',
-                      trap:'"Why did a trust like the old GBTC structure trade at a discount to NAV?" → Without an open creation/redemption mechanism, arbitrage can\'t close the gap, so price drifts from NAV. The ETF wrapper restores that mechanism. Knowing this signals you understand product structure, not just the asset.' },
-                    { key:'custody', open:false, tag:'RISK', badgeClass:'bg-red-950 text-red-300', name:'Custody & the Qualified Custodian',
-                      what:'Who holds the assets and how. In regulated asset management, client assets are held by a qualified custodian under strict controls. For digital assets that means private-key management — cold storage, multi-sig or MPC, hardware security modules, and segregation of client holdings.',
-                      pm:'Custody is the highest-consequence integration in the whole platform. Product decisions about how systems read balances, trigger movements, or reconcile holdings all run into custody controls. The discipline signal: systems observe and request through governed interfaces; they never hold keys or move assets directly.',
-                      trap:'"Cold storage is safer — why not keep everything cold?" → Cold storage trades accessibility for security; you need a tiered model (cold for the bulk, warm/hot for operational liquidity) governed by policy. Pure cold can\'t service redemptions on time; pure hot is an unacceptable attack surface.' },
-                    { key:'settlement', open:false, tag:'TIMING', badgeClass:'bg-purple-950 text-purple-300', name:'Settlement & T+1',
-                      what:'The gap between trade execution and final transfer of cash and assets. US equities settle T+1 (one business day after trade). Crypto settles on-chain in minutes to hours, but with probabilistic finality — and the two worlds don\'t share a clock or a calendar.',
-                      pm:'When a product spans traditional and on-chain rails, settlement-timing mismatch is a primary source of reconciliation breaks. A product owner has to design for the seam: what\'s the source of truth during the window where the trade is done but settlement isn\'t final, and how do reports represent "in flight" state.',
-                      trap:'"Crypto settles instantly, so reconciliation is easier, right?" → No. On-chain settlement is fast but probabilistic and runs 24/7, while banking rails are T+1 and closed on weekends. The mismatch is harder, not easier — you reconcile two systems with different finality and different calendars.' },
-                    { key:'reg', open:false, tag:'GOVERNANCE', badgeClass:'bg-amber-950 text-amber-300', name:'The Regulated-Industry Posture',
-                      what:'Asset managers operate under securities regulation, custody rules, and AML/KYC obligations. Practically, this means audit trails, controls evidence, recordkeeping, and the ability to reconstruct what happened and why — for any transaction, on demand.',
-                      pm:'"Regulated" is why explainability and auditability aren\'t nice-to-haves. Every product decision is shadowed by: can we evidence this to an auditor or regulator? It\'s also why AI goes assistive-not-authoritative — a black box that can\'t explain its reasoning is a liability in the critical path.',
-                      trap:'"Compliance slows us down — how do you ship fast in a regulated shop?" → You build the controls into the platform once (audit logging, immutable raw layer, lineage) so they\'re free on every future feature, instead of bolting them on per project. Compliance becomes a property of the system, not a tax on each release.' }
-                ],
-
-                // ── WEB3 ──
-                web3: [
-                    { key:'finality', open:true, tag:'CONSENSUS', badgeClass:'bg-purple-950 text-purple-300', name:'Finality: probabilistic vs deterministic',
-                      what:'When a transaction is irreversibly settled. Bitcoin-style chains have probabilistic finality — a transaction gets exponentially more secure with each confirmation but is never mathematically final. Some proof-of-stake chains offer deterministic (BFT) finality after a fixed checkpoint.',
-                      pm:'Finality dictates how long you wait before treating an on-chain event as real. Act too early and a reorg can revert it; wait too long and you hurt user experience and settlement timing. The product decision is a per-chain confirmation policy tied to the value at risk.',
-                      trap:'"How many confirmations is enough?" → It depends on the chain and the amount. High-value movements warrant more confirmations; low-value, fewer. The wrong answer is a single global number. The right answer is a risk-tiered, per-chain policy — and treating pre-finality state as provisional in every report.' },
-                    { key:'reorg', open:false, tag:'FAILURE MODE', badgeClass:'bg-red-950 text-red-300', name:'Reorgs & chain reorganizations',
-                      what:'When competing versions of a chain resolve, recently-added blocks can be orphaned and their transactions effectively un-happen. A transaction you saw confirmed can disappear from the canonical chain.',
-                      pm:'This is the on-chain equivalent of a feed retraction. Any system that ingests blockchain events needs to handle the case where a previously-recorded event is rolled back — which means events are provisional until your confirmation policy clears them, and your ledger can reconcile a reversal.',
-                      trap:'"Your ingest pipeline recorded a deposit, then a reorg reverted it. What breaks?" → If you treated the event as final on first sight, your ledger now disagrees with the chain. The fix: ingest events as provisional, only promote to confirmed after the finality policy clears, and make reversal a first-class, reconcilable event.' },
-                    { key:'custody3', open:false, tag:'KEYS', badgeClass:'bg-emerald-950 text-emerald-300', name:'Key management: MPC, multi-sig, HSM',
-                      what:'How private keys are protected. Multi-sig requires M-of-N signatures to move funds. MPC (multi-party computation) splits a key into shares so the full key never exists in one place. HSMs are tamper-resistant hardware that hold keys. Wallets are tiered hot / warm / cold by accessibility.',
-                      pm:'These are the building blocks behind "qualified custody" for crypto. As a PM you won\'t implement them, but you design the workflows that operate within them — approval flows, signing policies, and how operational systems request movements without ever touching key material.',
-                      trap:'"Multi-sig vs MPC — which is better?" → Different trade-offs, not a ranking. Multi-sig is transparent and on-chain-verifiable but chain-specific and can leak signer structure. MPC is chain-agnostic and hides the policy but relies on the implementation\'s correctness. The PM answer names the trade-off rather than picking a winner.' },
-                    { key:'oracle', open:false, tag:'DATA', badgeClass:'bg-blue-950 text-blue-300', name:'Oracles & the off-chain problem',
-                      what:'Blockchains can\'t natively access off-chain data (prices, real-world events). Oracles bridge that gap, feeding external data on-chain. The hard part is trust: an oracle is a single point of failure and a manipulation target if not designed with redundancy.',
-                      pm:'Wherever a product depends on a price or external fact to drive on-chain or valuation logic, the oracle is a correctness-critical dependency. Same discipline as a vendor feed: freshness SLAs, multiple sources, sanity bounds, and a defined behavior when the oracle is stale or disagrees.',
-                      trap:'"What\'s the risk in using one price oracle for NAV?" → Single point of failure and manipulation risk. Mitigate with multiple independent sources, median/aggregation, deviation bounds that flag anomalies, and a fallback policy when sources disagree — the same anomaly-detection thinking you\'d apply to any feed.' },
-                    { key:'staking', open:false, tag:'YIELD', badgeClass:'bg-amber-950 text-amber-300', name:'Staking, yield & slashing',
-                      what:'On proof-of-stake networks, holders can stake assets to help secure the network and earn rewards. The risks: assets may be locked for an unbonding period, and validators can be "slashed" (penalized) for misbehavior or downtime.',
-                      pm:'For a product that stakes on behalf of clients, staking introduces new states — bonded, unbonding, slashable — that the ledger and reporting must represent, plus liquidity planning around lockups. Yield is a feature; slashing and lockup are the operational risks that come attached.',
-                      trap:'"Staking adds yield — why wouldn\'t a fund stake everything?" → Lockup and slashing risk. Staked assets can\'t be instantly redeemed and can be penalized. You\'d size the staked portion against redemption-liquidity needs and risk tolerance, exactly like a cold/hot custody split.' },
-                    { key:'por', open:false, tag:'TRUST', badgeClass:'bg-emerald-950 text-emerald-300', name:'Proof of Reserves',
-                      what:'A method for demonstrating that an entity holds the assets it claims to, typically by proving control of on-chain addresses and attesting to liabilities. Strong proof of reserves covers both assets and liabilities, not just wallet balances.',
-                      pm:'A transparency feature with a sharp edge: showing assets without liabilities is misleading. As a product owner you treat it as a reporting product with correctness and completeness requirements — what it does and does not prove has to be unambiguous.',
-                      trap:'"Is proof of reserves enough to show solvency?" → Not alone. Proving you control X coins says nothing about what you owe. Real solvency proof pairs verified reserves with a credible liabilities attestation. Naming that gap shows you understand the difference between a marketing claim and an audit.' }
-                ],
-
-                // ── ARCHITECTURE ──
-                archConcepts: [
-                    { key:'medallion', open:true, tag:'DATA', badgeClass:'bg-blue-950 text-blue-300', name:'Medallion architecture (bronze / silver / gold)',
-                      solves:'Separating raw ingestion from cleaned and business-ready data. Bronze is immutable raw landing; silver is validated and conformed; gold is aggregated for consumption. It gives you replay (re-derive everything from bronze) and a clean audit lineage.',
-                      wrong:'Overkill for a tiny, single-source, low-stakes pipeline where the ceremony costs more than it returns. If there\'s no audit, replay, or multi-source need, a simpler shape may be right.',
-                      trap:'"Why land raw before transforming — why not transform on ingest?" → Because if your transform logic is wrong, raw-on-disk lets you fix the code and re-run history. Transform-on-ingest throws away the only copy that could have saved you, and you can never reconstruct what the source actually sent.' },
-                    { key:'idem', open:false, tag:'RELIABILITY', badgeClass:'bg-emerald-950 text-emerald-300', name:'Idempotency & at-least-once delivery',
-                      solves:'Most messaging and webhook systems guarantee at-least-once delivery, meaning duplicates happen. An idempotency key lets the consumer recognize "I already processed this" and treat the repeat as a no-op — one logical effect no matter how many times the message arrives.',
-                      wrong:'Rarely the wrong tool, but it\'s misapplied when people reach for FIFO/exactly-once queues or reserved concurrency instead. Those add cost or serialize throughput without actually solving duplication at the place that matters: the write.',
-                      trap:'"FIFO gives exactly-once — isn\'t that simpler than idempotency keys?" → Exactly-once at the queue doesn\'t protect against duplicates introduced upstream (a webhook firing twice never enters your queue). Idempotency at the consumer is the universal defense, independent of how the duplicate arose.' },
-                    { key:'acid', open:false, tag:'CORRECTNESS', badgeClass:'bg-purple-950 text-purple-300', name:'ACID transactions',
-                      solves:'All-or-nothing writes. Wrapping a multi-column or multi-row write in a transaction means a failure midway rolls back to a clean state — no partial records land. Essential anywhere a ledger must never hold a half-written row.',
-                      wrong:'Cross-service consistency. A single-database transaction can\'t span multiple services or systems — for that you need a saga or an outbox pattern, not a bigger transaction.',
-                      trap:'"A Lambda wrote 7 of 10 columns then crashed — what saved you?" → A BEGIN/COMMIT transaction rolls the partial write back to clean state. The retry then runs as a fresh, complete transaction. Lambda has no automatic DB rollback; you must wrap the write yourself.' },
-                    { key:'saga', open:false, tag:'DISTRIBUTED', badgeClass:'bg-amber-950 text-amber-300', name:'Saga pattern',
-                      solves:'Consistency across services where one transaction can\'t. A saga is a sequence of local transactions, each with a compensating action that undoes it if a later step fails — so the overall workflow can roll back without a global lock.',
-                      wrong:'When everything lives in one database — then a plain ACID transaction is simpler and stronger. Sagas add complexity (compensations, partial-failure reasoning) you only want when you genuinely span systems.',
-                      trap:'"Why not just one big transaction across all the services?" → You can\'t hold a transaction across independent systems with separate datastores. The saga trades atomicity for orchestrated compensation — each step knows how to undo itself if a downstream step fails.' },
-                    { key:'eventdriven', open:false, tag:'TOPOLOGY', badgeClass:'bg-blue-950 text-blue-300', name:'Event-driven vs request/response',
-                      solves:'Decoupling producers from consumers. Events (via a queue or stream) let the edge accept work fast and absorb spikes while processing happens asynchronously — buffering, retries, and fan-out come naturally.',
-                      wrong:'Simple, low-volume, synchronous interactions where the caller needs an immediate answer. Adding a queue there just adds latency and operational surface for no benefit.',
-                      trap:'"When would you NOT go event-driven?" → When the operation is simple, low-volume, and the caller needs a synchronous result. Senior judgment is refusing to over-engineer; not every path needs a queue. Match the topology to the load and the latency requirement.' },
-                    { key:'hitl', open:false, tag:'ORCHESTRATION', badgeClass:'bg-emerald-950 text-emerald-300', name:'Human-in-the-loop (HITL) & long waits',
-                      solves:'Workflows that pause for a human decision — an approval that might take minutes or days. An orchestrator (e.g. Step Functions) using a task-token / callback pattern hands off, lets the human work, and resumes on a callback, without holding an execution open and burning resources.',
-                      wrong:'Holding a synchronous execution or a thread open for the duration of a multi-day wait — an anti-pattern that wastes cost and hits concurrency limits. Short inline waits are fine; long ones need the callback pattern.',
-                      trap:'"How do you model an approval that could take 3 days?" → Task-token / callback: the workflow pauses without staying resident, the analyst acts in their queue, and a callback resumes execution. Don\'t hold an open execution for days — it doesn\'t scale and it costs you.' },
-                    { key:'observability', open:false, tag:'OPERATIONS', badgeClass:'bg-red-950 text-red-300', name:'Data correctness ≠ job success',
-                      solves:'The false-green problem. A job that completes without throwing an exception can still be silently wrong — skipping unparseable rows, dropping a category. The fix is emitting explicit data-level metrics (rows checked / written / skipped) and alarming on anomalies, not just on errors.',
-                      wrong:'Relying on infra-level signals (error rate, DLQ depth, traces) to catch data-level defects. They catch failures, not silent correctness loss. Both layers of monitoring are needed; they answer different questions.',
-                      trap:'"Your Lambda ran clean but recon is off — how would monitoring have caught it?" → Error alarms wouldn\'t; the function didn\'t throw. You need row-count and skip-ratio metrics emitted per run, with an alarm when the skip ratio leaves baseline. A run completing is not a run being correct.' }
-                ],
-
-                // ── FRAMEWORKS ──
-                frameworks: [
-                    { key:'rice', name:'RICE', use:'Prioritization', core:'Score = (Reach × Impact × Confidence) / Effort. Forces you to quantify the fuzzy and compare unlike initiatives on one scale.', fails:'When the inputs are guesses dressed as numbers, or when a strategic must-do gets out-scored by easy wins. RICE ranks features; it doesn\'t set strategy.' },
-                    { key:'wsjf', name:'Cost of Delay / WSJF', use:'Sequencing', core:'Weighted Shortest Job First = cost of delay ÷ job size. Surfaces what to do first when delay itself is expensive — time-sensitivity becomes a first-class input.', fails:'When cost of delay is unknowable or when dependencies force an order regardless of the math. Good for sequencing, weak for deciding whether to build at all.' },
-                    { key:'ost', name:'Opportunity Solution Tree', use:'Discovery', core:'Connects a desired outcome to opportunities (unmet needs) to solutions to experiments. Keeps the team solving real problems instead of shipping pet features.', fails:'When there\'s no clear outcome to anchor it, or in pure execution mode where discovery is already done. It\'s a discovery tool, not a delivery plan.' },
-                    { key:'jtbd', name:'Jobs To Be Done', use:'Framing', core:'People "hire" a product to make progress in a situation. Frames needs by the job, not the demographic — exposes the real competition and the real switching trigger.', fails:'When taken as the only lens — it under-weights brand, distribution, and the actual feasibility of the build. A framing aid, not a roadmap.' },
-                    { key:'northstar', name:'North Star + inputs', use:'Measurement', core:'One metric that captures the value you deliver, decomposed into the input metrics a team can actually move. Aligns a group around outcome over output.', fails:'When the North Star is a vanity or lagging metric no team can influence, or when it\'s gamed at the expense of the real goal. A wrong North Star misaligns everyone efficiently.' },
-                    { key:'buildbuy', name:'Build / Buy / Partner', use:'Make-or-buy', core:'Build when it\'s core differentiation; buy when it\'s a solved commodity; partner when you need capability fast without owning it. Weigh TCO and maintenance, not just upfront cost.', fails:'When "build" wins on ego rather than differentiation, or when "buy" ignores integration and lock-in cost. The maintenance tail is where buy-vs-build decisions are actually won or lost.' },
-                    { key:'workingback', name:'Working Backwards', use:'0→1 definition', core:'Write the press release and FAQ before building. Forces clarity on the customer, the value, and the hard questions while changes are still cheap.', fails:'When it becomes a writing exercise that substitutes for talking to customers, or when applied to small iterative work where it\'s ceremony. Best for genuine 0→1 bets.' },
-                    { key:'kano', name:'Kano Model', use:'Feature triage', core:'Sorts features into basic expectations, performance (more is better), and delighters. Tells you where investment changes satisfaction and where it\'s merely table stakes.', fails:'When categories drift over time (today\'s delighter is tomorrow\'s expectation) and you don\'t re-survey. A snapshot, not a permanent classification.' },
-                    { key:'seqvprio', name:'Sequencing vs Priority', use:'Stakeholder alignment', core:'Priority is what matters most; sequencing is what has to come first. A lower-priority foundation can be sequenced ahead because higher-priority work depends on it.', fails:'It doesn\'t fail so much as get conflated — the failure is letting a stakeholder hear "you\'re not important" when you mean "you\'re built on a foundation we\'re laying first." Always pair it with a concrete date for their ask.' },
-                    { key:'rfc', name:'Outcome over Output', use:'Operating principle', core:'Measure success by the business result (efficiency, revenue, risk reduced), not by features shipped. Reframes the team from a delivery factory to a problem-solving unit.', fails:'When outcomes are too lagging or diffuse to attribute, leaving teams unable to tell if they\'re winning. Pair distant outcomes with leading indicators teams can act on weekly.' }
-                ],
-
-                // ── MENTORING ──
-                mentoring: [
-                    { key:'maturity', open:true, tag:'MODEL', badgeClass:'bg-purple-950 text-purple-300', name:'Project execution → product ownership',
-                      idea:'A project-execution team takes requirements and ships them on time. A product-ownership team owns the problem, the outcome, and the trade-offs — it pushes back, runs discovery, and is measured on impact, not delivery. The org\'s maturity is the distance between those two.',
-                      how:'Move one team at a time, starting with a willing PM and a real problem. Shift the question in every review from "did we ship it" to "did it move the metric." Introduce lightweight operating discipline — structured intake, explicit prioritization, outcome metrics — so ownership has rails to run on.',
-                      say:'"I don\'t want to grade the team on velocity. I want each PM able to tell me the outcome they\'re accountable for and the trade-off they made to get there. We\'ll start with one team and one metric and make it repeatable."' },
-                    { key:'situational', open:false, tag:'COACHING', badgeClass:'bg-emerald-950 text-emerald-300', name:'Coach vs direct (situational leadership)',
-                      idea:'How much you direct depends on the person\'s skill and confidence for the specific task. Low skill, high stakes → direct and demonstrate. High skill, low confidence → coach and reassure. High skill, high confidence → delegate and get out of the way.',
-                      how:'Diagnose per task, not per person — a strong PM may need direction on a brand-new domain and full autonomy on a familiar one. The mistake is a single style for everyone: micromanaging your best people or abandoning your newest.',
-                      say:'"For this one I\'ll pair closely with you since it\'s your first recon workflow. On the attribution work you already own, I\'m staying out of it — bring me the decision, not the deliberation."' },
-                    { key:'sbi', name:'Feedback that lands (SBI)', open:false, tag:'FEEDBACK', badgeClass:'bg-blue-950 text-blue-300',
-                      idea:'Situation–Behavior–Impact: describe the specific situation, the observable behavior, and its concrete impact — without character judgments. It keeps feedback factual and actionable instead of personal and defensive.',
-                      how:'Deliver it close to the event, privately for corrective feedback, and pair it with the question "what was going on for you?" so it\'s a conversation, not a verdict. Praise in the same structure makes the good behavior repeatable.',
-                      say:'"In yesterday\'s review (situation), the roadmap led with features rather than the outcome (behavior), so the room debated scope instead of value and we lost twenty minutes (impact). Next time, open with the metric we\'re moving."' },
-                    { key:'delegation', open:false, tag:'AUTONOMY', badgeClass:'bg-amber-950 text-amber-300', name:'Delegation without abdication',
-                      idea:'Delegation is a spectrum from "do exactly this" to "decide and inform me" to "decide, I trust you." Abdication is handing off accountability with no clarity on which level applies — the fastest way to lose both the outcome and the relationship.',
-                      how:'State the delegation level explicitly every time, and set the check-in cadence up front so it doesn\'t feel like surveillance. As trust builds, move the level up and say so — visible trust is itself a development tool.',
-                      say:'"You own this decision. Loop me in before it ships, not for approval but so I\'m not surprised. If the cost crosses [threshold], that\'s the one case where I want to weigh in first."' },
-                    { key:'noauthority', open:false, tag:'INFLUENCE', badgeClass:'bg-emerald-950 text-emerald-300', name:'Elevating the craft without a title',
-                      idea:'A Principal PM coaches peers without managing them. Influence comes from modeling the behavior, making the better way visibly easier, and giving credit generously — not from positional authority you don\'t have.',
-                      how:'Run a recurring product critique where PMs pressure-test each other\'s thinking. Turn your own strong artifacts (a crisp PRD, a clean prioritization) into reusable templates. Coach in the open so the standard spreads by example, not decree.',
-                      say:'"I\'m not here to approve anyone\'s roadmap. I\'m here to make it easy for every PM to do their best work — templates, a critique forum, and a second set of eyes whenever they want one."' },
-                    { key:'manageup', open:false, tag:'UPWARD', badgeClass:'bg-purple-950 text-purple-300', name:'Enabling leadership to step back',
-                      idea:'Part of the Principal mandate is letting leadership exit day-to-day execution. That requires giving them confidence through predictability — clear status, surfaced risks early, and decisions made at the right level so things don\'t bounce back up.',
-                      how:'Establish a lightweight reporting rhythm that answers "are we on track, what\'s at risk, what do you need from me" before they ask. Bring problems with a recommendation attached. Earn the autonomy by removing the need for oversight, not by requesting it.',
-                      say:'"You shouldn\'t have to chase status. You\'ll get a standing update on what\'s on track, what\'s at risk, and where I need a decision — and when I bring you a problem, I\'ll bring a recommended call with it."' }
-                ],
-
-                // ── FLASHCARDS ──
-                deck: 'all',
-                ci: 0, ans: false,
-                mastered: JSON.parse(localStorage.getItem('ppm_mastered') || '[]'),
-                allCards: [
-                    { id:'f1', cat:'Fintech', deck:'fintech', q:'What is NAV and how is it calculated?', a:'Net Asset Value: a fund\'s assets minus liabilities, divided by shares outstanding — the per-share value of holdings, struck on a schedule using defined pricing sources. It\'s the correctness-critical number everything else is measured against.' },
-                    { id:'f2', cat:'Fintech', deck:'fintech', q:'Why did the old closed-trust GBTC structure trade at a discount to NAV?', a:'No open creation/redemption mechanism meant arbitrage couldn\'t close the gap between share price and NAV, so price drifted. The ETF wrapper restores that mechanism via Authorized Participants.' },
-                    { id:'f3', cat:'Fintech', deck:'fintech', q:'Why can\'t a fund keep 100% of assets in cold storage?', a:'Cold storage trades accessibility for security. You need a tiered model — cold for the bulk, warm/hot for operational liquidity — governed by policy. Pure cold can\'t service redemptions on time; pure hot is too large an attack surface.' },
-                    { id:'f4', cat:'Fintech', deck:'fintech', q:'Why is crypto↔traditional reconciliation harder, not easier, despite fast on-chain settlement?', a:'On-chain settles fast but probabilistically and runs 24/7; banking rails are T+1 and closed on weekends. You\'re reconciling two systems with different finality and different calendars.' },
-                    { id:'f5', cat:'Fintech', deck:'fintech', q:'How do you ship fast in a regulated shop without compliance becoming a tax?', a:'Build controls into the platform once — audit logging, immutable raw layer, lineage — so they\'re free on every future feature. Compliance becomes a property of the system, not a per-project cost.' },
-                    { id:'w1', cat:'Web3', deck:'web3', q:'Probabilistic vs deterministic finality — what\'s the difference and why does it matter to product?', a:'Probabilistic (Bitcoin-style) gets exponentially safer per confirmation but is never final; deterministic (BFT PoS) is final after a checkpoint. It dictates how long you wait before treating an on-chain event as real — a risk-tiered, per-chain confirmation policy.' },
-                    { id:'w2', cat:'Web3', deck:'web3', q:'A reorg reverts a deposit your pipeline already recorded. What should the design have done?', a:'Ingest on-chain events as provisional, promote to confirmed only after the finality policy clears, and make reversal a first-class, reconcilable event. Treating first-sight events as final is the bug.' },
-                    { id:'w3', cat:'Web3', deck:'web3', q:'Multi-sig vs MPC — which is better?', a:'Neither universally. Multi-sig is on-chain-verifiable but chain-specific and can leak signer structure; MPC is chain-agnostic and hides policy but depends on implementation correctness. Name the trade-off rather than ranking them.' },
-                    { id:'w4', cat:'Web3', deck:'web3', q:'What\'s the risk of a single price oracle feeding NAV, and the fix?', a:'Single point of failure and manipulation risk. Mitigate with multiple independent sources, median/aggregation, deviation bounds that flag anomalies, and a defined fallback when sources disagree.' },
-                    { id:'w5', cat:'Web3', deck:'web3', q:'Why wouldn\'t a fund stake all its assets for yield?', a:'Lockup and slashing risk. Staked assets can\'t be instantly redeemed and can be penalized. Size the staked portion against redemption-liquidity needs — same logic as a cold/hot custody split.' },
-                    { id:'w6', cat:'Web3', deck:'web3', q:'Is proof of reserves enough to prove solvency?', a:'No. Proving control of assets says nothing about liabilities. Real solvency proof pairs verified reserves with a credible liabilities attestation.' },
-                    { id:'a1', cat:'Architecture', deck:'arch', q:'Why land raw data before transforming?', a:'If transform logic is wrong, raw-on-disk (bronze) lets you fix the code and re-run history. Transform-on-ingest discards the only copy that could reconstruct what the source actually sent.' },
-                    { id:'a2', cat:'Architecture', deck:'arch', q:'A webhook fires twice and both hit your service. What prevents a double write?', a:'An idempotency key at the consumer — the service recognizes "already processed this ID" and no-ops. It\'s the universal defense against at-least-once delivery, independent of how the duplicate arose.' },
-                    { id:'a3', cat:'Architecture', deck:'arch', q:'A write fails after 7 of 10 columns. What guarantees rollback?', a:'An ACID transaction (BEGIN/COMMIT) rolls the partial write back to clean state; the retry runs as a fresh complete transaction. Lambda has no automatic DB rollback — you wrap it yourself.' },
-                    { id:'a4', cat:'Architecture', deck:'arch', q:'When can\'t a single transaction guarantee consistency, and what do you use instead?', a:'When the work spans multiple services/datastores. Use a saga — local transactions each with a compensating action — trading atomicity for orchestrated rollback.' },
-                    { id:'a5', cat:'Architecture', deck:'arch', q:'How do you model an approval that might take 3 days?', a:'Task-token / callback pattern in an orchestrator: pause without staying resident, let the human act in their queue, resume on callback. Never hold an open execution for days.' },
-                    { id:'a6', cat:'Architecture', deck:'arch', q:'A job ran clean but the data is wrong. How would monitoring catch it?', a:'Error alarms won\'t — nothing threw. Emit row-count and skip-ratio metrics per run and alarm when the skip ratio leaves baseline. A run completing ≠ a run being correct.' },
-                    { id:'a7', cat:'Architecture', deck:'arch', q:'When would you NOT go event-driven?', a:'Simple, low-volume, synchronous interactions where the caller needs an immediate answer. Adding a queue there is latency and operational surface for no benefit. Match topology to load.' },
-                    { id:'l1', cat:'Frameworks', deck:'lead', q:'What\'s the difference between sequencing and priority?', a:'Priority is what matters most; sequencing is what has to come first. A lower-priority foundation can be sequenced ahead because higher-priority work depends on it. Always pair it with a concrete date for the deferred ask.' },
-                    { id:'l2', cat:'Frameworks', deck:'lead', q:'When does RICE fail you?', a:'When inputs are guesses dressed as numbers, or a strategic must-do gets out-scored by easy wins. RICE ranks features; it doesn\'t set strategy.' },
-                    { id:'l3', cat:'Frameworks', deck:'lead', q:'Build vs buy — where is the decision actually won or lost?', a:'On the maintenance tail and total cost of ownership, not upfront cost. Build for core differentiation; buy commodities; weigh integration and lock-in, not just the sticker price.' },
-                    { id:'l4', cat:'Leadership', deck:'lead', q:'How do you move a team from project execution to product ownership?', a:'One team and one real problem at a time. Shift every review from "did we ship" to "did it move the metric," and add lightweight operating discipline — intake, explicit prioritization, outcome metrics — so ownership has rails.' },
-                    { id:'l5', cat:'Leadership', deck:'lead', q:'How do you decide how much to coach vs direct?', a:'Per task, by the person\'s skill and confidence for that task: direct when new/high-stakes, coach when skilled-but-unsure, delegate when skilled-and-confident. A single style for everyone is the mistake.' },
-                    { id:'l6', cat:'Leadership', deck:'lead', q:'What\'s the SBI feedback structure?', a:'Situation–Behavior–Impact: the specific situation, the observable behavior, its concrete impact — no character judgments. Factual and actionable instead of personal and defensive.' },
-                    { id:'l7', cat:'Leadership', deck:'lead', q:'How does a Principal PM influence peers without authority?', a:'Model the behavior, make the better way visibly easier (templates, a critique forum), and give credit generously. The standard spreads by example, not decree.' },
-                    { id:'l8', cat:'Leadership', deck:'lead', q:'How do you enable leadership to step out of execution?', a:'Give predictability: a standing update on what\'s on track, what\'s at risk, what you need decided. Bring problems with a recommendation. Earn autonomy by removing the need for oversight.' },
-                    { id:'g1', cat:'Grayscale', deck:'company', q:'What single act most defines Grayscale\'s brand and identity?', a:'Suing the SEC, winning unanimously, and converting GBTC into a spot Bitcoin ETF in January 2024 — which opened the entire US spot-Bitcoin-ETF market. They were the pioneer who forced the door open.' },
-                    { id:'g2', cat:'Grayscale', deck:'company', q:'How does Grayscale make money, and why is that model relatively stable?', a:'Management fees on AUM, not transaction fees. That\'s steadier than an exchange\'s trading-fee model — but it still rises and falls with crypto prices and fund flows (revenue dipped meaningfully in 2025).' },
-                    { id:'g3', cat:'Grayscale', deck:'company', q:'Who owns and controls Grayscale, and what\'s its public-market status?', a:'It\'s a subsidiary of Barry Silbert\'s Digital Currency Group (DCG). It filed an S-1 to list on NYSE as "GRAY" via an Up-C, dual-class structure that keeps DCG in control; the listing has been paced against market conditions.' },
-                    { id:'g4', cat:'Grayscale', deck:'company', q:'What is the strategic tension Grayscale faces right now?', a:'It\'s the first mover and brand leader, but now competes with giants like BlackRock whose spot ETFs undercut it on fee. It has to defend the legacy franchise (GBTC saw big post-conversion outflows) while out-innovating on product breadth.' },
-                    { id:'g5', cat:'Grayscale', deck:'company', q:'How is Grayscale broadening its product line beyond GBTC/ETHE?', a:'Low-fee Mini Trusts (0.15%) for advised wealth, the GDLC multi-token diversified ETP, the GSOL Solana staking ETF, single-asset ETPs like GDOG/GLNK, and higher-fee Private Funds that incubate emerging assets before a public wrapper exists.' },
-                    { id:'g6', cat:'Grayscale', deck:'company', q:'What\'s notable about CEO Peter Mintzberg\'s background, and why does it matter to you?', a:'He came from Goldman Sachs (Global Head of Strategy, AWM) with prior BlackRock/Apollo/Invesco roles — a TradFi-strategy operator deliberately bringing institutional discipline to a crypto-native firm. That\'s the same TradFi-into-crypto bridge your honest positioning mirrors.' },
-                    { id:'g7', cat:'Grayscale', deck:'company', q:'Why does an AI-workflow / product-operating-discipline Principal PM mandate exist at Grayscale right now?', a:'They\'re maturing from "the GBTC company" into a diversified, multi-product, soon-to-be-public, SEC-registered asset manager. That transition demands product operating rigor and automation — exactly the role you\'re targeting.' }
-                ],
-                get cards() {
-                    return this.deck==='all' ? this.allCards : this.allCards.filter(c=>c.deck===this.deck);
-                },
-                toggleMastered(id) {
-                    if (this.mastered.includes(id)) this.mastered = this.mastered.filter(x=>x!==id);
-                    else this.mastered.push(id);
-                    localStorage.setItem('ppm_mastered', JSON.stringify(this.mastered));
-                },
-
-                // ── streak / review ──
-                streak: 0, lastReviewedLabel: 'never', bestQuizScore: null,
-                initReview() {
-                    this.bestQuizScore = JSON.parse(localStorage.getItem('ppm_best_quiz') || 'null');
-                    const last = localStorage.getItem('ppm_last_review');
-                    let s = parseInt(localStorage.getItem('ppm_streak') || '0');
-                    if (last) {
-                        const d = Math.floor((Date.now() - parseInt(last)) / 86400000);
-                        this.lastReviewedLabel = d===0?'today':d===1?'yesterday':d+' days ago';
-                        if (d > 1) s = 0;
-                    }
-                    this.streak = s;
-                },
-                recordReview() {
-                    const today = new Date().setHours(0,0,0,0);
-                    const last = parseInt(localStorage.getItem('ppm_last_review_day') || '0');
-                    if (today !== last) {
-                        const d = Math.floor((today - last) / 86400000);
-                        this.streak = (d===1) ? this.streak+1 : 1;
-                        localStorage.setItem('ppm_streak', this.streak);
-                        localStorage.setItem('ppm_last_review_day', today);
-                    }
-                    localStorage.setItem('ppm_last_review', Date.now());
-                    this.lastReviewedLabel = 'today';
-                },
-
-                // ── QUIZ ──
-                quizI: 0, quizSel: null, quizAns: false, quizScore: 0, quizDone: false, quizHistory: [],
-                quizQuestions: [
-                    { cat:'Fintech', q:'A digital-asset fund\'s daily NAV looks wrong. What\'s the most likely operational cause to check first?', opts:['The blockchain consensus algorithm changed','A stale or missing pricing feed, or timing skew between price capture and balance confirmation','Too many shares outstanding','The custodian rotated keys'], c:1, exp:'NAV breaks operationally on its inputs: stale/missing pricing feeds and timing skew between when price is captured and when balances are confirmed. The fix is freshness SLAs on every pricing input and explicit "price as of" timestamps.' },
-                    { cat:'Fintech', q:'What keeps an ETP\'s market price tracking its NAV?', opts:['The custodian rebalances daily','SEC price controls','Creation/redemption arbitrage by Authorized Participants','The management fee'], c:2, exp:'APs create/redeem shares against the underlying, and that arbitrage closes any gap between market price and NAV. Remove the mechanism (as in the old closed-trust structure) and price drifts to a premium or discount.' },
-                    { cat:'Fintech', q:'Why is reconciling on-chain settlement with traditional banking rails harder than reconciling two banks?', opts:['On-chain is slower','Different finality models AND different calendars — on-chain is 24/7 probabilistic, banks are T+1 and closed weekends','Banks don\'t use APIs','Crypto has no transaction records'], c:1, exp:'The difficulty is the seam: probabilistic 24/7 settlement on one side, deterministic T+1 with weekends closed on the other. You\'re reconciling two systems with mismatched finality and calendars.' },
-                    { cat:'Web3', q:'How many confirmations should you require before treating an on-chain deposit as final?', opts:['Always exactly 6','One — blockchains are immutable','A risk-tiered, per-chain policy scaled to value at risk','Wait 24 hours for every transaction'], c:2, exp:'There\'s no universal number. The right answer is a per-chain confirmation policy tied to value at risk — more confirmations for high-value movements — and treating pre-finality state as provisional everywhere.' },
-                    { cat:'Web3', q:'Your ingest pipeline recorded a deposit, then a reorg reverted it. What design choice would have prevented the ledger mismatch?', opts:['Faster ingestion','Treating on-chain events as provisional until the finality policy clears, with reversal as a reconcilable event','A bigger database','Using a single oracle'], c:1, exp:'Reorgs can orphan recently-confirmed blocks. Events must be provisional until your confirmation policy clears them, and a reversal has to be a first-class, reconcilable event — not a silent contradiction with the chain.' },
-                    { cat:'Web3', q:'A colleague says proof of reserves proves the firm is solvent. Your correction?', opts:['Agree — it shows assets on-chain','It proves control of assets but says nothing about liabilities; solvency needs a liabilities attestation too','Solvency can\'t be proven at all','Only an auditor can comment'], c:1, exp:'Proof of reserves shows assets; it\'s silent on what\'s owed. Real solvency proof pairs verified reserves with a credible liabilities attestation. Spotting that gap separates a marketing claim from an audit.' },
-                    { cat:'Web3', q:'Why might a fund deliberately NOT stake a portion of its assets despite the yield?', opts:['Staking is illegal','Lockup periods and slashing risk reduce redemption liquidity and can penalize the fund','Staking lowers NAV automatically','It requires a different blockchain'], c:1, exp:'Staked assets face unbonding lockups and slashing penalties. You size the staked portion against redemption-liquidity needs and risk tolerance — the same trade-off logic as a cold/hot custody split.' },
-                    { cat:'Architecture', q:'Why does a medallion architecture land raw data immutably before transforming it?', opts:['To save storage','So a wrong transform can be fixed and history re-run from raw — replay and audit lineage','Because raw data is encrypted','To avoid using a database'], c:1, exp:'Bronze (immutable raw) gives you replay: fix the transform, re-derive everything. Transform-on-ingest throws away the only copy that could reconstruct what the source actually sent — and your audit lineage with it.' },
-                    { cat:'Architecture', q:'A webhook fires twice in 5 seconds and both reach your handler. What reliably prevents two records?', opts:['API Gateway rate limiting','SQS FIFO exactly-once','An idempotency key checked at the consumer before writing','Reserved concurrency of 1'], c:2, exp:'Idempotency at the write is the universal defense against at-least-once delivery. Rate limits don\'t catch a 5-second retry; FIFO doesn\'t help when the duplicate never entered a queue; reserved concurrency serializes but both still write.' },
-                    { cat:'Architecture', q:'A Lambda writes 7 of 10 columns to the database, then throws. What guarantees no partial record lands?', opts:['The DLQ retries the partial write','Lambda auto-rolls back DB state','Wrapping the write in an ACID transaction so failure rolls back atomically','S3 Object Lock'], c:2, exp:'RDS is ACID. A BEGIN/COMMIT transaction rolls a mid-write failure back to clean state; the retry runs fresh and complete. Lambda has no built-in DB rollback — you must wrap the write.' },
-                    { cat:'Architecture', q:'You need consistency across three separate services with their own datastores. The right pattern?', opts:['One large transaction spanning all three','A saga — local transactions each with a compensating action','Reserved concurrency','A FIFO queue'], c:1, exp:'A single transaction can\'t span independent datastores. A saga sequences local transactions, each able to compensate (undo) if a later step fails — trading atomicity for orchestrated rollback.' },
-                    { cat:'Architecture', q:'An approval step in your workflow can take anywhere from 2 minutes to 3 days. Correct orchestration pattern?', opts:['Hold the execution open the whole time','Short waits pause inline; long waits use the task-token / callback pattern','Poll the database every minute','Use a FIFO queue to serialize approvals'], c:1, exp:'Holding an execution open for days is an anti-pattern (cost, concurrency limits). Short waits can pause inline; long waits hand off via task token and resume on a callback when the human acts.' },
-                    { cat:'Architecture', q:'A nightly job completes without errors, but recon is off by 480 rows. How should monitoring have caught it?', opts:['Lambda error-rate alarm','DLQ depth alarm','Explicit rows-checked / rows-skipped metrics with a skip-ratio alarm','X-Ray tracing'], c:2, exp:'The false-green problem: nothing threw, so error and DLQ alarms stay silent. You need data-level metrics — rows checked/written/skipped — and an alarm when the skip ratio leaves baseline. Completing ≠ correct.' },
-                    { cat:'Architecture', q:'When is event-driven architecture the WRONG choice?', opts:['Never — it\'s always better','For simple, low-volume, synchronous interactions where the caller needs an immediate answer','When you have more than one service','For anything involving a database'], c:1, exp:'Senior judgment includes refusing to over-engineer. A queue adds latency and operational surface; for simple synchronous, low-volume work it buys nothing. Match the topology to the load and latency need.' },
-                    { cat:'Frameworks', q:'A stakeholder hears "Ops-first" as "Finance doesn\'t matter." What\'s the right framing and the move that defuses it?', opts:['Tell them priority is fixed and move on','Explain it\'s sequencing, not priority — Finance\'s accuracy depends on the foundation being built — and commit a concrete phase-two date','Reorder to put Finance first','Run both in parallel'], c:1, exp:'Priority is what matters most; sequencing is what must come first. Finance builds on a source of truth that doesn\'t exist yet. Name the distinction AND attach a specific date for their ask so "sequenced" doesn\'t read as "deprioritized."' },
-                    { cat:'Frameworks', q:'When does RICE scoring most mislead a team?', opts:['When effort is easy to estimate','When a strategic must-do gets out-scored by cheap, high-reach wins','When reach is high','It never misleads'], c:1, exp:'RICE ranks features on quantifiable inputs but can bury a strategic necessity under easy wins, and its numbers are only as good as the guesses behind them. It supports prioritization; it doesn\'t set strategy.' },
-                    { cat:'Frameworks', q:'In a build-vs-buy decision, where is the call most often won or lost?', opts:['The upfront license cost','The total cost of ownership and maintenance tail, plus integration and lock-in','The vendor\'s logo','The number of features'], c:1, exp:'Upfront cost is the visible part; the maintenance tail, integration burden, and lock-in are where build-vs-buy actually turns. Build for core differentiation, buy commodities, and weigh TCO over the sticker price.' },
-                    { cat:'Leadership', q:'You\'re asked to move a team from project execution to product ownership. Best first move?', opts:['Rewrite everyone\'s job descriptions','Mandate a new process across all teams at once','Start with one willing PM and one real problem, shifting the review question to outcome','Hire new PMs'], c:2, exp:'Change one team at a time with a willing PM and a real problem. Shift every review from "did we ship" to "did it move the metric," backed by lightweight operating discipline. Org-wide mandates without proof points stall.' },
-                    { cat:'Leadership', q:'A strong, experienced PM is unusually hesitant on a brand-new domain. The right leadership style?', opts:['Delegate fully — they\'re senior','Coach and reassure on this task while staying close, since the gap is confidence/novelty not skill','Direct them step by step on everything','Reassign the work'], c:1, exp:'Situational leadership diagnoses per task. A skilled person low on confidence for a new domain needs coaching and reassurance here — even though they get full autonomy on familiar work. Style follows the task, not the title.' },
-                    { cat:'Leadership', q:'You need to give a direct report corrective feedback that lands. Best structure?', opts:['Tell them what kind of person they\'re being','Situation–Behavior–Impact, delivered close to the event and privately','Save it all for the annual review','Send it to the whole team for transparency'], c:1, exp:'SBI keeps feedback factual and actionable: specific situation, observable behavior, concrete impact, no character judgment. Deliver corrective feedback privately and promptly, framed as a conversation.' },
-                    { cat:'Leadership', q:'As a Principal PM with no direct reports, how do you raise the whole team\'s product craft?', opts:['Ask for a manager title first','Approve every roadmap personally','Model the behavior and make the better way easier — templates, a critique forum, generous credit','Escalate weak PMs to their managers'], c:2, exp:'Influence without authority works through modeling, lowering the friction of doing it right (reusable artifacts, peer critique), and crediting others. The standard spreads by example, not by sign-off you don\'t own.' },
-                    { cat:'Leadership', q:'What most lets leadership step out of day-to-day execution and trust you to run it?', opts:['Asking them for autonomy directly','Predictability — proactive status on track/risk/decisions-needed, and problems brought with a recommendation','Shipping more features','Cc\'ing them on everything'], c:1, exp:'Leaders disengage when they\'re confident, and confidence comes from predictability: a standing update on what\'s on track, what\'s at risk, and what needs deciding — plus problems that arrive with a recommended call attached.' },
-                    { cat:'Grayscale', q:'What act most defines Grayscale\'s identity and market position?', opts:['Launching the first crypto exchange','Suing the SEC, winning, and converting GBTC to a spot Bitcoin ETF in Jan 2024','Being acquired by BlackRock','Issuing a stablecoin'], c:1, exp:'Grayscale forced the US spot-Bitcoin-ETF market open by beating the SEC in court and converting GBTC. That pioneer-who-won identity is central to how they see themselves — and the legacy they\'re now defending against lower-fee rivals.' },
-                    { cat:'Grayscale', q:'Grayscale\'s revenue model is primarily based on what, and what\'s the implication?', opts:['Trading commissions, so volume spikes drive most revenue','Management fees on AUM, so it\'s steadier than an exchange but still tied to crypto prices and flows','Interest on customer deposits','Selling proprietary trading data'], c:1, exp:'Fee-based-on-AUM revenue is more stable than transaction-fee models, but it still moves with asset prices and fund flows — which is why fee pressure from rivals and post-conversion GBTC outflows matter to the business.' },
-                    { cat:'Grayscale', q:'Why does a Principal PM mandate for AI workflows and product operating discipline make sense at Grayscale right now?', opts:['They\'re shrinking and need to cut headcount','They\'re maturing from a single-flagship firm into a diversified, multi-product, soon-to-be-public, regulated asset manager that needs operating rigor','They have no engineers','They\'re exiting the crypto business'], c:1, exp:'The transition from "the GBTC company" to a broad, public-bound, SEC-registered platform is exactly what creates demand for product operating discipline and automation. Tying your pitch to that inflection is the strongest framing in the room.' }
-                ],
-                nextQuiz() {
-                    if (this.quizAns) {
-                        const correct = this.quizSel === this.quizQuestions[this.quizI].c;
-                        this.quizHistory.push({ correct });
-                        if (correct) this.quizScore++;
-                        if (this.quizI < this.quizQuestions.length - 1) { this.quizI++; this.quizSel = null; this.quizAns = false; }
-                        else {
-                            this.quizDone = true;
-                            const best = JSON.parse(localStorage.getItem('ppm_best_quiz') || 'null');
-                            if (best === null || this.quizScore > best) { localStorage.setItem('ppm_best_quiz', this.quizScore); this.bestQuizScore = this.quizScore; }
-                            this.recordReview();
-                        }
-                    } else if (this.quizSel !== null) { this.quizAns = true; }
-                },
-                resetQuiz() { this.quizI=0; this.quizSel=null; this.quizAns=false; this.quizScore=0; this.quizDone=false; this.quizHistory=[]; },
-
-                // ── SEQUENCING ──
-                seqMode: null, seqItems: [], seqSelected: [], seqCorrectOrder: [], seqDone: false, seqPerfect: false,
-                seqModes: {
-                    pipeline: {
-                        label:'Mode 1', title:'Ingest → Ledger Data Flow', blurb:'8 components. Click them in the order data moves from external feed to human workflow surface.',
-                        items:[
-                            { id:'1', label:'Vendor / custodian feed', why:'External input boundary — where data originates.' },
-                            { id:'2', label:'API Gateway', why:'Managed ingress: auth, throttling, request validation, fast acknowledgment.' },
-                            { id:'3', label:'SQS + DLQ', why:'Buffer and decouple the edge from processing; absorbs spikes, captures failures.' },
-                            { id:'4', label:'Lambda (ingest) → S3 bronze', why:'Process the message; write immutable raw to the bronze layer before any transform.' },
-                            { id:'5', label:'Lambda (transform), wrapped in a transaction', why:'Validate and transform; the ACID write guarantees no partial rows land in the ledger.' },
-                            { id:'6', label:'RDS (source of truth)', why:'Curated, relational state for recon joins and reporting.' },
-                            { id:'7', label:'CloudWatch row-count / skip-ratio metrics', why:'Emit data-level metrics so a clean run that\'s silently wrong still alarms.' },
-                            { id:'8', label:'No-code workflow surface (reads via governed API)', why:'Humans see curated state and submit decision intent — never mutating source tables directly.' }
-                        ],
-                        correct:['1','2','3','4','5','6','7','8']
-                    },
-                    incident: {
-                        label:'Mode 2', title:'Production Incident Response', blurb:'6 steps. A feed stopped, recon is stale, your engineer is offline. Order your moves.',
-                        items:[
-                            { id:'a', label:'Establish facts: which feed, last good run, is bronze S3 current', why:'You can\'t contain or escalate accurately what you don\'t understand.' },
-                            { id:'b', label:'Assess blast radius: NAV, client-facing, or regulatory?', why:'Impact determines whether you escalate/page regardless of who\'s online.' },
-                            { id:'c', label:'Contain: flag stale reports "data as of [time]", tell Ops what not to act on', why:'Containment never requires the engineer — stop the bleeding before diagnosing.' },
-                            { id:'d', label:'Pause downstream automation depending on the stale data', why:'Prevents cascading errors from automations acting on wrong values.' },
-                            { id:'e', label:'Escalate vendor / page engineer if impact warrants', why:'Escalation is impact-driven, not availability-driven.' },
-                            { id:'f', label:'Prep engineer handoff: feed, last good run, logs, likely cause', why:'The engineer lands in a defined problem, not a blank page.' }
-                        ],
-                        correct:['a','b','c','d','e','f']
-                    },
-                    discovery: {
-                        label:'Mode 3', title:'0→1 Product Discovery', blurb:'6 steps. Take an ambiguous business problem to a sequenced, measurable first build.',
-                        items:[
-                            { id:'p', label:'Define the outcome and the metric it moves', why:'Anchor everything to a business result, not a feature wishlist.' },
-                            { id:'q', label:'Talk to the people living the problem; map the real workflow', why:'Discovery before solutioning — find the actual pain, not the assumed one.' },
-                            { id:'r', label:'Structure the ambiguity: name opportunities and constraints', why:'Turn a fuzzy ask into a bounded problem space you can prioritize within.' },
-                            { id:'s', label:'Prioritize the sharpest, highest-value narrow slice', why:'One critical workflow, not the whole platform — protect the timeline.' },
-                            { id:'t', label:'Define success metrics and the parallel-run validation', why:'Decide how you\'ll know it worked before you build it.' },
-                            { id:'u', label:'Ship the slice to production and measure against the metric', why:'0→1 ends at production adoption and a measured outcome, not a demo.' }
-                        ],
-                        correct:['p','q','r','s','t','u']
-                    }
-                },
-                startSeq(mode) {
-                    this.seqMode = mode;
-                    const m = this.seqModes[mode];
-                    this.seqItems = [...m.items].sort(()=>Math.random()-0.5);
-                    this.seqCorrectOrder = m.correct.map(id=>m.items.find(it=>it.id===id));
-                    this.seqSelected = []; this.seqDone = false; this.seqPerfect = false;
-                },
-                checkSeq() {
-                    this.seqDone = true;
-                    this.seqPerfect = this.seqSelected.every((item,i)=>item.id===this.seqCorrectOrder[i].id);
-                    this.recordReview();
-                },
-
-                // ── TRADE-OFFS ──
-                tradeoffPick: {},
-                tradeoffs: [
-                    { cat:'Scope', q:'You have 6 weeks and one engineer for a 0→1 internal product. The business wants three workflows automated. Your call?',
-                      opts:['Attempt all three at reduced quality to satisfy every stakeholder','Ship one narrow workflow end-to-end in production, plus a reusable pattern, and sequence the rest','Spend the 6 weeks building a flexible platform that could do all three later','Push back that 6 weeks isn\'t enough and ask for more time first'],
-                      correct:1, right:'One workflow in production — real data, status, exceptions, audit trail, metrics — plus a reusable pattern beats three half-built ones. It\'s a small promise kept, it earns trust, and the pattern makes the next two faster. This is the 0→1→scale discipline.',
-                      wrong:['Three at reduced quality means three things that don\'t earn trust and probably none in production. Spreading one engineer that thin is how you wash out in month six.', null, 'A speculative platform with no shipped workflow is the classic over-engineering trap — you\'ve spent the runway on flexibility nobody has validated they need.', 'Leading with "not enough time" before showing what IS possible reads as a no. Scope to what\'s achievable, make the smaller promise, and keep it.'] },
-                    { cat:'Build vs Buy', q:'A core workflow needs document parsing. A vendor solves 80% off the shelf; building gives full control. Which way, and on what basis?',
-                      opts:['Build — control matters and you don\'t want lock-in','Buy — parsing isn\'t your differentiation; weigh integration and TCO, keep the option to swap','Build a thin wrapper over the vendor so you can swap later','Buy, but only if it solves 100% of the need'],
-                      correct:1, right:'Parsing is a solved commodity, not your differentiation, so buy — but the decision turns on total cost of ownership, integration effort, and lock-in, not the sticker price. Reserve build for what actually differentiates the product. (A swappable abstraction is a reasonable hedge layered on top.)',
-                      wrong:['Building a commodity capability consumes your scarce engineering on something that doesn\'t differentiate you. Control is rarely worth the maintenance tail here.', null, 'A thin wrapper to preserve optionality is a fine implementation detail — but it\'s the how, not the decision. The decision is buy-vs-build, made on TCO and differentiation.', 'Demanding 100% fit ignores that the last 20% is often configurable, low-value, or solvable with a small amount of glue. Holding out for perfection blocks an 80% win.'] },
-                    { cat:'Quality bar', q:'In a parallel run, your automated financial recon matches the manual process 99.3% of the time. The business wants to ship. Your move?',
-                      opts:['Ship — 99.3% exceeds most reliability bars','Investigate and explain the 0.7% before shipping — unexplained deltas in a ledger are defects','Lower the acceptance threshold to 98% to account for timing variance','Run one more week and ship if it holds'],
-                      correct:1, right:'In a financial recon ledger, unexplained deltas are defects, not acceptable variance. The 0.7% could be systematic — a bad transform, a silently dropped category, a timing edge case. You investigate and explain every delta first. "Good enough" has no place in an audit ledger.',
-                      wrong:['99.3% sounds great until you realize the 0.7% might be one systematic bug repeating. In a ledger, you have to know what the gap IS before you can accept it.', null, 'Lowering the bar to make the number pass is exactly backwards — you\'re hiding the signal instead of understanding it.', 'More time without investigation just gives you the same unexplained gap a week later. The issue isn\'t duration; it\'s that you haven\'t explained the deltas.'] },
-                    { cat:'AI placement', q:'Leadership wants AI in the new recon product to show innovation. Where do you put it?',
-                      opts:['In the critical path — let the model decide the reconciliation to maximize automation','Assistive and out of the critical path — summaries, anomaly flagging, drafts on top of a deterministic core','Replace the deterministic pipeline entirely with an LLM agent','Decline to use AI in a regulated product'],
-                      correct:1, right:'A recon ledger must be explainable and repeatable first; AI is a force multiplier on top — exception summaries, anomaly flagging, draft narratives — never the thing that decides the numbers. In a regulated, audited context a black box in the critical path is a liability. You\'re pro-AI and pro-determinism.',
-                      wrong:['AI deciding the ledger gives you unexplainable, non-repeatable results in an audited system — the opposite of what a regulator needs to see. This is the failure mode to avoid.', null, 'Replacing a deterministic pipeline with an agent throws away correctness, auditability, and replay to chase novelty. Wrong trade in this domain.', 'Declining entirely overcorrects and misses real value. AI is genuinely useful assistively; the discipline is keeping it out of the path that has to be provable.'] },
-                    { cat:'Sequencing', q:'Finance (higher org priority) wants their reporting in phase one. Ops is already planned and builds the shared source of truth. What do you do?',
-                      opts:['Reorder — Finance outranks Ops, so build Finance first','Hold Ops-first as sequencing not priority, explain Finance inherits a trustworthy source of truth, and commit a concrete phase-two date','Split the one engineer across both tracks','Descope Ops to fit some Finance work into phase one'],
-                      correct:1, right:'Sequencing, not priority. Finance\'s reporting accuracy depends on a trustworthy source of truth that Ops-first builds — reorder and Finance builds on sand. Name the distinction, show Finance benefits from the foundation before their features even ship, and attach a specific phase-two date so it reads as sequenced, not deprioritized.',
-                      wrong:['Reordering to chase the org chart means Finance builds reporting on a source of truth that isn\'t trustworthy yet. You\'d ship fast and wrong.', null, 'Splitting one engineer across two tracks gets you two half-done things and blows both timelines. Focus is the asset here.', 'Descoping the foundation to wedge in Finance work undermines the very thing Finance\'s accuracy depends on. You\'d compromise both.'] },
-                    { cat:'Technical debt', q:'A shortcut now ships the phase-one workflow two weeks early but hard-codes logic that should be configurable. Take it?',
-                      opts:['Always — speed wins, refactor later','Take it only if you name it explicitly, log it, and the shortcut doesn\'t compromise correctness or auditability','Never take shortcuts in a financial product','Take it and don\'t mention it to keep momentum'],
-                      correct:1, right:'Debt is a tool when it\'s a conscious, logged decision that doesn\'t touch correctness or auditability — hard-coding a config you\'ll generalize later is often fine. The discipline is making it explicit and tracked, so it\'s a deliberate trade and not a silent landmine.',
-                      wrong:['"Refactor later" without naming or tracking the debt is how it becomes permanent and forgotten. The trade can be right; the silence makes it wrong.', null, 'A blanket "never" ignores that not all debt touches correctness. Hard-coding a value you\'ll later make configurable is a reasonable, reversible trade if it\'s tracked.', 'Hiding debt to preserve momentum is the genuinely wrong answer — it removes the team\'s ability to make an informed call and erodes trust when it surfaces.'] }
-                ],
-
-                // ── CONFLICT ──
-                conflictStage: 0, conflictPick: null, conflictAns: false, conflictScore: 0,
-                conflictScenarios: [
-                    { who:'Engineer', whoClass:'bg-emerald-950 text-emerald-300',
-                      setup:'Your lead engineer pushes back hard on your prioritization in front of the team: "We should be fixing the data pipeline, not building another report." You believe the report unlocks a committed business outcome this quarter.',
-                      opts:['Pull rank — remind them prioritization is your call and move on','Acknowledge the concern, ask them to walk you through the pipeline risk, then explain the outcome the report commits to and find where both fit in sequence','Defer to the engineer — they know the system better','Table it and take the disagreement to your manager'],
-                      correct:1, rightFeedback:'You treat the disagreement as signal, not insubordination. Understanding the pipeline risk might change your call — or reveal it\'s a sequencing question, not an either/or. Either way, you make the reasoning visible and bring the engineer along instead of overruling them.',
-                      wrongFeedback:['Pulling rank wins the moment and loses the engineer. You also skip information that might genuinely change your decision. Authority is the last tool, not the first.', null, 'Always deferring to the loudest technical voice abdicates the product call — and the business outcome you committed to. Engineers optimize for the system; you optimize for the outcome. Hear them, then decide.', 'Escalating a normal disagreement signals you can\'t resolve friction yourself. Work it directly first; escalation is for genuine deadlocks, not first contact.'] },
-                    { who:'Stakeholder', whoClass:'bg-blue-950 text-blue-300',
-                      setup:'A senior business stakeholder corners you: "My team\'s feature has to be in the next release. It\'s critical." It\'s genuinely valuable but would displace committed work, and you suspect "critical" is being used loosely.',
-                      opts:['Say yes to keep the relationship strong','Get underneath it: "Which obligation is driving the deadline?" then show the trade-off it forces and offer a sequenced date','Say no — the release is locked','Add it and quietly let the committed work slip'],
-                      correct:1, rightFeedback:'You diagnose before deciding. "Critical" often hides a specific driver — an audit, a client commitment, a board ask — and surfacing it lets you judge real urgency and find options. Then you make the trade-off visible rather than absorbing it silently, and offer a concrete sequenced date.',
-                      wrongFeedback:['Saying yes to preserve the relationship just moves the broken promise to whoever owns the displaced work. You can\'t say yes to everything; the job is making trade-offs visible.', null, 'A flat "it\'s locked" with no inquiry treats a possibly-real need as noise and damages the relationship. Understand the driver first — the answer might still be no, but it won\'t be dismissive.', 'Silently letting committed work slip is the worst option — you\'ve broken a promise without anyone deciding to, which is exactly the trust-destroying pattern to avoid.'] },
-                    { who:'Direct report', whoClass:'bg-purple-950 text-purple-300',
-                      setup:'A PM you coach keeps shipping features on time but can\'t tell you what outcome any of them moved. The team loves them; the work is busy but not clearly valuable.',
-                      opts:['Leave it — they\'re delivering and well-liked','Coach the shift: in your next 1:1, ask them to name the outcome and metric for each item, and make "did it move the metric" the standard going forward','Reassign them to pure execution work where output is the goal','Flag it as a performance issue'],
-                      correct:1, rightFeedback:'This is the project-execution-to-product-ownership shift in miniature. The PM has the delivery muscle; what\'s missing is outcome accountability. You coach it by changing the question you ask — from "what did you ship" to "what did it move" — and giving them the metric framing to grow into.',
-                      wrongFeedback:['Leaving it because they\'re liked and busy is how a team optimizes for output forever. Comfortable and valuable aren\'t the same thing — your job is to develop the ownership.', null, 'Reassigning them to execution-only work writes off someone who clearly can deliver and just needs to learn outcome thinking. That\'s the exact capability you\'re there to build.', 'Jumping to a performance issue is disproportionate — this is a coachable growth gap, not a failure. SBI feedback and a changed standard come long before a performance flag.'] },
-                    { who:'CTO', whoClass:'bg-purple-950 text-purple-300',
-                      setup:'The CTO wants to build a capability in-house that a mature vendor already solves well. You think buying is right. The CTO is technically excellent and clearly enjoys the build.',
-                      opts:['Defer — the CTO is the technical authority','Frame it on differentiation and TCO: "Is this where we want our scarce engineering — or is it commodity we should buy so we build the thing only we can?" and bring the numbers','Build it to keep the CTO happy','Escalate over the CTO\'s head'],
-                      correct:1, rightFeedback:'You don\'t make it about who\'s right — you make it about where the engineering should go. Reframing to differentiation and total cost of ownership lets the CTO reach the conclusion with you, and respects their expertise while protecting the roadmap. Bring data, not just opinion.',
-                      wrongFeedback:['Deferring on every technical-flavored call means you\'re not actually a product owner. Build-vs-buy is a product and business decision as much as a technical one — engage on it.', null, 'Building to keep the CTO happy spends scarce engineering on a commodity and sets a precedent that preference beats analysis. Disagree respectfully, with numbers.', 'Going over the CTO\'s head on a normal disagreement detonates the relationship you most need. Make the case directly and well before anyone escalates.'] },
-                    { who:'Exec', whoClass:'bg-red-950 text-red-300',
-                      setup:'In a leadership review, an exec asks you to commit to a delivery date you don\'t believe is achievable. The room is waiting and the pressure to just say yes is real.',
-                      opts:['Commit to the date and hope you can make it work','Give the honest range with what drives it, name the biggest risk, and offer a smaller committed milestone by their date','Refuse to give any date until you\'ve done more analysis','Commit privately to a later date with the exec after the meeting'],
-                      correct:1, rightFeedback:'You protect your credibility and theirs. An honest range with its drivers and the key risk is more useful than a false yes, and offering a real, smaller milestone by their date gives them something concrete to hold without overpromising. This is exactly the "make the smaller promise and keep it" discipline.',
-                      wrongFeedback:['A date you don\'t believe is a debt you\'ll default on publicly. The short-term comfort of yes becomes the long-term cost of a missed commitment — the thing that gets people fired.', null, 'Refusing to give anything reads as evasive in a leadership setting. You can give an honest range and a risk now; you don\'t need perfect analysis to be useful.', 'A private side-deal undermines the public commitment and confuses the room about what\'s real. Be honest in the room, once.'] },
-                    { who:'Peer PM', whoClass:'bg-amber-950 text-amber-300',
-                      setup:'Two PMs on the team are quietly fighting over a shared platform resource, and it\'s slowing both their roadmaps. Neither reports to you, but you\'re the senior IC.',
-                      opts:['Stay out of it — it\'s not your team to manage','Bring them together around the shared goal, make the contention explicit, and facilitate a sequencing decision tied to outcomes','Tell each of them privately what to do','Decide the allocation yourself and announce it'],
-                      correct:1, rightFeedback:'Influence without authority: you don\'t own them, so you can\'t direct — but you can convene, surface the real trade-off, and facilitate them to a decision anchored on outcomes. That both solves the problem and models the collaborative norm you want to spread.',
-                      wrongFeedback:['Staying out lets a solvable problem keep taxing two roadmaps. Senior ICs raise the team\'s game; this is exactly the moment to use influence.', null, 'Privately telling each what to do is triangulation — it can deepen the conflict and erodes trust when they compare notes. Get them in the same room.', 'Unilaterally deciding and announcing oversteps an authority you don\'t have and breeds resentment. Facilitate the decision; don\'t impose it.'] },
-                    { who:'Direct report', whoClass:'bg-purple-950 text-purple-300',
-                      setup:'A talented but defensive PM bristles every time you give feedback, treating it as criticism. Their work would level up significantly with coaching they keep deflecting.',
-                      opts:['Stop giving feedback to avoid the friction','Switch to SBI delivered as a conversation — specific situation, behavior, impact — and ask "what was going on for you?" to make it collaborative','Document the defensiveness for their review','Give the feedback more bluntly so it can\'t be deflected'],
-                      correct:1, rightFeedback:'Defensiveness usually means the feedback feels like a verdict on them as a person. SBI strips out the character judgment and keeps it to observable facts and impact, and opening the door with "what was going on for you?" turns it into a shared problem to solve rather than an attack to defend against.',
-                      wrongFeedback:['Withholding feedback to avoid friction caps a talented person\'s growth and is a quiet failure of your role. The fix is how you deliver it, not whether.', null, 'Going straight to documentation skips the coaching that could actually change the behavior. That\'s an escalation, not a development move.', 'Blunter feedback raises the threat level and deepens the defensiveness. The problem isn\'t clarity; it\'s that it feels personal. Lower the threat, don\'t raise it.'] },
-                    { who:'Stakeholder', whoClass:'bg-blue-950 text-blue-300',
-                      setup:'A stakeholder who was burned by a past failed project is openly skeptical of your plan, expecting it to slip and disappoint like the last one. Their buy-in matters for the rollout.',
-                      opts:['Reassure them this team is different and it\'ll be fine','Acknowledge the past directly, make a deliberately small first promise with a visible milestone, and over-communicate progress to rebuild trust by demonstration','Avoid them until you have results to show','Promise extra scope to win them over'],
-                      correct:1, rightFeedback:'Trust that was broken is rebuilt by demonstration, not assurance. You name the prior experience honestly, shrink the first promise so it\'s easy to keep, attach a visible milestone, and over-communicate — including bad news early. The small kept promise does what no reassurance can.',
-                      wrongFeedback:['"Trust me, it\'ll be fine" is exactly what they heard before it wasn\'t. Reassurance to a burned stakeholder lands as a red flag, not comfort.', null, 'Going dark until you have results leaves them to assume the worst and confirms the pattern they fear. Visible, frequent progress is the antidote.', 'Promising extra scope to win them over raises the stakes on a relationship that needs you to under-promise and over-deliver. You\'d be re-creating the original failure mode.'] }
-                ],
-                confirmConflict() {
-                    if (!this.conflictAns && this.conflictPick !== null) {
-                        this.conflictAns = true;
-                        if (this.conflictPick === this.conflictScenarios[this.conflictStage-1].correct) this.conflictScore++;
-                    }
-                },
-                nextConflict() {
-                    if (this.conflictStage < this.conflictScenarios.length) { this.conflictStage++; this.conflictPick = null; this.conflictAns = false; }
-                    else { this.conflictStage = this.conflictScenarios.length + 1; this.recordReview(); }
-                },
-                resetConflict() { this.conflictStage=0; this.conflictPick=null; this.conflictAns=false; this.conflictScore=0; },
-
-                // ── CHEAT SHEET ──
-                cheat: [
-                    { t:'Fintech essentials', lines:[
-                        '<strong>NAV:</strong> assets − liabilities ÷ shares. Breaks on stale pricing feeds & timing skew → freshness SLAs + "price as of".',
-                        '<strong>Creation/redemption:</strong> APs arbitrage keeps price ≈ NAV. No mechanism → premium/discount drift.',
-                        '<strong>Custody:</strong> tiered cold/warm/hot by policy. Systems observe & request, never hold keys.',
-                        '<strong>Settlement:</strong> on-chain 24/7 probabilistic vs banking T+1 weekends-closed = the reconciliation seam.',
-                        '<strong>Regulated:</strong> build controls into the platform once → free on every feature.'] },
-                    { t:'Web3 deltas', lines:[
-                        '<strong>Finality:</strong> probabilistic (BTC) vs deterministic (BFT PoS) → per-chain confirmation policy by value.',
-                        '<strong>Reorgs:</strong> events provisional until policy clears; reversal is a first-class reconcilable event.',
-                        '<strong>Keys:</strong> multi-sig vs MPC = trade-offs not ranking. HSM, M-of-N.',
-                        '<strong>Oracles:</strong> correctness-critical feed → multi-source, median, deviation bounds, fallback.',
-                        '<strong>Staking:</strong> yield vs lockup + slashing. <strong>PoR:</strong> assets only ≠ solvency (need liabilities).'] },
-                    { t:'Architecture patterns', lines:[
-                        '<strong>Medallion:</strong> raw bronze first → replay + lineage.',
-                        '<strong>Idempotency key:</strong> universal defense vs at-least-once. Not FIFO, not concurrency=1.',
-                        '<strong>ACID txn:</strong> partial-write rollback. Saga: consistency across services via compensations.',
-                        '<strong>HITL long wait:</strong> task-token/callback, never hold execution open.',
-                        '<strong>False-green:</strong> clean run ≠ correct. Emit row-count/skip-ratio metrics + alarm.'] },
-                    { t:'Frameworks', lines:[
-                        '<strong>RICE</strong> ranks features (not strategy). <strong>WSJF</strong> sequences by cost of delay.',
-                        '<strong>OST/JTBD</strong> discovery & framing. <strong>North Star + inputs</strong> = outcome alignment.',
-                        '<strong>Build/Buy:</strong> build differentiation, buy commodity, decide on TCO + lock-in.',
-                        '<strong>Sequencing ≠ priority:</strong> foundation first + concrete date for the deferred ask.',
-                        '<strong>Outcome over output</strong> is the operating principle behind all of it.'] },
-                    { t:'Mentoring & leadership', lines:[
-                        '<strong>Project→product ownership:</strong> one team, one problem; review asks "did it move the metric".',
-                        '<strong>Situational:</strong> direct / coach / delegate by skill × confidence, per task.',
-                        '<strong>SBI feedback:</strong> situation, behavior, impact — no character judgment; conversation not verdict.',
-                        '<strong>Delegation levels</strong> stated explicitly = autonomy without abdication.',
-                        '<strong>No authority:</strong> model it, make it easy (templates, critique forum), credit generously.'] },
-                    { t:'Conflict reflexes', lines:[
-                        '<strong>Disagreement = signal:</strong> understand before overruling; authority is the last tool.',
-                        '<strong>"Critical"?</strong> diagnose the driver, then make the trade-off visible + offer a date.',
-                        '<strong>Burned stakeholder:</strong> small promise, visible milestone, over-communicate, bad news early.',
-                        '<strong>Hard date you can\'t hit:</strong> honest range + risk + smaller committed milestone.',
-                        '<strong>No-authority conflict:</strong> convene, surface the trade-off, facilitate to an outcome.'] }
-                ],
-
-                // ── GLOSSARY ──
-                glossaryFilter: '',
-                glossary: [
-                    { term:'NAV', cat:'Fintech', def:'Net Asset Value — a fund\'s assets minus liabilities per share; the core valuation number.' },
-                    { term:'AUM', cat:'Fintech', def:'Assets Under Management — total market value of assets a firm manages.' },
-                    { term:'ETP / ETF', cat:'Fintech', def:'Exchange-Traded Product/Fund — an exchange-listed wrapper holding underlying assets, with creation/redemption keeping price near NAV.' },
-                    { term:'Authorized Participant', cat:'Fintech', def:'A firm permitted to create/redeem ETP shares against the underlying; its arbitrage keeps price ≈ NAV.' },
-                    { term:'In-kind vs cash', cat:'Fintech', def:'Whether creation/redemption is settled by delivering the underlying asset (in-kind) or cash; affects custody and operational risk.' },
-                    { term:'Premium / Discount', cat:'Fintech', def:'When market price trades above (premium) or below (discount) NAV — large/persistent gaps signal a broken arbitrage mechanism.' },
-                    { term:'Qualified custodian', cat:'Fintech', def:'A regulated entity holding client assets under strict controls; for crypto, manages private keys.' },
-                    { term:'T+1', cat:'Fintech', def:'Settlement one business day after trade — the traditional-rails timing that mismatches 24/7 on-chain settlement.' },
-                    { term:'Probabilistic finality', cat:'Web3', def:'Settlement that grows exponentially safer per confirmation but is never mathematically final (e.g. Bitcoin).' },
-                    { term:'Deterministic finality', cat:'Web3', def:'Settlement that becomes final after a fixed checkpoint (many BFT proof-of-stake chains).' },
-                    { term:'Reorg', cat:'Web3', def:'Chain reorganization — recently-added blocks get orphaned, effectively reversing their transactions.' },
-                    { term:'Confirmation', cat:'Web3', def:'A block added on top of the one containing your transaction; more confirmations = higher settlement assurance.' },
-                    { term:'Multi-sig', cat:'Web3', def:'Requires M-of-N signatures to move funds; on-chain-verifiable but chain-specific.' },
-                    { term:'MPC', cat:'Web3', def:'Multi-Party Computation — splits a key into shares so the full key never exists in one place; chain-agnostic.' },
-                    { term:'HSM', cat:'Web3', def:'Hardware Security Module — tamper-resistant hardware that stores keys and performs signing.' },
-                    { term:'Oracle', cat:'Web3', def:'A service that brings off-chain data (prices, events) on-chain; a trust and manipulation surface if not redundant.' },
-                    { term:'Slashing', cat:'Web3', def:'A penalty that destroys part of a validator\'s staked assets for misbehavior or downtime.' },
-                    { term:'Proof of Reserves', cat:'Web3', def:'Evidence an entity controls claimed assets; only proves solvency when paired with a liabilities attestation.' },
-                    { term:'Medallion architecture', cat:'Arch', def:'Bronze (raw) → silver (cleaned) → gold (business-ready) data layering enabling replay and lineage.' },
-                    { term:'Idempotency key', cat:'Arch', def:'An identifier letting a consumer treat a repeated message as a no-op; the defense against at-least-once delivery.' },
-                    { term:'At-least-once', cat:'Arch', def:'A delivery guarantee where messages may arrive more than once — duplicates must be handled downstream.' },
-                    { term:'ACID transaction', cat:'Arch', def:'All-or-nothing database write; a mid-write failure rolls back to a clean state.' },
-                    { term:'Saga', cat:'Arch', def:'Cross-service consistency via a sequence of local transactions, each with a compensating undo action.' },
-                    { term:'Task token / callback', cat:'Arch', def:'Orchestration pattern that pauses a workflow for a human/external step and resumes on a callback — for long waits.' },
-                    { term:'DLQ', cat:'Arch', def:'Dead Letter Queue — captures messages that failed processing so they\'re not lost and can be inspected.' },
-                    { term:'False-green', cat:'Arch', def:'A job that completes without error but is silently wrong; caught only by data-level metrics, not infra alarms.' },
-                    { term:'RICE', cat:'Framework', def:'Prioritization score: Reach × Impact × Confidence ÷ Effort. Ranks features; doesn\'t set strategy.' },
-                    { term:'WSJF', cat:'Framework', def:'Weighted Shortest Job First — cost of delay ÷ job size; sequences time-sensitive work.' },
-                    { term:'Opportunity Solution Tree', cat:'Framework', def:'Maps outcome → opportunities → solutions → experiments to keep discovery anchored on real needs.' },
-                    { term:'JTBD', cat:'Framework', def:'Jobs To Be Done — frames needs by the progress a user is trying to make, not demographics.' },
-                    { term:'North Star metric', cat:'Framework', def:'One metric capturing delivered value, decomposed into movable input metrics for alignment.' },
-                    { term:'Build/Buy/Partner', cat:'Framework', def:'Build differentiation, buy commodity, partner for speed — decided on total cost of ownership and lock-in.' },
-                    { term:'Sequencing vs priority', cat:'Framework', def:'Priority = what matters most; sequencing = what must come first. A foundation can be sequenced ahead of higher-priority work.' },
-                    { term:'Situational leadership', cat:'Leadership', def:'Adjusting direct/coach/delegate to a person\'s skill and confidence for the specific task.' },
-                    { term:'SBI', cat:'Leadership', def:'Situation–Behavior–Impact — a feedback structure that stays factual and actionable, not personal.' },
-                    { term:'Outcome over output', cat:'Leadership', def:'Measuring success by business result, not features shipped — the core of product ownership.' }
-                ],
-                get filteredGlossary() {
-                    const f = this.glossaryFilter.toLowerCase().trim();
-                    if (!f) return this.glossary;
-                    return this.glossary.filter(g => g.term.toLowerCase().includes(f) || g.def.toLowerCase().includes(f) || g.cat.toLowerCase().includes(f));
-                },
-
-                init() { this.initReview(); }
-            }));
-        });
-    </script>
+    <script>window.DEFAULT_COURSE_ID = 'grayscale-ppm-mastery';</script>
+    <script type="text/babel" src="grayscale-lab-data.jsx"></script>
+    <script type="text/babel" src="lab-engine.jsx"></script>
+    <script type="text/babel" src="lab-dashboard.jsx"></script>
+    <script type="text/babel" src="lab-app.jsx"></script>
 </body>
 </html>

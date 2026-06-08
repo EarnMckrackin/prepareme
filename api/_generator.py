@@ -242,6 +242,19 @@ ENV_KEYS = {
 _HTTP_TIMEOUT = httpx.Timeout(120.0, connect=15.0)
 
 
+def _max_output_tokens() -> int:
+    raw = os.environ.get("PREP_MAX_OUTPUT_TOKENS", "").strip()
+    try:
+        value = int(raw) if raw else 12000
+    except ValueError:
+        value = 12000
+    return max(4000, min(value, 24000))
+
+
+def _strict_generation_required() -> bool:
+    return os.environ.get("PREP_STRICT_GENERATION", "").strip().lower() in {"1", "true", "yes"}
+
+
 def _call_gemini(system: str, user: str, api_key: str, model: str) -> str:
     url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
            f"{model}:generateContent")
@@ -266,6 +279,7 @@ def _call_openai_compatible(system: str, user: str, api_key: str, model: str,
     payload = {
         "model": model,
         "temperature": 0.3,
+        "max_tokens": _max_output_tokens(),
         "response_format": {"type": "json_object"},
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": user}],
@@ -319,7 +333,7 @@ def _call_openrouter(system: str, user: str, api_key: str, model: str) -> str:
 def _call_anthropic(system: str, user: str, api_key: str, model: str) -> str:
     payload = {
         "model": model,
-        "max_tokens": 8000,
+        "max_tokens": _max_output_tokens(),
         "temperature": 0.3,
         "system": system,
         "messages": [{"role": "user", "content": user}],
@@ -637,7 +651,7 @@ def build_course(instruction: str, material: str, learner: str,
                  template_path: Path, provider: str | None = None,
                  api_key: str | None = None, model: str | None = None,
                  context: str = "", learning_style: str = "mixed",
-                 retries: int = 1) -> tuple[dict, str]:
+                 retries: int = 2) -> tuple[dict, str]:
     """Returns (course_dict, finished_html). Raises GenerationError on failure."""
     template = Path(template_path).read_text(encoding="utf-8")
     learning_style = learning_style if learning_style in VALID_STYLES else "mixed"
@@ -649,6 +663,7 @@ def build_course(instruction: str, material: str, learner: str,
     mdl = (model or os.environ.get("PREP_MODEL") or DEFAULT_MODELS[prov])
 
     last_errs: list[str] = []
+    best_schema_valid: dict | None = None
     for attempt in range(retries + 1):
         sys_prompt = SYSTEM_PROMPT
         if attempt > 0 and last_errs:
@@ -659,8 +674,21 @@ def build_course(instruction: str, material: str, learner: str,
         meta = course.setdefault("meta", {})
         meta.setdefault("learner", learner)
         meta.setdefault("learningStyle", learning_style)
-        last_errs = validate_generation_design(course)
-        if not last_errs:
+        schema_errs = validate(course)
+        if schema_errs:
+            last_errs = schema_errs
+            continue
+        best_schema_valid = course
+        design_errs = validate_generation_design(course)
+        if not design_errs:
             return course, inject(course, template)
+        last_errs = design_errs
+
+    if best_schema_valid is not None and not _strict_generation_required():
+        best_schema_valid.setdefault("meta", {})["qualityWarning"] = (
+            "The model returned a schema-valid course but missed some richness targets."
+        )
+        log.warning("Returning schema-valid course despite design gaps: %s", "; ".join(last_errs[:6]))
+        return best_schema_valid, inject(best_schema_valid, template)
 
     raise GenerationError("Validation failed after retry:\n- " + "\n- ".join(last_errs))
