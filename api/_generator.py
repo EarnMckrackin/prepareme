@@ -139,12 +139,22 @@ Course design requirements:
   * Professional/interview prep: use role pressure, executive framing, decision judgment, and answer drills.
 - Make the course as rich as the curated examples: each module should teach or practice a distinct
   skill, not repeat the same summary in different formats.
+- Avoid checklist-only output. Every module should contain explanatory content, not just labels,
+  synonyms, or word associations.
+- Expand the theory in the content itself. Concept cards should read like mini lessons, with full
+  sentences that define the idea, show how it works, give a concrete example, and name the common
+  mistake or contrast.
+- Treat the visual_map as an actual diagram, not a list. Each node should represent a conceptual
+  role and each link should explain the relationship between roles or functions.
 - Quantity targets:
-  overview cards 3-5; concept cards 5-8 with 2-4 fields each; flashcards 10-12;
+  overview cards 3-5; concept cards 5-8 with 3-4 fields each; flashcards 10-12;
   quiz questions 8-10; glossary terms 10-16; notes sections 4-8; cheatsheet blocks 5-8;
   visual map nodes 5-9; drag_sort items 8-12; teach_back prompts 4-6;
   sequence modes 1-3 with 5-8 items each; rounds challenge 4-7 rounds;
   timed challenge 6-10 rounds.
+- If the topic is music, include at least one visual map that reads like a theory diagram
+  (for example: tonic/function/voice-leading/improvisation choices), and make the expandable
+  concept cards explain the theory in plain language with concrete instrument-level examples.
 - If learningStyle is visual, put visual_map before concept_cards. If practice, put drag_sort,
   sequence, and challenge modules earlier. If read, put notes and cheatsheet earlier. If audio,
   put audio_script near the top. If mixed, balance the order naturally.
@@ -167,6 +177,9 @@ def _course_design_hint(instruction: str, material: str) -> str:
             "guided progression from hearing/recognizing ideas to applying them on an instrument "
             "or in improvisation. Use drills such as ear-training choices, chord/scale fit, "
             "voice-leading order, listening analysis, repertoire study, and practice routines. "
+            "Make the visual map read like a theory diagram and make expandable concept cards "
+            "teach actual theory, not just labels. Include concrete examples on guitar or at the "
+            "piano where possible. "
             "Avoid interview, employer, resume, product, or job-prep framing unless the instruction "
             "explicitly requests it."
         )

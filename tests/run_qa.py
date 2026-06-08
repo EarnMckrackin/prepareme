@@ -292,6 +292,9 @@ def main():
           style_opts == {"mixed", "visual", "practice", "read", "audio"}, str(sorted(style_opts)))
     check("ui: generated courses saved locally",
           "prepareme_generated_courses_v1" in ui and "storeGeneratedCourse" in ui)
+    check("ui: server courses removable locally",
+          "prepareme_hidden_library_courses_v1" in ui and "hideLibraryCourse" in ui
+          and "restoreHiddenLibraryCourses" in ui)
     check("ui: BYOK exposes OpenRouter paid models",
           "const byok=!!document.getElementById('api_key').value.trim();" in ui)
 

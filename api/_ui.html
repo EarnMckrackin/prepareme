@@ -214,6 +214,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3)}
         <h2>Open a course</h2>
         <p>Curated courses use richer progression, drills, and interview practice patterns.</p>
       </div>
+      <button type="button" id="restoreLibraryBtn" class="secondary-link hidden">Restore removed</button>
     </div>
     <div class="course-grid" id="courseGrid">
     </div>
@@ -346,9 +347,10 @@ segs.forEach(b=>b.onclick=()=>{segs.forEach(x=>x.classList.remove('active'));b.c
 const f=document.getElementById('f'),go=document.getElementById('go');
 const elStatus=document.getElementById('status'),elResult=document.getElementById('result'),elErr=document.getElementById('error');
 const provider=document.getElementById('provider'),model=document.getElementById('model'),keyHint=document.getElementById('keyHint'),searchHint=document.getElementById('searchHint');
-const authUser=document.getElementById('authUser'),authPasscode=document.getElementById('authPasscode'),loginBtn=document.getElementById('loginBtn'),logoutBtn=document.getElementById('logoutBtn'),accessHint=document.getElementById('accessHint'),courseGrid=document.getElementById('courseGrid'),courseCount=document.getElementById('courseCount');
+const authUser=document.getElementById('authUser'),authPasscode=document.getElementById('authPasscode'),loginBtn=document.getElementById('loginBtn'),logoutBtn=document.getElementById('logoutBtn'),accessHint=document.getElementById('accessHint'),courseGrid=document.getElementById('courseGrid'),courseCount=document.getElementById('courseCount'),restoreLibraryBtn=document.getElementById('restoreLibraryBtn');
 let CONFIG={configured:{},sources:{},default:'gemini',access:{},openrouter:{free_models:['openrouter/free'],paid_models:[]}};
 const GENERATED_STORE_KEY='prepareme_generated_courses_v1';
+const HIDDEN_LIBRARY_STORE_KEY='prepareme_hidden_library_courses_v1';
 let SERVER_COURSES=[];
 let generatedObjectUrls=[];
 let statusTimer=null;
@@ -422,6 +424,38 @@ function removeGeneratedCourse(id){
   renderLibrary();
 }
 
+function courseKey(c){
+  return String(c.id||c.href||c.title||'').trim();
+}
+
+function loadHiddenLibraryCourses(){
+  try{
+    const raw=localStorage.getItem(HIDDEN_LIBRARY_STORE_KEY);
+    const items=raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(items) ? items.filter(Boolean) : []);
+  }catch(_){return new Set();}
+}
+
+function saveHiddenLibraryCourses(keys){
+  try{
+    localStorage.setItem(HIDDEN_LIBRARY_STORE_KEY,JSON.stringify([...keys]));
+    return true;
+  }catch(_){return false;}
+}
+
+function hideLibraryCourse(key){
+  if(!key){return;}
+  const hidden=loadHiddenLibraryCourses();
+  hidden.add(key);
+  saveHiddenLibraryCourses(hidden);
+  renderLibrary();
+}
+
+function restoreHiddenLibraryCourses(){
+  localStorage.removeItem(HIDDEN_LIBRARY_STORE_KEY);
+  renderLibrary();
+}
+
 function objectUrlFromB64(html_b64){
   const html=atob(html_b64);
   const blob=new Blob([Uint8Array.from(html, c=>c.charCodeAt(0))],{type:'text/html'});
@@ -451,18 +485,23 @@ function storeGeneratedCourse(result,safe){
 function renderLibrary(){
   generatedObjectUrls.forEach(u=>URL.revokeObjectURL(u));
   generatedObjectUrls=[];
+  const hidden=loadHiddenLibraryCourses();
+  const visibleServerCourses=SERVER_COURSES.filter(c=>!hidden.has(courseKey(c)));
   const generated=loadGeneratedCourses().map(c=>({
     ...c,
     href:c.href||objectUrlFromB64(c.html_b64),
     generatedLocal:true
   }));
-  const courses=[...SERVER_COURSES,...generated];
+  const courses=[...visibleServerCourses,...generated];
   courseGrid.innerHTML='';
   courseCount.textContent=String(courses.length);
+  restoreLibraryBtn.classList.toggle('hidden',hidden.size===0);
   if(!courses.length){
     const empty=document.createElement('div');
     empty.className='callout';
-    empty.textContent='No courses are available for this access code.';
+    empty.textContent=hidden.size
+      ? 'All available courses are removed from your library. Restore removed courses to show them again.'
+      : 'No courses are available for this access code.';
     courseGrid.appendChild(empty);
     return;
   }
@@ -507,14 +546,12 @@ function renderLibrary(){
     const actions=document.createElement('div');
     actions.className='card-actions';
     actions.appendChild(link);
-    if(c.generatedLocal){
-      const remove=document.createElement('button');
-      remove.type='button';
-      remove.className='remove-link';
-      remove.textContent='Remove';
-      remove.onclick=()=>removeGeneratedCourse(c.id);
-      actions.appendChild(remove);
-    }
+    const remove=document.createElement('button');
+    remove.type='button';
+    remove.className='remove-link';
+    remove.textContent='Remove';
+    remove.onclick=()=>c.generatedLocal ? removeGeneratedCourse(c.id) : hideLibraryCourse(courseKey(c));
+    actions.appendChild(remove);
     foot.append(modules,actions);
     article.append(top,title,desc,tags,foot);
     courseGrid.appendChild(article);
@@ -566,6 +603,7 @@ function refreshHint(){
 loadConfig();
 loadLibrary();
 provider.onchange=refreshHint;
+restoreLibraryBtn.onclick=restoreHiddenLibraryCourses;
 document.getElementById('api_key').addEventListener('input',refreshHint);
 
 let lastUrl=null;
