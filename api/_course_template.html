@@ -25,6 +25,18 @@
         .calm-mode .animate-pulse,
         .calm-mode .animate-spin { animation: none !important; }
         .focus-mode .focus-hide { display: none !important; }
+        .diagram-grid {
+            background:
+                radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.12), transparent 30%),
+                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.10), transparent 28%),
+                linear-gradient(to bottom right, rgba(17, 24, 39, 0.96), rgba(3, 7, 18, 0.98));
+        }
+        .diagram-node {
+            transform: translate(-50%, -50%);
+            box-shadow:
+                0 18px 50px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
         @media print {
             body { background: #fff !important; color: #000 !important; }
             header, .no-print { display: none !important; }
@@ -103,7 +115,7 @@
                         <p class="text-xs text-gray-400 leading-relaxed" x-text="m.data.intro"></p>
                     </div>
                     <template x-for="(c,ci) in m.data.cards" :key="ci">
-                        <details class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden group">
+                        <details class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden group" :open="ci===0">
                             <summary class="p-4 flex items-center justify-between hover:bg-gray-900/60 transition">
                                 <div class="flex items-center gap-3">
                                     <span x-show="c.badge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-950 text-purple-300" x-text="c.badge"></span>
@@ -166,29 +178,52 @@
                         <h3 class="text-sm font-bold text-white font-mono uppercase tracking-wide" x-text="m.data.title||'Concept map'"></h3>
                         <p x-show="m.data.intro" class="text-xs text-gray-400 mt-1 leading-relaxed" x-text="m.data.intro"></p>
                     </div>
-                    <div class="grid lg:grid-cols-[1.15fr_0.85fr] gap-5">
-                        <div class="grid sm:grid-cols-2 gap-3">
-                            <template x-for="(node,ni) in (m.data.nodes||[])" :key="node.id||ni">
-                                <div class="relative bg-gray-900 border border-gray-800 rounded-xl p-4 overflow-hidden">
-                                    <div class="absolute top-0 left-0 h-full w-1" :class="['bg-purple-500','bg-emerald-500','bg-amber-500','bg-blue-500','bg-rose-500'][ni%5]"></div>
-                                    <div class="pl-2 space-y-2">
-                                        <span x-show="node.tag" class="text-[10px] font-mono uppercase tracking-widest text-gray-500" x-text="node.tag"></span>
-                                        <h4 class="font-bold text-white text-sm" x-text="node.label"></h4>
-                                        <p class="text-xs text-gray-400 leading-relaxed" x-text="node.summary"></p>
+                    <div class="grid lg:grid-cols-[1.2fr_0.8fr] gap-5 items-start">
+                        <div class="space-y-3">
+                            <div class="diagram-grid relative overflow-hidden rounded-2xl border border-gray-800 min-h-[28rem]">
+                                <svg class="absolute inset-0 h-full w-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                    <defs>
+                                        <linearGradient :id="'mapLine-'+m.id" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#a855f7" stop-opacity="0.75"></stop>
+                                            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.55"></stop>
+                                        </linearGradient>
+                                    </defs>
+                                    <template x-for="(link,li) in visualLayout(m).links" :key="li">
+                                        <g>
+                                            <line :x1="link.from.x" :y1="link.from.y" :x2="link.to.x" :y2="link.to.y"
+                                                  :stroke="'url(#mapLine-'+m.id+')'" stroke-width="0.8" stroke-linecap="round"
+                                                  stroke-dasharray="0" opacity="0.9"></line>
+                                            <text x="50" y="50" fill="transparent"></text>
+                                        </g>
+                                    </template>
+                                </svg>
+                                <template x-for="(node,ni) in visualLayout(m).nodes" :key="node.id||ni">
+                                    <div class="diagram-node absolute w-[42%] sm:w-[30%] lg:w-[26%] max-w-[18rem] bg-gray-950/95 border rounded-2xl p-4 backdrop-blur"
+                                         :class="['border-purple-900/50','border-emerald-900/50','border-amber-900/50','border-blue-900/50','border-rose-900/50'][ni%5]"
+                                         :style="'left:'+node.x+'%;top:'+node.y+'%;'">
+                                        <div class="flex items-start justify-between gap-3 mb-2">
+                                            <span x-show="node.tag" class="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded bg-gray-900 border border-gray-800 text-gray-400" x-text="node.tag"></span>
+                                            <span class="h-2.5 w-2.5 rounded-full mt-1.5" :class="['bg-purple-400','bg-emerald-400','bg-amber-400','bg-blue-400','bg-rose-400'][ni%5]"></span>
+                                        </div>
+                                        <h4 class="font-bold text-white text-sm leading-tight" x-text="node.label"></h4>
+                                        <p class="text-xs text-gray-400 leading-relaxed mt-2" x-text="node.summary"></p>
                                     </div>
-                                </div>
-                            </template>
+                                </template>
+                            </div>
+                            <p class="text-[11px] font-mono text-gray-500 leading-relaxed">
+                                Diagram reading tip: follow the arrows as a relationship story, not as isolated vocabulary.
+                            </p>
                         </div>
                         <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3">
-                            <div class="text-[10px] font-mono uppercase tracking-widest text-purple-400">Relationships</div>
+                            <div class="text-[10px] font-mono uppercase tracking-widest text-purple-400">Relationship notes</div>
                             <template x-for="(link,li) in (m.data.links||[])" :key="li">
-                                <div class="rounded-lg border border-gray-800 bg-gray-900 p-3 text-xs">
+                                <div class="rounded-lg border border-gray-800 bg-gray-900 p-3 text-xs space-y-1.5">
                                     <div class="flex items-center gap-2 text-gray-200">
                                         <span class="font-semibold" x-text="mapNode(m, link.from)"></span>
-                                        <span class="text-purple-400 font-mono">-></span>
+                                        <span class="text-purple-400 font-mono">→</span>
                                         <span class="font-semibold" x-text="mapNode(m, link.to)"></span>
                                     </div>
-                                    <p x-show="link.label" class="mt-1 text-gray-500 leading-relaxed" x-text="link.label"></p>
+                                    <p x-show="link.label" class="text-gray-500 leading-relaxed" x-text="link.label"></p>
                                 </div>
                             </template>
                         </div>
@@ -808,6 +843,38 @@
             mapNode(m, id) {
                 const node = (m.data.nodes||[]).find(n => n.id === id);
                 return node ? node.label : id;
+            },
+            visualLayout(m) {
+                const nodes = (m.data.nodes || []).filter(Boolean);
+                const count = nodes.length || 1;
+                const radius = count <= 2 ? 0 : count <= 4 ? 28 : 33;
+                const positions = nodes.map((node, i) => {
+                    let x = 50;
+                    let y = 50;
+                    if (count === 1) {
+                        x = 50; y = 50;
+                    } else if (count === 2) {
+                        x = i === 0 ? 28 : 72;
+                        y = 50;
+                    } else if (count === 3) {
+                        const layout = [
+                            { x: 50, y: 26 },
+                            { x: 26, y: 72 },
+                            { x: 74, y: 72 },
+                        ];
+                        x = layout[i].x; y = layout[i].y;
+                    } else {
+                        const angle = (-Math.PI / 2) + ((Math.PI * 2) * i / count);
+                        x = 50 + Math.cos(angle) * radius;
+                        y = 50 + Math.sin(angle) * radius * 0.78;
+                    }
+                    return { ...node, x: Number(x.toFixed(1)), y: Number(y.toFixed(1)) };
+                });
+                const byId = Object.fromEntries(positions.map(n => [n.id, n]));
+                const links = (m.data.links || [])
+                    .map(link => ({ ...link, from: byId[link.from], to: byId[link.to] }))
+                    .filter(link => link.from && link.to);
+                return { nodes: positions, links };
             },
 
             // ---- audio helpers ----

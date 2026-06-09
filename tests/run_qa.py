@@ -60,13 +60,26 @@ def make_rich_course():
 
     seq_items = [{"id": f"s{i}", "label": f"Step {i}", "why": f"Reason {i}"}
                  for i in range(1, 6)]
+    long_text = ("This is a full, multi-sentence explanation that defines the idea precisely, "
+                 "explains how and why it works in practice, and then walks through a concrete "
+                 "worked example with specific values so the learner actually understands it.")
+    summary_text = ("This section teaches the underlying idea in depth: it states the rule, shows "
+                    "the mechanism step by step, and grounds it in a concrete, specific example "
+                    "that the learner can reproduce on their own.")
+    glossary_def = ("A precise, full-sentence definition of the term that explains what it means "
+                    "and gives a concrete example of where it applies.")
+    flash_answer = ("A complete answer that explains the reasoning and includes a specific, "
+                    "concrete example rather than merely restating the term itself.")
     return {
         "meta": {"title": "Rich Course", "subtitle": "QA", "learner": "adult",
                  "learningStyle": "mixed"},
         "modules": [
             {"type": "overview", "id": "overview", "label": "1. Overview",
              "data": {"kicker": "Start", "headline": "A complete course",
-                      "body": "Body", "cards": [
+                      "body": ("This course gives a complete, in-depth tour of the subject, moving "
+                               "from core concepts to concrete worked examples and hands-on "
+                               "practice so the learner finishes with real, applicable understanding."),
+                      "cards": [
                           {"tag": f"T{i}", "title": f"Card {i}", "text": "Text"}
                           for i in range(1, 4)
                       ], "stepsTitle": "Path", "steps": ["A", "B", "C"]}},
@@ -78,8 +91,8 @@ def make_rich_course():
             {"type": "concept_cards", "id": "concepts", "label": "3. Concepts",
              "data": {"intro": "Intro", "cards": [
                  {"badge": "B", "name": f"Concept {i}",
-                  "fields": [{"label": "Idea", "text": "Text", "tone": "info"},
-                             {"label": "Use", "text": "Text", "tone": "good"}],
+                  "fields": [{"label": "Idea", "text": long_text, "tone": "info"},
+                             {"label": "Example", "text": long_text, "tone": "good"}],
                   "highlight": {"label": "Trap", "q": "Mistake?", "a": "Avoid it."}}
                  for i in range(1, 6)
              ]}},
@@ -91,7 +104,7 @@ def make_rich_course():
                                  "detail": "Detail", "bucket": "a" if i % 2 else "b"}
                                 for i in range(1, 9)]}},
             {"type": "flashcards", "id": "cards", "label": "5. Cards",
-             "data": {"cards": [{"q": f"Q{i}", "a": f"A{i}"} for i in range(1, 11)]}},
+             "data": {"cards": [{"q": f"Q{i}", "a": flash_answer} for i in range(1, 11)]}},
             {"type": "challenge", "id": "quiz", "label": "6. Quiz",
              "data": {"kind": "quiz", "title": "Quiz", "intro": "Intro",
                       "startLabel": "Start", "rounds": rounds("Quiz", 8)}},
@@ -108,11 +121,11 @@ def make_rich_course():
                       "startLabel": "Start", "timer": 20, "rounds": rounds("Speed", 6)}},
             {"type": "glossary", "id": "glossary", "label": "10. Terms",
              "data": {"intro": "Intro",
-                      "terms": [{"t": f"Term {i}", "d": "Definition"}
+                      "terms": [{"t": f"Term {i}", "d": glossary_def}
                                 for i in range(1, 11)]}},
             {"type": "notes", "id": "notes", "label": "11. Notes",
              "data": {"title": "Notes", "intro": "Intro", "sections": [
-                 {"heading": f"Section {i}", "summary": "Summary",
+                 {"heading": f"Section {i}", "summary": summary_text,
                   "bullets": ["One", "Two"], "check": "Check"}
                  for i in range(1, 5)
              ]}},
@@ -409,26 +422,27 @@ def main():
     course2, _ = gen.build_course("i", "mat", "adult", tpl_path, provider="gemini", api_key="x")
     check("build_course: recovers on retry", course2 == rich)
 
-    # 8c: schema-valid but thin output falls back unless strict mode is enabled
+    # 8c: schema-valid but thin output. Strict generation is ON by default, so it must raise;
+    # opting out (PREP_STRICT_GENERATION=0) restores the warning-tagged fallback.
     gen.PROVIDERS["gemini"] = lambda s, u, k, m: valid_json.replace('"Rich Course"', '"Unused"')
     gen.PROVIDERS["openai"] = lambda s, u, k, m: json.dumps(good)
     old_log_disabled = gen.log.disabled
     gen.log.disabled = True
     try:
-        fallback_course, _ = gen.build_course("i", "mat", "adult", tpl_path,
-                                              provider="openai", api_key="x")
-        check("build_course: design-short schema-valid fallback returns",
-              fallback_course["meta"].get("qualityWarning") and fallback_course["meta"]["title"] == "T")
+        os.environ["PREP_STRICT_GENERATION"] = "0"
+        try:
+            fallback_course, _ = gen.build_course("i", "mat", "adult", tpl_path,
+                                                  provider="openai", api_key="x")
+            check("build_course: design-short schema-valid fallback returns (opt-out)",
+                  fallback_course["meta"].get("qualityWarning") and fallback_course["meta"]["title"] == "T")
+        finally:
+            os.environ.pop("PREP_STRICT_GENERATION", None)
     finally:
         gen.log.disabled = old_log_disabled
-    os.environ["PREP_STRICT_GENERATION"] = "1"
-    try:
-        expect_raises("build_course: strict mode rejects design-short output",
-                      lambda: gen.build_course("i", "mat", "adult", tpl_path,
-                                               provider="openai", api_key="x"),
-                      gen.GenerationError)
-    finally:
-        os.environ.pop("PREP_STRICT_GENERATION", None)
+    expect_raises("build_course: strict mode (default) rejects design-short output",
+                  lambda: gen.build_course("i", "mat", "adult", tpl_path,
+                                           provider="openai", api_key="x"),
+                  gen.GenerationError)
 
     # 8d: always invalid -> raises after retry
     gen.PROVIDERS["gemini"] = lambda s, u, k, m: invalid_json

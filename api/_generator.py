@@ -99,7 +99,27 @@ def fetch_url_text(url: str, max_chars: int = 40000) -> str:
 # ----------------------------------------------------------------------------
 # 1. The generation prompt (kept in sync with the COURSE schema)
 # ----------------------------------------------------------------------------
-SYSTEM_PROMPT = """You are a course architect and generator. You convert study material into a single JSON object that drives an interactive study app. Output ONLY valid JSON — no markdown, no prose, no code fences.
+SYSTEM_PROMPT = """You are an expert teacher and course architect. Your job is to TEACH a subject, then express that teaching as a single JSON object that drives an interactive study app. Output ONLY valid JSON — no markdown, no prose, no code fences.
+
+THINK LIKE A SUBJECT-MATTER EXPERT WRITING A REAL COURSE — NOT A KEYWORD INDEXER.
+The single most common failure mode you must avoid is producing a shallow "word-association"
+course: vague one-line definitions, restated labels, and synonyms with no actual instruction.
+That output is unacceptable. A learner who finishes your course must come away understanding
+the real material: the concepts explained, the mechanics shown, worked examples carried out,
+concrete artifacts written down (actual scales, chords, formulas, code, dates, equations,
+diagrams-in-text), and the common mistakes named. If you cannot teach a point with real
+substance, do not include a hollow placeholder for it — teach a different point properly.
+
+HOW TO USE THE PROVIDED MATERIAL:
+- Treat the provided material as the SCOPE, focus, and syllabus for the course — what to cover
+  and at what level — NOT as the only sentences you are allowed to use.
+- You are an authority on the subject. Bring in accurate, established domain knowledge to
+  actually explain and demonstrate each topic, even when the source material only names it.
+  A topic like "voice leading," "the Krebs cycle," "gradient descent," or "the subjunctive"
+  must be explained and demonstrated, not merely listed.
+- Be factually correct. Use standard, well-established knowledge and real, checkable examples.
+  Do NOT fabricate claims about the user's specific/proprietary material, private data, or
+  numbers that would have to come from their document. Everything else: teach it for real.
 
 The JSON must match this schema exactly:
 { "meta": {"title","subtitle","learner","learningStyle"}, "modules": [ {"type","id","label","data"} ] }
@@ -139,13 +159,38 @@ Course design requirements:
   * Professional/interview prep: use role pressure, executive framing, decision judgment, and answer drills.
 - Make the course as rich as the curated examples: each module should teach or practice a distinct
   skill, not repeat the same summary in different formats.
-- Avoid checklist-only output. Every module should contain explanatory content, not just labels,
-  synonyms, or word associations.
-- Expand the theory in the content itself. Concept cards should read like mini lessons, with full
-  sentences that define the idea, show how it works, give a concrete example, and name the common
-  mistake or contrast.
+
+DEPTH CONTRACT (NON-NEGOTIABLE):
+- Every explanatory text must be substantive prose, not a label or a synonym. Concept-card field
+  text, notes summaries, glossary definitions, flashcard answers, and quiz explanations should be
+  full multi-sentence explanations that (1) define the idea precisely, (2) explain HOW/WHY it
+  works, and (3) include a CONCRETE, specific example with real artifacts.
+- "Concrete artifacts" means actual content, written out in text:
+    * Music: spell scales and chords by note name and degree (e.g. "C major = C D E F G A B";
+      "Dmin7 = D F A C, the ii of C"); write a real ii–V–I in a named key; describe voice-leading
+      by which notes move where; give simple fret/string or fingering hints in text.
+    * Programming/CS: include short, correct code snippets, exact commands, signatures, or
+      step-by-step algorithm traces.
+    * Math/science: write real equations, units, and a worked numeric example with the steps.
+    * Language: give real example sentences with translation/gloss and the rule applied.
+    * History/humanities: cite specific events, dates, people, causes, and consequences.
+- BAD (forbidden): {"label":"Definition","text":"Improvisation is making up music spontaneously."}
+  GOOD (required): {"label":"Definition","text":"Improvisation is composing melody in real time
+  over a chord progression by choosing notes from the chord tones and a matching scale. Over a
+  Dmin7–G7–Cmaj7 (ii–V–I in C), you can play D Dorian over Dmin7, G Mixolydian over G7, and C
+  major over Cmaj7 — these are the same seven notes, so the trick is targeting the chord tones
+  (3rds and 7ths) on the strong beats while the others connect them."}
+- Concept cards must read like mini-lessons: 3–4 fields, and at least one field is a worked,
+  specific EXAMPLE (not a generality). The highlight box names the single most common real mistake
+  and how to fix it — also specifically, not generically.
+- Notes sections must contain teaching prose plus bullets that carry real, specific information.
+- The cheatsheet must hold quick-reference facts a learner would actually want at hand (formulas,
+  spellings, key tables, command lists), not slogans.
 - Treat the visual_map as an actual diagram, not a list. Each node should represent a conceptual
-  role and each link should explain the relationship between roles or functions.
+  role and each link should explain the relationship between roles or functions, with a specific
+  summary on each node (e.g. what it is and one concrete instance), not a 4-word tag.
+- Quiz/rounds/timed questions test real understanding and application of the taught material;
+  wrong options should be plausible misconceptions, and explanations should teach why.
 - Quantity targets:
   overview cards 3-5; concept cards 5-8 with 3-4 fields each; flashcards 10-12;
   quiz questions 8-10; glossary terms 10-16; notes sections 4-8; cheatsheet blocks 5-8;
@@ -159,7 +204,9 @@ Course design requirements:
   sequence, and challenge modules earlier. If read, put notes and cheatsheet earlier. If audio,
   put audio_script near the top. If mixed, balance the order naturally.
 - Every module id must be unique and lowercase. Tab labels should be short and numbered (e.g. "1. Big Idea").
-- Ground every fact in the provided material. Do NOT invent facts. If something is ambiguous, leave it out.
+- Be accurate: teach the real subject with correct, well-established knowledge and real examples.
+  Do not fabricate claims about the user's private/proprietary material or invent numbers that
+  would have to come from their specific document; for everything else, teach it fully and concretely.
 - On each concept card, write a "highlight" box (label starts with an emoji like ⚠) calling out the single most common mistake or test trap for that concept.
 - Match the requested audience. If the instruction names a grade level or says "kid", set meta.learner="kid", keep language simple, friendly and encouraging, use concrete examples. Otherwise set meta.learner="adult".
 - Set meta.learningStyle to one of: mixed, visual, practice, read, audio.
@@ -178,8 +225,12 @@ def _course_design_hint(instruction: str, material: str) -> str:
             "or in improvisation. Use drills such as ear-training choices, chord/scale fit, "
             "voice-leading order, listening analysis, repertoire study, and practice routines. "
             "Make the visual map read like a theory diagram and make expandable concept cards "
-            "teach actual theory, not just labels. Include concrete examples on guitar or at the "
-            "piano where possible. "
+            "teach actual theory, not just labels. You MUST write out real musical artifacts in "
+            "text: spell scales and chords by note name and scale degree, give at least one real "
+            "ii–V–I (or relevant progression) in a named key, describe specific voice-leading "
+            "moves (which note resolves where), and include concrete guitar/piano examples "
+            "(fret/string or fingering hints). Concept cards and notes should read like a real "
+            "theory lesson with worked examples, not a glossary. "
             "Avoid interview, employer, resume, product, or job-prep framing unless the instruction "
             "explicitly requests it."
         )
@@ -222,8 +273,16 @@ def _user_message(instruction: str, learner: str, material: str,
     context_block = f"\nADDITIONAL CONTEXT (goals, constraints, focus areas):\n{context.strip()}\n" \
         if context and context.strip() else ""
     design_hint = _course_design_hint(instruction, material)
+    depth_demand = (
+        "DEPTH REQUIREMENT: Teach the actual subject. Use the material below as the scope and "
+        "focus, but draw on your full expert knowledge to explain every concept with real "
+        "substance and concrete, worked examples (actual notes/chords/formulas/code/equations/"
+        "events as appropriate). Reject any output that is just labels, synonyms, or one-line "
+        "definitions — that is a failed course. A learner should finish genuinely understanding "
+        "the topic."
+    )
     return (f"INSTRUCTION: {instruction}\n{learner_hint}\n{style_hint}\n"
-            f"COURSE DESIGN ADAPTATION:\n{design_hint}\n"
+            f"COURSE DESIGN ADAPTATION:\n{design_hint}\n{depth_demand}\n"
             f"{context_block}\nMATERIAL:\n{trimmed}")
 
 
@@ -265,7 +324,13 @@ def _max_output_tokens() -> int:
 
 
 def _strict_generation_required() -> bool:
-    return os.environ.get("PREP_STRICT_GENERATION", "").strip().lower() in {"1", "true", "yes"}
+    # Strict generation is ON by default: a shallow, schema-valid course is treated as a failure
+    # so the engine regenerates instead of shipping word-association filler. Opt out explicitly
+    # (PREP_STRICT_GENERATION=0/false/no) to allow the warning-tagged fallback instead.
+    raw = os.environ.get("PREP_STRICT_GENERATION", "").strip().lower()
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    return True
 
 
 def _call_gemini(system: str, user: str, api_key: str, model: str) -> str:
@@ -439,6 +504,93 @@ REQUIRED_GENERATED_TYPES = {"overview", "concept_cards", "flashcards", "visual_m
                             "cheatsheet", "sequence"}
 REQUIRED_GENERATED_CHALLENGES = {"quiz", "rounds", "timed"}
 MIN_GENERATED_MODULES = 12
+
+
+def _repair_course(course: dict) -> None:
+    """Fix common, harmless model formatting mistakes in place before validation.
+
+    Models (especially smaller ones) reliably trip on a few schema details. Rather than burn
+    retries on output that is substantively fine, normalize the well-understood mistakes:
+      - challenge round `wrongFeedback` not parallel to `opts` (the classic: one entry per
+        WRONG option instead of a full-length array with null in the correct slot).
+      - `correct` provided as a string label or 1-based number instead of a 0-based index.
+    The renderer already tolerates missing feedback slots, so this only loses malformed extras.
+    """
+    if not isinstance(course, dict):
+        return
+    for module in course.get("modules", []) or []:
+        if not isinstance(module, dict) or module.get("type") != "challenge":
+            continue
+        data = module.get("data")
+        if not isinstance(data, dict):
+            continue
+        for rnd in data.get("rounds", []) or []:
+            if not isinstance(rnd, dict):
+                continue
+            opts = rnd.get("opts")
+            if not isinstance(opts, list) or not opts:
+                continue
+            n = len(opts)
+
+            # Rounds-style output often supplies `scenario` but forgets `question`.
+            if not rnd.get("question"):
+                scenario = rnd.get("scenario")
+                if isinstance(scenario, str) and scenario.strip():
+                    rnd["question"] = scenario.strip()
+                    rnd.pop("scenario", None)
+                else:
+                    rnd["question"] = "Which option is the best choice here?"
+
+            # Coerce a stringy / 1-based correct index into a 0-based int when unambiguous.
+            correct = rnd.get("correct")
+            if isinstance(correct, str):
+                labels = [o if isinstance(o, str) else (o.get("label") if isinstance(o, dict) else None)
+                          for o in opts]
+                if correct in labels:
+                    correct = labels.index(correct)
+                elif correct.strip().isdigit():
+                    correct = int(correct.strip())
+                rnd["correct"] = correct
+            if isinstance(correct, int) and correct == n and n >= 1:
+                # looks 1-based
+                rnd["correct"] = correct - 1
+                correct = rnd["correct"]
+            if not isinstance(correct, int) or not (0 <= correct < n):
+                correct = None
+
+            # Normalize wrongFeedback. Models sometimes emit it as a dict keyed by index/label,
+            # or as a string — coerce to a list, else drop it (the renderer tolerates absence).
+            wf = rnd.get("wrongFeedback")
+            if wf is not None and not isinstance(wf, list):
+                if isinstance(wf, dict):
+                    coerced: list = [None] * n
+                    for k, v in wf.items():
+                        try:
+                            idx = int(k)
+                        except (TypeError, ValueError):
+                            continue
+                        if 0 <= idx < n:
+                            coerced[idx] = v
+                    wf = coerced
+                    rnd["wrongFeedback"] = wf
+                else:
+                    rnd.pop("wrongFeedback", None)
+                    wf = None
+            if isinstance(wf, list) and len(wf) != n:
+                fixed = [None] * n
+                src = list(wf)
+                si = 0
+                for i in range(n):
+                    if i == correct:
+                        continue
+                    if si < len(src):
+                        fixed[i] = src[si]
+                        si += 1
+                if correct is not None:
+                    fixed[correct] = None
+                rnd["wrongFeedback"] = fixed
+            elif isinstance(wf, list) and correct is not None and correct < n:
+                wf[correct] = None
 
 
 def validate(course: dict) -> list[str]:
@@ -640,6 +792,73 @@ def validate_generation_design(course: dict) -> list[str]:
             if isinstance(rounds, list) and len(rounds) < minimum:
                 errs.append(f"challenge kind '{kind}' should include at least {minimum} rounds.")
 
+    errs.extend(_validate_generation_depth(course))
+    return errs
+
+
+def _texts_mean(values: list) -> float:
+    lengths = [len(v.strip()) for v in values if isinstance(v, str) and v.strip()]
+    return (sum(lengths) / len(lengths)) if lengths else 0.0
+
+
+def _validate_generation_depth(course: dict) -> list[str]:
+    """Reject shallow 'word-association' output: require substantive, taught content.
+
+    These thresholds are about *substance per field*, not item counts (counts are covered
+    above). They catch the common failure where every field is a one-line label/synonym
+    instead of a real explanation with a concrete example.
+    """
+    errs: list[str] = []
+
+    overviews = _module_by_type(course, "overview")
+    if overviews:
+        body = overviews[0].get("data", {}).get("body", "")
+        if isinstance(body, str) and len(body.strip()) < 180:
+            errs.append("overview.body is too thin — write a real introductory paragraph (>= 180 chars).")
+
+    concepts = _module_by_type(course, "concept_cards")
+    if concepts:
+        field_texts: list[str] = []
+        longest_per_card: list[int] = []
+        for card in concepts[0].get("data", {}).get("cards", []) or []:
+            if not isinstance(card, dict):
+                continue
+            texts = [f.get("text", "") for f in card.get("fields", []) or [] if isinstance(f, dict)]
+            field_texts.extend(texts)
+            lengths = [len(t.strip()) for t in texts if isinstance(t, str)]
+            longest_per_card.append(max(lengths) if lengths else 0)
+        if field_texts and _texts_mean(field_texts) < 110:
+            errs.append("concept_cards fields are too shallow — each field needs a multi-sentence "
+                        "explanation (avg >= 110 chars), not a label or synonym.")
+        thin_cards = sum(1 for n in longest_per_card if n < 140)
+        if longest_per_card and thin_cards > len(longest_per_card) // 2:
+            errs.append("most concept cards lack a worked, concrete example — give each card at "
+                        "least one detailed field (>= 140 chars) with specifics.")
+
+    flashcards = _module_by_type(course, "flashcards")
+    if flashcards:
+        answers = [c.get("a", "") for c in flashcards[0].get("data", {}).get("cards", []) or []
+                   if isinstance(c, dict)]
+        if answers and _texts_mean(answers) < 70:
+            errs.append("flashcard answers are too short — explain the answer (avg >= 70 chars), "
+                        "don't just restate a term.")
+
+    glossaries = _module_by_type(course, "glossary")
+    if glossaries:
+        defs = [t.get("d", "") for t in glossaries[0].get("data", {}).get("terms", []) or []
+                if isinstance(t, dict)]
+        if defs and _texts_mean(defs) < 60:
+            errs.append("glossary definitions are too thin — define each term in a full sentence "
+                        "(avg >= 60 chars).")
+
+    notes = _module_by_type(course, "notes")
+    if notes:
+        summaries = [s.get("summary", "") for s in notes[0].get("data", {}).get("sections", []) or []
+                     if isinstance(s, dict)]
+        if summaries and _texts_mean(summaries) < 120:
+            errs.append("notes sections are too thin — each section summary should teach "
+                        "the idea (avg >= 120 chars).")
+
     return errs
 
 
@@ -664,7 +883,7 @@ def build_course(instruction: str, material: str, learner: str,
                  template_path: Path, provider: str | None = None,
                  api_key: str | None = None, model: str | None = None,
                  context: str = "", learning_style: str = "mixed",
-                 retries: int = 2) -> tuple[dict, str]:
+                 retries: int = 3) -> tuple[dict, str]:
     """Returns (course_dict, finished_html). Raises GenerationError on failure."""
     template = Path(template_path).read_text(encoding="utf-8")
     learning_style = learning_style if learning_style in VALID_STYLES else "mixed"
@@ -687,6 +906,7 @@ def build_course(instruction: str, material: str, learner: str,
         meta = course.setdefault("meta", {})
         meta.setdefault("learner", learner)
         meta.setdefault("learningStyle", learning_style)
+        _repair_course(course)
         schema_errs = validate(course)
         if schema_errs:
             last_errs = schema_errs
